@@ -785,27 +785,27 @@ class AdminController {
   }
 
   renderCoinManager(container) {
-    const offer = JSON.parse(localStorage.getItem('hipa_welcome_offer_config') || localStorage.getItem('hima_welcome_offer_config') || 'null') || {
-      enabled: true,
-      coins: 60,
-      price: 14,
-      originalPrice: 40,
-      timerMinutes: 5
-    };
+      const offer = JSON.parse(localStorage.getItem('hipa_welcome_offer_config') || localStorage.getItem('hima_welcome_offer_config') || 'null') || {
+        enabled: true,
+        coins: 60,
+        price: 14,
+        originalPrice: 40,
+        timerMinutes: 5
+      };
 
-    const packs = [
-      { coins: 40, price: 25, discount: "Save 30%" },
-      { coins: 90, price: 49, discount: "" },
-      { coins: 200, price: 64, discount: "Save 30%" },
-      { coins: 440, price: 129, discount: "Save 20%" },
-      { coins: 1200, price: 299, discount: "Save 30%" },
-      { coins: 2500, price: 699, discount: "Save 30%" },
-      { coins: 5500, price: 1199, discount: "Save 33%" },
-      { coins: 15000, price: 2999, discount: "Save 40%" },
-      { coins: 33000, price: 6999, discount: "Save 45%" }
-    ];
+      const packs = [
+        { coins: 40, price: 25, discount: "Save 30%" },
+        { coins: 90, price: 49, discount: "" },
+        { coins: 200, price: 64, discount: "Save 30%" },
+        { coins: 440, price: 129, discount: "Save 20%" },
+        { coins: 1200, price: 299, discount: "Save 30%" },
+        { coins: 2500, price: 699, discount: "Save 30%" },
+        { coins: 5500, price: 1199, discount: "Save 33%" },
+        { coins: 15000, price: 2999, discount: "Save 40%" },
+        { coins: 33000, price: 6999, discount: "Save 45%" }
+      ];
 
-    container.innerHTML = `
+      container.innerHTML = `
       <div class="admin-topbar">
         <div>
           <h1 style="font-size: 1.8rem; font-weight: 800;">🪙 Coin Packs & Welcome Offer Manager</h1>
@@ -878,24 +878,24 @@ class AdminController {
       </div>
     `;
 
-    container.querySelector('#btnSaveOfferConfig').onclick = () => {
-      const updated = {
-        enabled: container.querySelector('#chkOfferEnabled').checked,
-        coins: Number(container.querySelector('#cfgOfferCoins').value) || 60,
-        price: Number(container.querySelector('#cfgOfferPrice').value) || 14,
-        originalPrice: Number(container.querySelector('#cfgOfferCutPrice').value) || 40,
-        timerMinutes: Number(container.querySelector('#cfgOfferTimer').value) || 5
+      container.querySelector('#btnSaveOfferConfig').onclick = () => {
+        const updated = {
+          enabled: container.querySelector('#chkOfferEnabled').checked,
+          coins: Number(container.querySelector('#cfgOfferCoins').value) || 60,
+          price: Number(container.querySelector('#cfgOfferPrice').value) || 14,
+          originalPrice: Number(container.querySelector('#cfgOfferCutPrice').value) || 40,
+          timerMinutes: Number(container.querySelector('#cfgOfferTimer').value) || 5
+        };
+        localStorage.setItem('hipa_welcome_offer_config', JSON.stringify(updated));
+        localStorage.setItem('hima_welcome_offer_config', JSON.stringify(updated));
+        alert('🎉 Welcome offer configuration saved and live on user app!');
       };
-      localStorage.setItem('hipa_welcome_offer_config', JSON.stringify(updated));
-      localStorage.setItem('hima_welcome_offer_config', JSON.stringify(updated));
-      alert('🎉 Welcome offer configuration saved and live on user app!');
-    };
-  }
+    }
 
-  renderWarningManager(container) {
-    const warnings = JSON.parse(localStorage.getItem('hipa_user_warnings') || localStorage.getItem('hima_user_warnings') || '[]');
+    renderWarningManager(container) {
+      const warnings = JSON.parse(localStorage.getItem('hipa_user_warnings') || localStorage.getItem('hima_user_warnings') || '[]');
 
-    container.innerHTML = `
+      container.innerHTML = `
       <div class="admin-topbar">
         <div>
           <h1 style="font-size: 1.8rem; font-weight: 800;">⚠️ User Warnings & Sanctions Dispatcher</h1>
@@ -972,47 +972,47 @@ class AdminController {
       </div>
     `;
 
-    container.querySelector('#btnDispatchWarning').onclick = () => {
-      const user = container.querySelector('#warnTargetUser').value.trim();
-      const reason = container.querySelector('#warnReason').value;
-      const message = container.querySelector('#warnMessage').value.trim();
+      container.querySelector('#btnDispatchWarning').onclick = () => {
+        const user = container.querySelector('#warnTargetUser').value.trim();
+        const reason = container.querySelector('#warnReason').value;
+        const message = container.querySelector('#warnMessage').value.trim();
 
-      if (!user || !message) {
-        alert('Please specify user and message.');
-        return;
-      }
+        if (!user || !message) {
+          alert('Please specify user and message.');
+          return;
+        }
 
-      warnings.unshift({
-        id: 'W-' + Date.now().toString().slice(-5),
-        user,
-        reason,
-        message,
-        date: new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
-      });
+        warnings.unshift({
+          id: 'W-' + Date.now().toString().slice(-5),
+          user,
+          reason,
+          message,
+          date: new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+        });
 
-      localStorage.setItem('hipa_user_warnings', JSON.stringify(warnings));
-      localStorage.setItem('hima_user_warnings', JSON.stringify(warnings));
-      alert(`⚠️ Warning successfully issued to user ${user}! It is now visible in their app profile under "My Warnings".`);
-      this.renderWarningManager(container);
-    };
-
-    container.querySelectorAll('.btn-revoke-warn').forEach(btn => {
-      btn.onclick = () => {
-        const idx = Number(btn.getAttribute('data-idx'));
-        warnings.splice(idx, 1);
         localStorage.setItem('hipa_user_warnings', JSON.stringify(warnings));
         localStorage.setItem('hima_user_warnings', JSON.stringify(warnings));
-        alert('Warning revoked.');
+        alert(`⚠️ Warning successfully issued to user ${user}! It is now visible in their app profile under "My Warnings".`);
         this.renderWarningManager(container);
       };
-    });
-  }
 
-  renderGateways(container) {
-    const cfg = this.gatewayConfigs;
-    const tab = this.activeGatewaySubTab;
+      container.querySelectorAll('.btn-revoke-warn').forEach(btn => {
+        btn.onclick = () => {
+          const idx = Number(btn.getAttribute('data-idx'));
+          warnings.splice(idx, 1);
+          localStorage.setItem('hipa_user_warnings', JSON.stringify(warnings));
+          localStorage.setItem('hima_user_warnings', JSON.stringify(warnings));
+          alert('Warning revoked.');
+          this.renderWarningManager(container);
+        };
+      });
+    }
 
-    container.innerHTML = `
+    renderGateways(container) {
+      const cfg = this.gatewayConfigs;
+      const tab = this.activeGatewaySubTab;
+
+      container.innerHTML = `
       <div class="admin-topbar">
         <div>
           <h1 style="font-size: 1.8rem; font-weight: 800;">⚡ Payment & APIs Integration Hub</h1>
@@ -1059,15 +1059,15 @@ class AdminController {
       </div>
     `;
 
-    this.bindGatewaysEvents(container);
-  }
+      this.bindGatewaysEvents(container);
+    }
 
-  getGatewaySubTabHtml(tab) {
-    const cfg = this.gatewayConfigs;
+    getGatewaySubTabHtml(tab) {
+      const cfg = this.gatewayConfigs;
 
-    if (tab === 'payments') {
-      const active = cfg.payments.activeGateway;
-      return `
+      if (tab === 'payments') {
+        const active = cfg.payments.activeGateway;
+        return `
         <div class="glass-panel" style="padding: 18px 24px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 14px;">
           <div>
             <div style="font-weight: 700; font-size: 1rem;">Primary Active Payment Gateway</div>
@@ -1281,11 +1281,11 @@ class AdminController {
           </div>
         </div>
       `;
-    }
+      }
 
-    if (tab === 'otp') {
-      const active = cfg.otp.activeProvider;
-      return `
+      if (tab === 'otp') {
+        const active = cfg.otp.activeProvider;
+        return `
         <div class="glass-panel" style="padding: 18px 24px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 14px;">
           <div>
             <div style="font-weight: 700; font-size: 1rem;">Active SMS & OTP Provider</div>
@@ -1470,10 +1470,10 @@ class AdminController {
           </div>
         </div>
       `;
-    }
+      }
 
-    if (tab === 'ai') {
-      return `
+      if (tab === 'ai') {
+        return `
         <div class="gateway-cards-grid">
           <!-- Google Gemini AI Card -->
           <div class="gateway-card ${cfg.ai.gemini.enabled ? 'active-gateway' : ''}">
@@ -1575,11 +1575,11 @@ class AdminController {
           </div>
         </div>
       `;
-    }
+      }
 
-    if (tab === 'storage') {
-      const active = cfg.storage.activeProvider;
-      return `
+      if (tab === 'storage') {
+        const active = cfg.storage.activeProvider;
+        return `
         <div class="glass-panel" style="padding: 18px 24px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 14px;">
           <div>
             <div style="font-weight: 700; font-size: 1rem;">Active User Media & Photo Storage</div>
@@ -1689,10 +1689,10 @@ class AdminController {
           </div>
         </div>
       `;
-    }
+      }
 
-    if (tab === 'webrtc') {
-      return `
+      if (tab === 'webrtc') {
+        return `
         <div class="gateway-cards-grid">
           <!-- WebRTC Card -->
           <div class="gateway-card active-gateway" style="grid-column: 1 / -1; max-width: 720px;">
@@ -1733,10 +1733,10 @@ class AdminController {
           </div>
         </div>
       `;
-    }
+      }
 
-    if (tab === 'notifications') {
-      return `
+      if (tab === 'notifications') {
+        return `
         <div class="gateway-cards-grid">
           <!-- FCM Card -->
           <div class="gateway-card active-gateway" style="max-width: 680px;">
@@ -1771,355 +1771,355 @@ class AdminController {
           </div>
         </div>
       `;
+      }
+
+      return '';
     }
 
-    return '';
-  }
+    bindGatewaysEvents(container) {
+      // Sub-tab click switching
+      container.querySelectorAll('.api-tab-btn').forEach((btn) => {
+        btn.onclick = () => {
+          this.saveCurrentGatewayFormInputs();
+          this.activeGatewaySubTab = btn.getAttribute('data-subtab');
+          this.renderGateways(container);
+        };
+      });
 
-  bindGatewaysEvents(container) {
-    // Sub-tab click switching
-    container.querySelectorAll('.api-tab-btn').forEach((btn) => {
-      btn.onclick = () => {
-        this.saveCurrentGatewayFormInputs();
-        this.activeGatewaySubTab = btn.getAttribute('data-subtab');
-        this.renderGateways(container);
-      };
-    });
-
-    // Eye toggle for secret fields
-    container.querySelectorAll('.btn-toggle-eye').forEach((btn) => {
-      btn.onclick = () => {
-        const targetId = btn.getAttribute('data-target');
-        const input = container.querySelector('#' + targetId);
-        if (input) {
-          if (input.type === 'password') {
-            input.type = 'text';
-            btn.textContent = '🔒';
-          } else {
-            input.type = 'password';
-            btn.textContent = '👁️';
-          }
-        }
-      };
-    });
-
-    // Active gateway radio change
-    container.querySelectorAll('input[name="activeGatewayRadio"]').forEach((radio) => {
-      radio.onchange = () => {
-        this.gatewayConfigs.payments.activeGateway = radio.value;
-        this.renderGateways(container);
-      };
-    });
-
-    // Active OTP radio change
-    container.querySelectorAll('input[name="activeOtpRadio"]').forEach((radio) => {
-      radio.onchange = () => {
-        this.gatewayConfigs.otp.activeProvider = radio.value;
-        this.renderGateways(container);
-      };
-    });
-
-    // Active storage radio change
-    container.querySelectorAll('input[name="activeStorageRadio"]').forEach((radio) => {
-      radio.onchange = () => {
-        this.gatewayConfigs.storage.activeProvider = radio.value;
-        this.renderGateways(container);
-      };
-    });
-
-    // Test API Buttons
-    container.querySelectorAll('.btn-test-api').forEach((btn) => {
-      btn.onclick = async () => {
-        const testType = btn.getAttribute('data-test');
-        await this.runGatewayApiTest(testType, container);
-      };
-    });
-
-    // Save All Button
-    const saveBtn = container.querySelector('#btnSaveAllGateways');
-    if (saveBtn) {
-      saveBtn.onclick = () => {
-        this.saveCurrentGatewayFormInputs();
-        localStorage.setItem('hipa_system_api_configs', JSON.stringify(this.gatewayConfigs));
-        alert('🎉 All Payment Gateways, OTP Providers & API Configurations saved successfully!');
-      };
-    }
-
-    // Export Button
-    const exportBtn = container.querySelector('#btnExportGateways');
-    if (exportBtn) {
-      exportBtn.onclick = () => {
-        this.saveCurrentGatewayFormInputs();
-        const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(this.gatewayConfigs, null, 2));
-        const downloadAnchor = document.createElement('a');
-        downloadAnchor.setAttribute('href', dataStr);
-        downloadAnchor.setAttribute('download', 'hipa_api_gateway_configs.json');
-        document.body.appendChild(downloadAnchor);
-        downloadAnchor.click();
-        downloadAnchor.remove();
-      };
-    }
-
-    // Import Button
-    const importInput = container.querySelector('#inputImportGateways');
-    if (importInput) {
-      importInput.onchange = (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = (event) => {
-          try {
-            const imported = JSON.parse(event.target.result);
-            this.gatewayConfigs = Object.assign(this.gatewayConfigs, imported);
-            localStorage.setItem('hipa_system_api_configs', JSON.stringify(this.gatewayConfigs));
-            alert('✅ API Configurations imported successfully!');
-            this.renderGateways(container);
-          } catch (err) {
-            alert('❌ Failed to parse JSON file: ' + err.message);
+      // Eye toggle for secret fields
+      container.querySelectorAll('.btn-toggle-eye').forEach((btn) => {
+        btn.onclick = () => {
+          const targetId = btn.getAttribute('data-target');
+          const input = container.querySelector('#' + targetId);
+          if (input) {
+            if (input.type === 'password') {
+              input.type = 'text';
+              btn.textContent = '🔒';
+            } else {
+              input.type = 'password';
+              btn.textContent = '👁️';
+            }
           }
         };
-        reader.readAsText(file);
-      };
-    }
+      });
 
-    // Reset Button
-    const resetBtn = container.querySelector('#btnResetGateways');
-    if (resetBtn) {
-      resetBtn.onclick = () => {
-        if (confirm('Reset all Payment & API configurations to default demo values?')) {
-          this.gatewayConfigs = JSON.parse(JSON.stringify(DEFAULT_GATEWAY_CONFIG));
-          localStorage.setItem('hipa_system_api_configs', JSON.stringify(this.gatewayConfigs));
+      // Active gateway radio change
+      container.querySelectorAll('input[name="activeGatewayRadio"]').forEach((radio) => {
+        radio.onchange = () => {
+          this.gatewayConfigs.payments.activeGateway = radio.value;
           this.renderGateways(container);
-        }
-      };
+        };
+      });
+
+      // Active OTP radio change
+      container.querySelectorAll('input[name="activeOtpRadio"]').forEach((radio) => {
+        radio.onchange = () => {
+          this.gatewayConfigs.otp.activeProvider = radio.value;
+          this.renderGateways(container);
+        };
+      });
+
+      // Active storage radio change
+      container.querySelectorAll('input[name="activeStorageRadio"]').forEach((radio) => {
+        radio.onchange = () => {
+          this.gatewayConfigs.storage.activeProvider = radio.value;
+          this.renderGateways(container);
+        };
+      });
+
+      // Test API Buttons
+      container.querySelectorAll('.btn-test-api').forEach((btn) => {
+        btn.onclick = async () => {
+          const testType = btn.getAttribute('data-test');
+          await this.runGatewayApiTest(testType, container);
+        };
+      });
+
+      // Save All Button
+      const saveBtn = container.querySelector('#btnSaveAllGateways');
+      if (saveBtn) {
+        saveBtn.onclick = () => {
+          this.saveCurrentGatewayFormInputs();
+          localStorage.setItem('hipa_system_api_configs', JSON.stringify(this.gatewayConfigs));
+          alert('🎉 All Payment Gateways, OTP Providers & API Configurations saved successfully!');
+        };
+      }
+
+      // Export Button
+      const exportBtn = container.querySelector('#btnExportGateways');
+      if (exportBtn) {
+        exportBtn.onclick = () => {
+          this.saveCurrentGatewayFormInputs();
+          const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(this.gatewayConfigs, null, 2));
+          const downloadAnchor = document.createElement('a');
+          downloadAnchor.setAttribute('href', dataStr);
+          downloadAnchor.setAttribute('download', 'hipa_api_gateway_configs.json');
+          document.body.appendChild(downloadAnchor);
+          downloadAnchor.click();
+          downloadAnchor.remove();
+        };
+      }
+
+      // Import Button
+      const importInput = container.querySelector('#inputImportGateways');
+      if (importInput) {
+        importInput.onchange = (e) => {
+          const file = e.target.files[0];
+          if (!file) return;
+          const reader = new FileReader();
+          reader.onload = (event) => {
+            try {
+              const imported = JSON.parse(event.target.result);
+              this.gatewayConfigs = Object.assign(this.gatewayConfigs, imported);
+              localStorage.setItem('hipa_system_api_configs', JSON.stringify(this.gatewayConfigs));
+              alert('✅ API Configurations imported successfully!');
+              this.renderGateways(container);
+            } catch (err) {
+              alert('❌ Failed to parse JSON file: ' + err.message);
+            }
+          };
+          reader.readAsText(file);
+        };
+      }
+
+      // Reset Button
+      const resetBtn = container.querySelector('#btnResetGateways');
+      if (resetBtn) {
+        resetBtn.onclick = () => {
+          if (confirm('Reset all Payment & API configurations to default demo values?')) {
+            this.gatewayConfigs = JSON.parse(JSON.stringify(DEFAULT_GATEWAY_CONFIG));
+            localStorage.setItem('hipa_system_api_configs', JSON.stringify(this.gatewayConfigs));
+            this.renderGateways(container);
+          }
+        };
+      }
     }
-  }
 
-  saveCurrentGatewayFormInputs() {
-    const root = document.getElementById('apiHubSubTabContent');
-    if (!root) return;
-    const cfg = this.gatewayConfigs;
+    saveCurrentGatewayFormInputs() {
+      const root = document.getElementById('apiHubSubTabContent');
+      if (!root) return;
+      const cfg = this.gatewayConfigs;
 
-    // Payments inputs
-    const rzpKey = root.querySelector('#rzp_keyId');
-    if (rzpKey) cfg.payments.razorpay.keyId = rzpKey.value.trim();
-    const rzpSec = root.querySelector('#rzp_keySecret');
-    if (rzpSec) cfg.payments.razorpay.keySecret = rzpSec.value.trim();
-    const rzpWh = root.querySelector('#rzp_webhookSecret');
-    if (rzpWh) cfg.payments.razorpay.webhookSecret = rzpWh.value.trim();
-    const rzpMode = root.querySelector('#rzp_mode');
-    if (rzpMode) cfg.payments.razorpay.mode = rzpMode.value;
+      // Payments inputs
+      const rzpKey = root.querySelector('#rzp_keyId');
+      if (rzpKey) cfg.payments.razorpay.keyId = rzpKey.value.trim();
+      const rzpSec = root.querySelector('#rzp_keySecret');
+      if (rzpSec) cfg.payments.razorpay.keySecret = rzpSec.value.trim();
+      const rzpWh = root.querySelector('#rzp_webhookSecret');
+      if (rzpWh) cfg.payments.razorpay.webhookSecret = rzpWh.value.trim();
+      const rzpMode = root.querySelector('#rzp_mode');
+      if (rzpMode) cfg.payments.razorpay.mode = rzpMode.value;
 
-    const cfApp = root.querySelector('#cf_appId');
-    if (cfApp) cfg.payments.cashfree.appId = cfApp.value.trim();
-    const cfSec = root.querySelector('#cf_secretKey');
-    if (cfSec) cfg.payments.cashfree.secretKey = cfSec.value.trim();
-    const cfEnv = root.querySelector('#cf_env');
-    if (cfEnv) cfg.payments.cashfree.env = cfEnv.value;
+      const cfApp = root.querySelector('#cf_appId');
+      if (cfApp) cfg.payments.cashfree.appId = cfApp.value.trim();
+      const cfSec = root.querySelector('#cf_secretKey');
+      if (cfSec) cfg.payments.cashfree.secretKey = cfSec.value.trim();
+      const cfEnv = root.querySelector('#cf_env');
+      if (cfEnv) cfg.payments.cashfree.env = cfEnv.value;
 
-    const ppMid = root.querySelector('#pp_merchantId');
-    if (ppMid) cfg.payments.phonepe.merchantId = ppMid.value.trim();
-    const ppSalt = root.querySelector('#pp_saltKey');
-    if (ppSalt) cfg.payments.phonepe.saltKey = ppSalt.value.trim();
-    const ppIdx = root.querySelector('#pp_saltIndex');
-    if (ppIdx) cfg.payments.phonepe.saltIndex = ppIdx.value.trim();
-    const ppEnv = root.querySelector('#pp_env');
-    if (ppEnv) cfg.payments.phonepe.env = ppEnv.value;
+      const ppMid = root.querySelector('#pp_merchantId');
+      if (ppMid) cfg.payments.phonepe.merchantId = ppMid.value.trim();
+      const ppSalt = root.querySelector('#pp_saltKey');
+      if (ppSalt) cfg.payments.phonepe.saltKey = ppSalt.value.trim();
+      const ppIdx = root.querySelector('#pp_saltIndex');
+      if (ppIdx) cfg.payments.phonepe.saltIndex = ppIdx.value.trim();
+      const ppEnv = root.querySelector('#pp_env');
+      if (ppEnv) cfg.payments.phonepe.env = ppEnv.value;
 
-    const upiVpa = root.querySelector('#upi_vpa');
-    if (upiVpa) cfg.payments.upiDirect.vpa = upiVpa.value.trim();
-    const upiPayee = root.querySelector('#upi_payee');
-    if (upiPayee) cfg.payments.upiDirect.payeeName = upiPayee.value.trim();
-    const upiGold = root.querySelector('#upi_goldPrice');
-    if (upiGold) cfg.payments.upiDirect.goldPrice = Number(upiGold.value) || 299;
-    const upiPlat = root.querySelector('#upi_platinumPrice');
-    if (upiPlat) cfg.payments.upiDirect.platinumPrice = Number(upiPlat.value) || 699;
+      const upiVpa = root.querySelector('#upi_vpa');
+      if (upiVpa) cfg.payments.upiDirect.vpa = upiVpa.value.trim();
+      const upiPayee = root.querySelector('#upi_payee');
+      if (upiPayee) cfg.payments.upiDirect.payeeName = upiPayee.value.trim();
+      const upiGold = root.querySelector('#upi_goldPrice');
+      if (upiGold) cfg.payments.upiDirect.goldPrice = Number(upiGold.value) || 299;
+      const upiPlat = root.querySelector('#upi_platinumPrice');
+      if (upiPlat) cfg.payments.upiDirect.platinumPrice = Number(upiPlat.value) || 699;
 
-    // OTP inputs
-    const allowUni = root.querySelector('#otp_allowUniversal');
-    if (allowUni) cfg.otp.allowUniversalOtp = allowUni.checked;
-    const uniCode = root.querySelector('#otp_universalCode');
-    if (uniCode) cfg.otp.universalOtpCode = uniCode.value.trim();
+      // OTP inputs
+      const allowUni = root.querySelector('#otp_allowUniversal');
+      if (allowUni) cfg.otp.allowUniversalOtp = allowUni.checked;
+      const uniCode = root.querySelector('#otp_universalCode');
+      if (uniCode) cfg.otp.universalOtpCode = uniCode.value.trim();
 
-    const f2sKey = root.querySelector('#f2s_apiKey');
-    if (f2sKey) cfg.otp.fast2sms.apiKey = f2sKey.value.trim();
-    const f2sRoute = root.querySelector('#f2s_route');
-    if (f2sRoute) cfg.otp.fast2sms.route = f2sRoute.value;
-    const f2sSender = root.querySelector('#f2s_senderId');
-    if (f2sSender) cfg.otp.fast2sms.senderId = f2sSender.value.trim();
+      const f2sKey = root.querySelector('#f2s_apiKey');
+      if (f2sKey) cfg.otp.fast2sms.apiKey = f2sKey.value.trim();
+      const f2sRoute = root.querySelector('#f2s_route');
+      if (f2sRoute) cfg.otp.fast2sms.route = f2sRoute.value;
+      const f2sSender = root.querySelector('#f2s_senderId');
+      if (f2sSender) cfg.otp.fast2sms.senderId = f2sSender.value.trim();
 
-    const twSid = root.querySelector('#tw_sid');
-    if (twSid) cfg.otp.twilio.accountSid = twSid.value.trim();
-    const twTok = root.querySelector('#tw_token');
-    if (twTok) cfg.otp.twilio.authToken = twTok.value.trim();
-    const twFrom = root.querySelector('#tw_from');
-    if (twFrom) cfg.otp.twilio.fromPhone = twFrom.value.trim();
+      const twSid = root.querySelector('#tw_sid');
+      if (twSid) cfg.otp.twilio.accountSid = twSid.value.trim();
+      const twTok = root.querySelector('#tw_token');
+      if (twTok) cfg.otp.twilio.authToken = twTok.value.trim();
+      const twFrom = root.querySelector('#tw_from');
+      if (twFrom) cfg.otp.twilio.fromPhone = twFrom.value.trim();
 
-    const m91Auth = root.querySelector('#msg91_auth');
-    if (m91Auth) cfg.otp.msg91.authKey = m91Auth.value.trim();
-    const m91Tpl = root.querySelector('#msg91_template');
-    if (m91Tpl) cfg.otp.msg91.templateId = m91Tpl.value.trim();
-    const m91Sender = root.querySelector('#msg91_sender');
-    if (m91Sender) cfg.otp.msg91.senderId = m91Sender.value.trim();
+      const m91Auth = root.querySelector('#msg91_auth');
+      if (m91Auth) cfg.otp.msg91.authKey = m91Auth.value.trim();
+      const m91Tpl = root.querySelector('#msg91_template');
+      if (m91Tpl) cfg.otp.msg91.templateId = m91Tpl.value.trim();
+      const m91Sender = root.querySelector('#msg91_sender');
+      if (m91Sender) cfg.otp.msg91.senderId = m91Sender.value.trim();
 
-    // AI inputs
-    const gemEnabled = root.querySelector('#ai_gemini_enabled');
-    if (gemEnabled) cfg.ai.gemini.enabled = gemEnabled.checked;
-    const gemKey = root.querySelector('#ai_gemini_key');
-    if (gemKey) cfg.ai.gemini.apiKey = gemKey.value.trim();
-    const gemModel = root.querySelector('#ai_gemini_model');
-    if (gemModel) cfg.ai.gemini.model = gemModel.value;
+      // AI inputs
+      const gemEnabled = root.querySelector('#ai_gemini_enabled');
+      if (gemEnabled) cfg.ai.gemini.enabled = gemEnabled.checked;
+      const gemKey = root.querySelector('#ai_gemini_key');
+      if (gemKey) cfg.ai.gemini.apiKey = gemKey.value.trim();
+      const gemModel = root.querySelector('#ai_gemini_model');
+      if (gemModel) cfg.ai.gemini.model = gemModel.value;
 
-    const oaiEnabled = root.querySelector('#ai_openai_enabled');
-    if (oaiEnabled) cfg.ai.openai.enabled = oaiEnabled.checked;
-    const oaiKey = root.querySelector('#ai_openai_key');
-    if (oaiKey) cfg.ai.openai.apiKey = oaiKey.value.trim();
+      const oaiEnabled = root.querySelector('#ai_openai_enabled');
+      if (oaiEnabled) cfg.ai.openai.enabled = oaiEnabled.checked;
+      const oaiKey = root.querySelector('#ai_openai_key');
+      if (oaiKey) cfg.ai.openai.apiKey = oaiKey.value.trim();
 
-    // Storage inputs
-    const r2Ep = root.querySelector('#r2_endpoint');
-    if (r2Ep) cfg.storage.r2.endpoint = r2Ep.value.trim();
-    const r2Bk = root.querySelector('#r2_bucket');
-    if (r2Bk) cfg.storage.r2.bucketName = r2Bk.value.trim();
-    const r2Dm = root.querySelector('#r2_domain');
-    if (r2Dm) cfg.storage.r2.publicDomain = r2Dm.value.trim();
-    const r2Ak = root.querySelector('#r2_accessKey');
-    if (r2Ak) cfg.storage.r2.accessKeyId = r2Ak.value.trim();
-    const r2Sk = root.querySelector('#r2_secretKey');
-    if (r2Sk) cfg.storage.r2.secretAccessKey = r2Sk.value.trim();
+      // Storage inputs
+      const r2Ep = root.querySelector('#r2_endpoint');
+      if (r2Ep) cfg.storage.r2.endpoint = r2Ep.value.trim();
+      const r2Bk = root.querySelector('#r2_bucket');
+      if (r2Bk) cfg.storage.r2.bucketName = r2Bk.value.trim();
+      const r2Dm = root.querySelector('#r2_domain');
+      if (r2Dm) cfg.storage.r2.publicDomain = r2Dm.value.trim();
+      const r2Ak = root.querySelector('#r2_accessKey');
+      if (r2Ak) cfg.storage.r2.accessKeyId = r2Ak.value.trim();
+      const r2Sk = root.querySelector('#r2_secretKey');
+      if (r2Sk) cfg.storage.r2.secretAccessKey = r2Sk.value.trim();
 
-    // WebRTC inputs
-    const rtcUrls = root.querySelector('#rtc_urls');
-    if (rtcUrls) cfg.webrtc.customTurn.urls = rtcUrls.value.trim();
-    const rtcUser = root.querySelector('#rtc_user');
-    if (rtcUser) cfg.webrtc.customTurn.username = rtcUser.value.trim();
-    const rtcPass = root.querySelector('#rtc_pass');
-    if (rtcPass) cfg.webrtc.customTurn.credential = rtcPass.value.trim();
+      // WebRTC inputs
+      const rtcUrls = root.querySelector('#rtc_urls');
+      if (rtcUrls) cfg.webrtc.customTurn.urls = rtcUrls.value.trim();
+      const rtcUser = root.querySelector('#rtc_user');
+      if (rtcUser) cfg.webrtc.customTurn.username = rtcUser.value.trim();
+      const rtcPass = root.querySelector('#rtc_pass');
+      if (rtcPass) cfg.webrtc.customTurn.credential = rtcPass.value.trim();
 
-    // FCM inputs
-    const fcmKey = root.querySelector('#fcm_key');
-    if (fcmKey) cfg.notifications.fcm.serverKey = fcmKey.value.trim();
-    const fcmSender = root.querySelector('#fcm_sender');
-    if (fcmSender) cfg.notifications.fcm.senderId = fcmSender.value.trim();
+      // FCM inputs
+      const fcmKey = root.querySelector('#fcm_key');
+      if (fcmKey) cfg.notifications.fcm.serverKey = fcmKey.value.trim();
+      const fcmSender = root.querySelector('#fcm_sender');
+      if (fcmSender) cfg.notifications.fcm.senderId = fcmSender.value.trim();
 
-    localStorage.setItem('hipa_system_api_configs', JSON.stringify(cfg));
-  }
+      localStorage.setItem('hipa_system_api_configs', JSON.stringify(cfg));
+    }
 
   async runGatewayApiTest(testType, container) {
-    this.saveCurrentGatewayFormInputs();
-    const resEl = container.querySelector('#res_test_' + testType);
-    if (!resEl) return;
+      this.saveCurrentGatewayFormInputs();
+      const resEl = container.querySelector('#res_test_' + testType);
+      if (!resEl) return;
 
-    resEl.className = 'test-result-box loading';
-    resEl.textContent = '⏳ Testing credentials with server handshake...';
+      resEl.className = 'test-result-box loading';
+      resEl.textContent = '⏳ Testing credentials with server handshake...';
 
-    await new Promise((r) => setTimeout(r, 800));
+      await new Promise((r) => setTimeout(r, 800));
 
-    const cfg = this.gatewayConfigs;
+      const cfg = this.gatewayConfigs;
 
-    if (testType === 'razorpay') {
-      const key = cfg.payments.razorpay.keyId;
-      if (!key || (!key.startsWith('rzp_test_') && !key.startsWith('rzp_live_'))) {
-        resEl.className = 'test-result-box error';
-        resEl.textContent = '❌ Invalid Razorpay Key ID! Must start with rzp_test_ or rzp_live_.';
-      } else {
+      if (testType === 'razorpay') {
+        const key = cfg.payments.razorpay.keyId;
+        if (!key || (!key.startsWith('rzp_test_') && !key.startsWith('rzp_live_'))) {
+          resEl.className = 'test-result-box error';
+          resEl.textContent = '❌ Invalid Razorpay Key ID! Must start with rzp_test_ or rzp_live_.';
+        } else {
+          resEl.className = 'test-result-box success';
+          resEl.textContent = '✅ Razorpay connection verified! Mode: ' + cfg.payments.razorpay.mode.toUpperCase() + ' (Ready for live card & UPI payments)';
+        }
+      } else if (testType === 'cashfree') {
+        const appId = cfg.payments.cashfree.appId;
+        if (!appId || appId.length < 5) {
+          resEl.className = 'test-result-box error';
+          resEl.textContent = '❌ Invalid Cashfree App ID. Please provide your merchant App ID.';
+        } else {
+          resEl.className = 'test-result-box success';
+          resEl.textContent = '✅ Cashfree API credentials validated successfully for environment: ' + cfg.payments.cashfree.env;
+        }
+      } else if (testType === 'phonepe') {
+        const mid = cfg.payments.phonepe.merchantId;
+        if (!mid || mid.length < 4) {
+          resEl.className = 'test-result-box error';
+          resEl.textContent = '❌ Invalid PhonePe Merchant ID.';
+        } else {
+          resEl.className = 'test-result-box success';
+          resEl.textContent = '✅ PhonePe UAT/Production handshake verified. Salt key format is correct.';
+        }
+      } else if (testType === 'upi') {
+        const vpa = cfg.payments.upiDirect.vpa;
+        if (!vpa || !vpa.includes('@')) {
+          resEl.className = 'test-result-box error';
+          resEl.textContent = '❌ Invalid UPI VPA format! Must be in format handle@bank (e.g. business@icici).';
+        } else {
+          resEl.className = 'test-result-box success';
+          resEl.textContent = '✅ UPI VPA Validated: ' + vpa + ' (Dynamic QR payload generation active)';
+        }
+      } else if (testType === 'mockOtp') {
         resEl.className = 'test-result-box success';
-        resEl.textContent = '✅ Razorpay connection verified! Mode: ' + cfg.payments.razorpay.mode.toUpperCase() + ' (Ready for live card & UPI payments)';
-      }
-    } else if (testType === 'cashfree') {
-      const appId = cfg.payments.cashfree.appId;
-      if (!appId || appId.length < 5) {
-        resEl.className = 'test-result-box error';
-        resEl.textContent = '❌ Invalid Cashfree App ID. Please provide your merchant App ID.';
-      } else {
+        resEl.textContent = '✅ Universal Mock OTP is active. Code: ' + (cfg.otp.universalOtpCode || '123456');
+      } else if (testType === 'fast2sms') {
+        const key = cfg.otp.fast2sms.apiKey;
+        if (!key || key.length < 15) {
+          resEl.className = 'test-result-box error';
+          resEl.textContent = '❌ Invalid Fast2SMS API Key length. Please paste your full API token.';
+        } else {
+          resEl.className = 'test-result-box success';
+          resEl.textContent = '✅ Fast2SMS route configured! Sender: ' + (cfg.otp.fast2sms.senderId || 'HIPAAP');
+        }
+      } else if (testType === 'twilio') {
+        const sid = cfg.otp.twilio.accountSid;
+        if (!sid || !sid.startsWith('AC')) {
+          resEl.className = 'test-result-box error';
+          resEl.textContent = '❌ Twilio Account SID must start with "AC".';
+        } else {
+          resEl.className = 'test-result-box success';
+          resEl.textContent = '✅ Twilio SMS credentials valid. Ready to dispatch international SMS.';
+        }
+      } else if (testType === 'msg91') {
+        const auth = cfg.otp.msg91.authKey;
+        if (!auth || auth.length < 10) {
+          resEl.className = 'test-result-box error';
+          resEl.textContent = '❌ MSG91 Auth Key is missing or invalid.';
+        } else {
+          resEl.className = 'test-result-box success';
+          resEl.textContent = '✅ MSG91 OTP route connected! Template: ' + (cfg.otp.msg91.templateId || 'Active');
+        }
+      } else if (testType === 'gemini') {
+        const key = cfg.ai.gemini.apiKey;
+        if (!key || key.length < 10) {
+          resEl.className = 'test-result-box error';
+          resEl.textContent = '❌ Gemini API key is missing. Paste your Google AI Studio key.';
+        } else {
+          resEl.className = 'test-result-box success';
+          resEl.textContent = '✅ Gemini AI API key format verified for model: ' + cfg.ai.gemini.model;
+        }
+      } else if (testType === 'openai') {
+        const key = cfg.ai.openai.apiKey;
+        if (!key || !key.startsWith('sk-')) {
+          resEl.className = 'test-result-box error';
+          resEl.textContent = '❌ OpenAI API key must start with "sk-".';
+        } else {
+          resEl.className = 'test-result-box success';
+          resEl.textContent = '✅ OpenAI API connection handshake validated.';
+        }
+      } else if (testType === 'r2') {
+        const ep = cfg.storage.r2.endpoint;
+        if (!ep || !ep.includes('r2.cloudflarestorage.com')) {
+          resEl.className = 'test-result-box error';
+          resEl.textContent = '❌ R2 Endpoint should be https://<account_id>.r2.cloudflarestorage.com';
+        } else {
+          resEl.className = 'test-result-box success';
+          resEl.textContent = '✅ Cloudflare R2 Bucket "' + cfg.storage.r2.bucketName + '" verified!';
+        }
+      } else if (testType === 'webrtc') {
         resEl.className = 'test-result-box success';
-        resEl.textContent = '✅ Cashfree API credentials validated successfully for environment: ' + cfg.payments.cashfree.env;
-      }
-    } else if (testType === 'phonepe') {
-      const mid = cfg.payments.phonepe.merchantId;
-      if (!mid || mid.length < 4) {
-        resEl.className = 'test-result-box error';
-        resEl.textContent = '❌ Invalid PhonePe Merchant ID.';
-      } else {
+        resEl.textContent = '✅ WebRTC STUN/TURN ICE candidate ping succeeded (RTT: 42ms).';
+      } else if (testType === 'fcm') {
         resEl.className = 'test-result-box success';
-        resEl.textContent = '✅ PhonePe UAT/Production handshake verified. Salt key format is correct.';
+        resEl.textContent = '✅ Firebase Cloud Messaging test packet dispatched to APNs/GCM.';
       }
-    } else if (testType === 'upi') {
-      const vpa = cfg.payments.upiDirect.vpa;
-      if (!vpa || !vpa.includes('@')) {
-        resEl.className = 'test-result-box error';
-        resEl.textContent = '❌ Invalid UPI VPA format! Must be in format handle@bank (e.g. business@icici).';
-      } else {
-        resEl.className = 'test-result-box success';
-        resEl.textContent = '✅ UPI VPA Validated: ' + vpa + ' (Dynamic QR payload generation active)';
-      }
-    } else if (testType === 'mockOtp') {
-      resEl.className = 'test-result-box success';
-      resEl.textContent = '✅ Universal Mock OTP is active. Code: ' + (cfg.otp.universalOtpCode || '123456');
-    } else if (testType === 'fast2sms') {
-      const key = cfg.otp.fast2sms.apiKey;
-      if (!key || key.length < 15) {
-        resEl.className = 'test-result-box error';
-        resEl.textContent = '❌ Invalid Fast2SMS API Key length. Please paste your full API token.';
-      } else {
-        resEl.className = 'test-result-box success';
-        resEl.textContent = '✅ Fast2SMS route configured! Sender: ' + (cfg.otp.fast2sms.senderId || 'HIPAAP');
-      }
-    } else if (testType === 'twilio') {
-      const sid = cfg.otp.twilio.accountSid;
-      if (!sid || !sid.startsWith('AC')) {
-        resEl.className = 'test-result-box error';
-        resEl.textContent = '❌ Twilio Account SID must start with "AC".';
-      } else {
-        resEl.className = 'test-result-box success';
-        resEl.textContent = '✅ Twilio SMS credentials valid. Ready to dispatch international SMS.';
-      }
-    } else if (testType === 'msg91') {
-      const auth = cfg.otp.msg91.authKey;
-      if (!auth || auth.length < 10) {
-        resEl.className = 'test-result-box error';
-        resEl.textContent = '❌ MSG91 Auth Key is missing or invalid.';
-      } else {
-        resEl.className = 'test-result-box success';
-        resEl.textContent = '✅ MSG91 OTP route connected! Template: ' + (cfg.otp.msg91.templateId || 'Active');
-      }
-    } else if (testType === 'gemini') {
-      const key = cfg.ai.gemini.apiKey;
-      if (!key || key.length < 10) {
-        resEl.className = 'test-result-box error';
-        resEl.textContent = '❌ Gemini API key is missing. Paste your Google AI Studio key.';
-      } else {
-        resEl.className = 'test-result-box success';
-        resEl.textContent = '✅ Gemini AI API key format verified for model: ' + cfg.ai.gemini.model;
-      }
-    } else if (testType === 'openai') {
-      const key = cfg.ai.openai.apiKey;
-      if (!key || !key.startsWith('sk-')) {
-        resEl.className = 'test-result-box error';
-        resEl.textContent = '❌ OpenAI API key must start with "sk-".';
-      } else {
-        resEl.className = 'test-result-box success';
-        resEl.textContent = '✅ OpenAI API connection handshake validated.';
-      }
-    } else if (testType === 'r2') {
-      const ep = cfg.storage.r2.endpoint;
-      if (!ep || !ep.includes('r2.cloudflarestorage.com')) {
-        resEl.className = 'test-result-box error';
-        resEl.textContent = '❌ R2 Endpoint should be https://<account_id>.r2.cloudflarestorage.com';
-      } else {
-        resEl.className = 'test-result-box success';
-        resEl.textContent = '✅ Cloudflare R2 Bucket "' + cfg.storage.r2.bucketName + '" verified!';
-      }
-    } else if (testType === 'webrtc') {
-      resEl.className = 'test-result-box success';
-      resEl.textContent = '✅ WebRTC STUN/TURN ICE candidate ping succeeded (RTT: 42ms).';
-    } else if (testType === 'fcm') {
-      resEl.className = 'test-result-box success';
-      resEl.textContent = '✅ Firebase Cloud Messaging test packet dispatched to APNs/GCM.';
     }
-  }
 
-  renderSettings(container) {
-    container.innerHTML = `
+    renderSettings(container) {
+      container.innerHTML = `
       <div class="admin-topbar">
         <div>
           <h1 style="font-size: 1.8rem; font-weight: 800;">System Settings</h1>
@@ -2143,8 +2143,8 @@ class AdminController {
         <button class="btn-primary" style="align-self: flex-start;" onclick="alert('Settings saved successfully!')">Save Configuration</button>
       </div>
     `;
+    }
   }
-}
 
 document.addEventListener('DOMContentLoaded', () => {
   const admin = new AdminController();

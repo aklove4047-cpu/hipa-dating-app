@@ -5,46 +5,30 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <meta name="theme-color" content="#ff007f">
   <meta name="description" content="Hipa — Where Feelings Connect. Audio & Video calling with verified creators.">
-  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate, max-age=0">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
   <title>Hipa — Where Feelings Connect</title>
-  
+
   <script>
-    // Bulletproof Cache Purge & Migration to Hipa v3
-    (function() {
-      const CURRENT_BUILD = 'hipa_v3_2026';
-      
-      // 1. Unregister all existing Service Workers unconditionally
+    // Bulletproof Cache Purge
+    (function () {
       if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.getRegistrations().then(function(regs) {
+        navigator.serviceWorker.getRegistrations().then(function (regs) {
           for (var r of regs) r.unregister();
         });
       }
-
-      // 2. Clear all browser cache storage unconditionally
       if ('caches' in window) {
-        caches.keys().then(function(names) {
+        caches.keys().then(function (names) {
           for (var name of names) caches.delete(name);
         });
       }
-
-      // 3. Purge obsolete Tinder/swipe app state keys from localStorage
-      const obsoleteKeys = ['dating_user', 'dating_profiles', 'dating_swipes', 'dating_matches', 'active_chat', 'hipa_matches', 'dating_users'];
-      obsoleteKeys.forEach(function(k) { localStorage.removeItem(k); });
-
-      // 4. Force hard reload if first time on v3 build
-      if (localStorage.getItem('hipa_build_version') !== CURRENT_BUILD) {
-        localStorage.setItem('hipa_build_version', CURRENT_BUILD);
-        if (window.location.search.indexOf('v=3') === -1) {
-          window.location.replace(window.location.pathname + '?v=3.5');
-        }
-      }
+      var obsoleteKeys = ['dating_user', 'dating_profiles', 'dating_swipes', 'dating_matches', 'active_chat', 'hipa_matches', 'dating_users'];
+      obsoleteKeys.forEach(function (k) { localStorage.removeItem(k); });
     })();
   </script>
 
-  <link rel="stylesheet" href="/css/hipa.css?v=3.5">
-  <link rel="stylesheet" href="/css/hima.css?v=3.5">
+  <link rel="stylesheet" href="/css/hipa.css?v=5.0">
 </head>
 <body>
   <div class="hipa-viewport hima-viewport" id="hipaAppRoot">
@@ -78,7 +62,7 @@
       <span>🔀</span> Random
     </button>
 
-    <!-- Bottom Navigation Bar (4 Tabs matching reference images) -->
+    <!-- Bottom Navigation Bar (4 Tabs) -->
     <nav class="hipa-bottom-nav hima-bottom-nav" id="hipaBottomNav" style="display: none;">
       <button class="hipa-nav-item hima-nav-item active" data-tab="home">
         <span class="hipa-nav-icon hima-nav-icon">🏠</span>
@@ -99,6 +83,6 @@
     </nav>
   </div>
 
-  <script type="module" src="/js/app.js?v=3.5"></script>
+  <script type="module" src="/js/app.js?v=5.0"></script>
 </body>
 </html>
