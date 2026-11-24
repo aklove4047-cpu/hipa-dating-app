@@ -1,7 +1,7 @@
 /* =========================================================
    Hipa Dating App — API Client & Data Layer
    Specification: PRD Files 01, 02, 03
-   Includes: Auth (Signup, OTP, Login, Logout), Profile Wizard, Photo Upload, Admin Auth
+   Includes: Auth (Signup, OTP, Login, Logout), Profile Wizard, Photo Upload, Matches, Calling
    ========================================================= */
 
 const INITIAL_PROFILES = [
@@ -377,23 +377,6 @@ class ApiService {
     this.user.superLikesLeft = 20;
     this.saveUser(this.user);
     return { ok: true, plan: planType, utr };
-  }
-
-  async adminLogin(email, password) {
-    if ((email === 'admin@hipa.com' || email === 'admin') && password === 'admin123') {
-      const adminSession = { token: 'admin_token_' + Date.now(), email, role: 'Super Admin' };
-      localStorage.setItem('hipa_admin_session', JSON.stringify(adminSession));
-      return { ok: true, session: adminSession };
-    }
-    return { ok: false, error: "Invalid admin credentials. Use admin@hipa.com / admin123" };
-  }
-
-  isAdminLoggedIn() {
-    return !!localStorage.getItem('hipa_admin_session');
-  }
-
-  adminLogout() {
-    localStorage.removeItem('hipa_admin_session');
   }
 }
 
