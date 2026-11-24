@@ -343,17 +343,58 @@ class HipaApiService {
       return { ok: false, error: "Please enter a valid 10-digit mobile number." };
     }
 
+    const cleanPhone = phone.replace(/^\+91/, '').replace(/\D/g, '').slice(-10);
     const cfg = this.getGatewayConfigs();
     const universalAllowed = cfg.otp?.allowUniversalOtp !== false;
     const universalCode = cfg.otp?.universalOtpCode || "123456";
 
+    // Generate real 6-digit OTP
+    const generatedOtp = Math.floor(100000 + Math.random() * 900000).toString();
+    const activeProvider = cfg.otp?.activeProvider || 'mockOtp';
+
+    try {
+      if (activeProvider === 'fast2sms' && cfg.otp?.fast2sms?.apiKey) {
+        const f2sKey = cfg.otp.fast2sms.apiKey;
+        const url = `https://www.fast2sms.com/dev/bulkV2?authorization=${encodeURIComponent(f2sKey)}&route=otp&variables_values=${generatedOtp}&flash=0&numbers=${cleanPhone}`;
+        await fetch(url, { method: 'GET', mode: 'no-cors' }).catch(() => {});
+      } else if (activeProvider === 'twofactor' && cfg.otp?.twofactor?.apiKey) {
+        const tfKey = cfg.otp.twofactor.apiKey;
+        const sender = cfg.otp.twofactor.senderId || 'HIPAOT';
+        const url = `https://2factor.in/API/V1/${encodeURIComponent(tfKey)}/SMS/${cleanPhone}/${generatedOtp}/${encodeURIComponent(sender)}`;
+        await fetch(url, { method: 'GET' }).catch(() => {});
+      } else if (activeProvider === 'msg91' && cfg.otp?.msg91?.authKey) {
+        const mKey = cfg.otp.msg91.authKey;
+        const tpl = cfg.otp.msg91.templateId || '';
+        const url = `https://control.msg91.com/api/v5/otp?template_id=${encodeURIComponent(tpl)}&mobile=91${cleanPhone}&authkey=${encodeURIComponent(mKey)}&otp=${generatedOtp}`;
+        await fetch(url, { method: 'GET', mode: 'no-cors' }).catch(() => {});
+      } else if (activeProvider === 'custom_sms' && cfg.otp?.customSms?.url) {
+        const cs = cfg.otp.customSms;
+        const targetUrl = cs.url.replace(/\{phone\}/g, cleanPhone).replace(/\{otp\}/g, generatedOtp);
+        const options = { method: cs.method || 'POST', headers: {} };
+        if (cs.headers) {
+          try {
+            options.headers = JSON.parse(cs.headers.replace(/\{phone\}/g, cleanPhone).replace(/\{otp\}/g, generatedOtp));
+          } catch (e) {
+            options.headers = { 'Content-Type': 'application/json' };
+          }
+        }
+        if (cs.bodyTemplate && cs.method !== 'GET') {
+          options.body = cs.bodyTemplate.replace(/\{phone\}/g, cleanPhone).replace(/\{otp\}/g, generatedOtp);
+        }
+        await fetch(targetUrl, options).catch(() => {});
+      }
+    } catch (err) {
+      console.warn("SMS dispatch notice:", err);
+    }
+
     sessionStorage.setItem('hipa_pending_phone', JSON.stringify({
-      phone: "+91" + phone.replace(/^\+91/, '').trim(),
+      phone: "+91" + cleanPhone,
       referralCode,
-      otp: universalCode
+      otp: generatedOtp,
+      universalCode: universalAllowed ? universalCode : null
     }));
 
-    return { ok: true, otp: universalCode };
+    return { ok: true, otp: generatedOtp, universalOtp: universalAllowed ? universalCode : null };
   }
 
   async verifyPhoneOtp(code) {
@@ -363,10 +404,15 @@ class HipaApiService {
     }
 
     const cfg = this.getGatewayConfigs();
+    const universalAllowed = cfg.otp?.allowUniversalOtp !== false;
     const universalCode = cfg.otp?.universalOtpCode || "123456";
 
-    if (code !== pending.otp && code !== universalCode && code !== '123456') {
-      return { ok: false, error: "Invalid OTP code. Please enter " + universalCode };
+    const entered = (code || '').trim();
+    const isValid = (entered === pending.otp) ||
+                    (universalAllowed && (entered === universalCode || entered === '123456' || entered === pending.universalCode));
+
+    if (!isValid) {
+      return { ok: false, error: "Invalid OTP code. Please enter the OTP code or test code " + (universalAllowed ? universalCode : "") };
     }
 
     return { ok: true, pending };
