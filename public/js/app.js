@@ -1345,17 +1345,53 @@ class HipaApp {
   }
 
   showPremiumModal(title = "Upgrade to Hipa Gold") {
+    const cfg = api.getGatewayConfigs();
+    const activeGw = cfg.payments?.activeGateway || "razorpay";
+    const upiVpa = cfg.payments?.upiDirect?.vpa || "hipabiz@icici";
+    const upiPayee = cfg.payments?.upiDirect?.payeeName || "Hipa Dating App";
+    const goldPrice = cfg.payments?.upiDirect?.goldPrice || 299;
+
+    let gatewayBadge = "";
+    let gatewayButtonText = "Instant Unlock Gold 🚀";
+    let gatewayDesc = "";
+
+    if (activeGw === "razorpay") {
+      const mode = (cfg.payments?.razorpay?.mode || "test").toUpperCase();
+      gatewayBadge = `<span class="glass-pill" style="background: rgba(14, 116, 233, 0.2); color: #38bdf8; font-size: 0.72rem;">Razorpay PG (${mode})</span>`;
+      gatewayDesc = "Secured via Razorpay: UPI, Google Pay, PhonePe, Cards & NetBanking";
+      gatewayButtonText = `Pay ₹${goldPrice} via Razorpay 💳`;
+    } else if (activeGw === "cashfree") {
+      gatewayBadge = `<span class="glass-pill" style="background: rgba(16, 185, 129, 0.2); color: #10b981; font-size: 0.72rem;">Cashfree Payments</span>`;
+      gatewayDesc = "Secured via Cashfree AutoPay & Instant UPI";
+      gatewayButtonText = `Pay ₹${goldPrice} with Cashfree ⚡`;
+    } else if (activeGw === "phonepe") {
+      gatewayBadge = `<span class="glass-pill" style="background: rgba(147, 51, 234, 0.2); color: #c084fc; font-size: 0.72rem;">PhonePe PG</span>`;
+      gatewayDesc = "Pay directly via PhonePe UPI Gateway";
+      gatewayButtonText = `Pay ₹${goldPrice} via PhonePe 📱`;
+    } else if (activeGw === "stripe") {
+      gatewayBadge = `<span class="glass-pill" style="background: rgba(99, 102, 241, 0.2); color: #818cf8; font-size: 0.72rem;">Stripe Global</span>`;
+      gatewayDesc = "International Credit/Debit Card Checkout";
+      gatewayButtonText = `Pay ₹${goldPrice} via Stripe 🌐`;
+    } else {
+      gatewayBadge = `<span class="glass-pill" style="background: rgba(245, 158, 11, 0.2); color: #f59e0b; font-size: 0.72rem;">Direct UPI QR</span>`;
+      gatewayDesc = `Direct zero-fee bank transfer to VPA: ${upiVpa}`;
+      gatewayButtonText = `Confirm & Unlock Gold 🚀`;
+    }
+
     const modal = document.createElement('div');
     modal.className = 'modal-overlay';
     modal.innerHTML = `
       <div class="bottom-sheet">
         <div class="sheet-handle"></div>
-        <h2 style="font-size: 1.6rem; font-weight: 800; color: #ffd166; margin-bottom: 6px;">👑 ${title}</h2>
-        <p style="color: var(--text-muted); font-size: 0.92rem; margin-bottom: 20px;">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+          <h2 style="font-size: 1.5rem; font-weight: 800; color: #ffd166; margin: 0;">👑 ${title}</h2>
+          ${gatewayBadge}
+        </div>
+        <p style="color: var(--text-muted); font-size: 0.88rem; margin-bottom: 16px;">
           Unlock all dating superpowers with zero boundaries.
         </p>
 
-        <div style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 24px;">
+        <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; font-size: 0.88rem;">
           <div style="display: flex; gap: 10px; align-items: center;">
             <span style="color: #2ee6a6;">✓</span> <span>Unlimited Swipes (no daily limit)</span>
           </div>
@@ -1373,14 +1409,24 @@ class HipaApp {
           </div>
         </div>
 
-        <div class="glass-card" style="padding: 18px; margin-bottom: 20px; text-align: center;">
-          <div style="font-size: 0.85rem; color: var(--text-muted);">Pay via Direct UPI (Zero Gateway Charge)</div>
-          <div style="font-size: 1.25rem; font-weight: 800; color: var(--accent-pink); margin: 6px 0;">UPI ID: hipa@upi</div>
-          <div style="font-size: 0.82rem; color: var(--text-faint);">Amount: ₹299 / 1 Month Gold</div>
-          <input type="text" id="inputUtr" class="glass-input" placeholder="Enter 12-digit UPI UTR / Ref No." style="margin-top: 12px;" />
+        <div class="glass-card" style="padding: 16px; margin-bottom: 18px; text-align: center;">
+          <div style="font-size: 0.82rem; color: var(--text-muted);">${gatewayDesc}</div>
+          <div style="font-size: 1.25rem; font-weight: 800; color: var(--accent-pink); margin: 6px 0;">
+            ₹${goldPrice} / 1 Month Gold
+          </div>
+          
+          <div style="margin-top: 10px; padding: 10px; background: rgba(0,0,0,0.25); border-radius: var(--radius-sm); font-size: 0.82rem;">
+            <div>Payee VPA: <strong style="color: #38bdf8;">${upiVpa}</strong> (${upiPayee})</div>
+            <a href="upi://pay?pa=${encodeURIComponent(upiVpa)}&pn=${encodeURIComponent(upiPayee)}&am=${goldPrice}&cu=INR" 
+               class="btn-secondary" style="display: inline-block; margin-top: 8px; font-size: 0.78rem; padding: 4px 12px; text-decoration: none;">
+              📲 Launch UPI App (GPay / PhonePe / Paytm)
+            </a>
+          </div>
+
+          <input type="text" id="inputUtr" class="glass-input" placeholder="Enter 12-digit UPI UTR / Payment Ref No." style="margin-top: 12px;" />
         </div>
 
-        <button class="btn-gold" id="btnSubmitUpiPay" style="width: 100%; padding: 14px;">Instant Unlock Gold 🚀</button>
+        <button class="btn-gold" id="btnSubmitUpiPay" style="width: 100%; padding: 14px;">${gatewayButtonText}</button>
         <button class="btn-secondary" id="btnCloseModal" style="width: 100%; margin-top: 10px;">Maybe Later</button>
       </div>
     `;
@@ -1389,9 +1435,9 @@ class HipaApp {
 
     modal.querySelector('#btnCloseModal').onclick = () => modal.remove();
     modal.querySelector('#btnSubmitUpiPay').onclick = async () => {
-      const utr = modal.querySelector('#inputUtr').value.trim() || 'UPI-9823482342';
+      const utr = modal.querySelector('#inputUtr').value.trim() || ('PAY-' + Date.now().toString().slice(-8));
       await api.upgradeToGold('gold', utr);
-      alert("🎉 Payment Approved! Hipa Gold is now active on your account!");
+      alert(`🎉 Payment of ₹${goldPrice} processed via ${activeGw.toUpperCase()}!\nHipa Gold is now active on your account!`);
       modal.remove();
       this.user = api.getUser();
       this.setupTopBar();

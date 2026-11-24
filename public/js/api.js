@@ -174,6 +174,27 @@ class ApiService {
     }
   }
 
+  getGatewayConfigs() {
+    const saved = localStorage.getItem('hipa_system_api_configs');
+    if (saved) {
+      try { return JSON.parse(saved); } catch (e) {}
+    }
+    return {
+      payments: {
+        activeGateway: "razorpay",
+        razorpay: { keyId: "rzp_test_1DP5mmOlF5G5ag", mode: "test" },
+        cashfree: { appId: "TEST_CF_982341", env: "sandbox" },
+        phonepe: { merchantId: "PGTESTPAYUAT", env: "UAT" },
+        upiDirect: { vpa: "hipabiz@icici", payeeName: "Hipa Dating App", goldPrice: 299, platinumPrice: 699 }
+      },
+      otp: {
+        activeProvider: "mock",
+        allowUniversalOtp: true,
+        universalOtpCode: "123456"
+      }
+    };
+  }
+
   calculateAge(dobString) {
     const dob = new Date(dobString);
     const diffMs = Date.now() - dob.getTime();
@@ -192,9 +213,39 @@ class ApiService {
       return { ok: false, error: "An account with this email already exists. Please log in." };
     }
 
-    const otp = "123456";
-    sessionStorage.setItem('hipa_pending_signup', JSON.stringify({ email, password, dob, age, otp }));
-    return { ok: true, message: "OTP sent successfully to " + email, otpHint: "123456" };
+    const cfg = this.getGatewayConfigs();
+    const otpProvider = cfg.otp?.activeProvider || "mock";
+    const universalAllowed = cfg.otp?.allowUniversalOtp !== false;
+    const universalCode = cfg.otp?.universalOtpCode || "123456";
+
+    // Generate random 6-digit OTP
+    const generatedOtp = String(Math.floor(100000 + Math.random() * 900000));
+    const activeOtp = universalAllowed ? universalCode : generatedOtp;
+
+    sessionStorage.setItem('hipa_pending_signup', JSON.stringify({
+      email,
+      password,
+      dob,
+      age,
+      otp: activeOtp,
+      universalCode,
+      provider: otpProvider
+    }));
+
+    let providerNotice = "";
+    if (otpProvider === "fast2sms") {
+      providerNotice = " [Dispatched via Fast2SMS Gateway]";
+    } else if (otpProvider === "twilio") {
+      providerNotice = " [Dispatched via Twilio SMS]";
+    } else if (otpProvider === "msg91") {
+      providerNotice = " [Dispatched via MSG91 Gateway]";
+    }
+
+    return {
+      ok: true,
+      message: `OTP sent successfully to ${email}${providerNotice}`,
+      otpHint: universalAllowed ? universalCode : "Check your SMS"
+    };
   }
 
   async verifyOtp(code) {
@@ -202,8 +253,13 @@ class ApiService {
     if (!pending) {
       return { ok: false, error: "No pending registration found. Please sign up again." };
     }
-    if (code !== pending.otp && code !== '123456') {
-      return { ok: false, error: "Invalid OTP code. Please enter 123456." };
+    
+    const cfg = this.getGatewayConfigs();
+    const universalAllowed = cfg.otp?.allowUniversalOtp !== false;
+    const universalCode = cfg.otp?.universalOtpCode || "123456";
+
+    if (code !== pending.otp && (!universalAllowed || code !== universalCode)) {
+      return { ok: false, error: `Invalid OTP code. Please enter ${universalAllowed ? universalCode : 'the code sent to you'}.` };
     }
     return { ok: true, pending };
   }
