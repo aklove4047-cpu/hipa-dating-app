@@ -1,30 +1,30 @@
-/* =========================================================
-   Hima Dating App — Main Application Controller
-   Exact Replica of Hima Mobile UI & Feature Set
+﻿/* =========================================================
+   Hipa Dating App — Main Application Controller
+   Exact Replica of Hipa Mobile UI & Feature Set
    Includes: Mobile OTP Login, 9-Language Selector, Gender/Avatar Wizard,
              Creators Directory, Live Calling (Voice/Video with Coin Meter),
              Wallet Recharge (40 to 33,000 Coins), ₹14 Welcome Offer Popup,
              Recent Calls Log, Friends Deck, User Profile & Settings.
    ========================================================= */
 
-import { himaApi, HIMA_CREATORS, HIMA_COIN_PACKS, HIMA_LANGUAGES, HIMA_AVATARS } from './api.js';
+import { hipaApi, HIPA_CREATORS, HIPA_COIN_PACKS, HIPA_LANGUAGES, HIPA_AVATARS } from './api.js';
 
-class HimaApp {
+class HipaApp {
   constructor() {
     this.currentTab = 'home';
     this.selectedLanguage = 'Hindi';
     this.selectedGender = 'male';
-    this.selectedAvatar = HIMA_AVATARS[0];
-    this.selectedCoinPack = HIMA_COIN_PACKS[0];
+    this.selectedAvatar = HIPA_AVATARS[0];
+    this.selectedCoinPack = HIPA_COIN_PACKS[0];
     this.activeCategory = 'All';
-    this.user = himaApi.getUser();
+    this.user = hipaApi.getUser();
     this.callTimer = null;
     this.offerTimer = null;
     this.offerSeconds = 297; // 04:57
   }
 
   init() {
-    if (!himaApi.isLoggedIn()) {
+    if (!hipaApi.isLoggedIn()) {
       this.renderOnboardingStep1();
     } else {
       this.renderMainApp();
@@ -38,15 +38,15 @@ class HimaApp {
   // Step 1: Get Started / Mobile Number
   renderOnboardingStep1() {
     const root = document.getElementById('mainViewport');
-    document.getElementById('himaTopBar').style.display = 'none';
-    document.getElementById('himaBottomNav').style.display = 'none';
+    (document.getElementById('hipaTopBar') || document.getElementById('himaTopBar')).style.display = 'none';
+    (document.getElementById('hipaBottomNav') || document.getElementById('himaBottomNav')).style.display = 'none';
     document.getElementById('btnFloatingRandom').style.display = 'none';
 
     root.innerHTML = `
       <div class="onboarding-container" style="justify-content: space-between;">
         <div class="onboarding-header-decor">
           <div class="onboarding-logo">💬</div>
-          <h1 style="font-size: 1.8rem; font-weight: 900; color: #111827;">Hima</h1>
+          <h1 style="font-size: 1.8rem; font-weight: 900; color: #111827;">Hipa</h1>
           <p style="font-size: 0.85rem; color: var(--text-muted); font-weight: 600;">Where Feelings Connect</p>
 
           <div class="features-row">
@@ -89,7 +89,7 @@ class HimaApp {
             <span style="font-weight: 700; color: #1f2937;">Have a referral code?</span>
           </label>
           <div id="referralCodeBox" style="margin-bottom: 14px; display: flex; gap: 8px;">
-            <input type="text" id="inputRefCode" class="glass-input" value="HIMA2026" placeholder="Enter referral code" style="background: #f9fafb; border-color: #e5e7eb; color: #111827; font-weight: 700;" />
+            <input type="text" id="inputRefCode" class="glass-input" value="HIPA2026" placeholder="Enter referral code" style="background: #f9fafb; border-color: #e5e7eb; color: #111827; font-weight: 700;" />
             <button class="btn-secondary" id="btnApplyRef" style="padding: 0 18px; font-weight: 800; background: #4b5563; color: #ffffff;">Apply</button>
           </div>
           <div id="refSuccessMsg" style="font-size: 0.75rem; color: #10b981; font-weight: 700; margin-top: -10px; margin-bottom: 14px;">
@@ -103,7 +103,7 @@ class HimaApp {
           </label>
           <label class="checkbox-row">
             <input type="checkbox" id="chkTerms" checked />
-            <span>I accept <strong style="color: var(--primary-pink);">terms & conditions</strong>, and <strong style="color: var(--primary-pink);">community guidelines & moderation policy</strong> of Hima.</span>
+            <span>I accept <strong style="color: var(--primary-pink);">terms & conditions</strong>, and <strong style="color: var(--primary-pink);">community guidelines & moderation policy</strong> of Hipa.</span>
           </label>
 
           <button class="btn-pink-block" id="btnSendOtp" style="margin-top: 10px;">
@@ -123,7 +123,7 @@ class HimaApp {
       const termsChk = root.querySelector('#chkTerms').checked;
 
       if (!ageChk) {
-        alert('You must be 18 years or older to use Hima.');
+        alert('You must be 18 years or older to use Hipa.');
         return;
       }
       if (!termsChk) {
@@ -131,7 +131,7 @@ class HimaApp {
         return;
       }
 
-      const res = await himaApi.sendPhoneOtp(phone);
+      const res = await hipaApi.sendPhoneOtp(phone);
       if (res.ok) {
         this.renderOnboardingStep2(phone);
       } else {
@@ -152,7 +152,7 @@ class HimaApp {
 
         <div class="onboarding-header-decor">
           <div class="onboarding-logo">💬</div>
-          <h1 style="font-size: 1.8rem; font-weight: 900; color: #111827;">Hima</h1>
+          <h1 style="font-size: 1.8rem; font-weight: 900; color: #111827;">Hipa</h1>
           <p style="font-size: 0.85rem; color: var(--text-muted); font-weight: 600;">Where Feelings Connect</p>
         </div>
 
@@ -205,7 +205,7 @@ class HimaApp {
 
     root.querySelector('#btnVerifyOtp').onclick = async () => {
       const code = Array.from(digits).map(d => d.value).join('');
-      const res = await himaApi.verifyPhoneOtp(code);
+      const res = await hipaApi.verifyPhoneOtp(code);
       if (res.ok) {
         this.renderOnboardingStep3();
       } else {
@@ -235,7 +235,7 @@ class HimaApp {
 
         <!-- Languages List -->
         <div style="flex: 1; padding-bottom: 80px;">
-          ${HIMA_LANGUAGES.map((lang) => `
+          ${HIPA_LANGUAGES.map((lang) => `
             <div class="lang-card-item ${this.selectedLanguage === lang.name ? 'selected' : ''}" data-lang="${lang.name}">
               <div class="lang-letter-circle">${lang.char}</div>
               <div>
@@ -311,7 +311,7 @@ class HimaApp {
 
         <!-- 3D Avatars Carousel -->
         <div class="avatar-carousel">
-          ${HIMA_AVATARS.map((av, idx) => `
+          ${HIPA_AVATARS.map((av, idx) => `
             <div class="avatar-item-wrap ${this.selectedAvatar === av ? 'selected' : ''}" data-avatar="${av}">
               <img src="${av}" alt="Avatar ${idx + 1}" />
               ${this.selectedAvatar === av ? '<div class="avatar-check-badge">✓</div>' : ''}
@@ -356,7 +356,7 @@ class HimaApp {
     });
 
     root.querySelector('#btnFinishOnboarding').onclick = () => {
-      this.user = himaApi.finishOnboarding(this.selectedLanguage, this.selectedGender, this.selectedAvatar);
+      this.user = hipaApi.finishOnboarding(this.selectedLanguage, this.selectedGender, this.selectedAvatar);
       this.renderMainApp();
       // Show Welcome Offer automatically on first entry!
       setTimeout(() => this.showWelcomeOfferModal(), 800);
@@ -368,11 +368,11 @@ class HimaApp {
   // ==========================================
 
   renderMainApp() {
-    this.user = himaApi.getUser();
-    document.getElementById('himaTopBar').style.display = 'flex';
-    document.getElementById('himaBottomNav').style.display = 'flex';
+    this.user = hipaApi.getUser();
+    (document.getElementById('hipaTopBar') || document.getElementById('himaTopBar')).style.display = 'flex';
+    (document.getElementById('hipaBottomNav') || document.getElementById('himaBottomNav')).style.display = 'flex';
     document.getElementById('btnFloatingRandom').style.display = 'flex';
-    document.getElementById('userCoinsCount').textContent = himaApi.getCoins();
+    document.getElementById('userCoinsCount').textContent = hipaApi.getCoins();
 
     this.bindGlobalEvents();
     this.renderCurrentTab();
@@ -386,9 +386,9 @@ class HimaApp {
     }
 
     // Bottom Navigation click
-    document.querySelectorAll('.hima-nav-item').forEach((item) => {
+    document.querySelectorAll('.hipa-nav-item, .hima-nav-item').forEach((item) => {
       item.onclick = () => {
-        document.querySelectorAll('.hima-nav-item').forEach(i => i.classList.remove('active'));
+        document.querySelectorAll('.hipa-nav-item, .hima-nav-item').forEach(i => i.classList.remove('active'));
         item.classList.add('active');
         this.currentTab = item.getAttribute('data-tab');
 
@@ -406,8 +406,8 @@ class HimaApp {
     const randomBtn = document.getElementById('btnFloatingRandom');
     if (randomBtn) {
       randomBtn.onclick = () => {
-        const onlineCreators = HIMA_CREATORS.filter(c => c.online);
-        const randomCreator = onlineCreators[Math.floor(Math.random() * onlineCreators.length)] || HIMA_CREATORS[0];
+        const onlineCreators = HIPA_CREATORS.filter(c => c.online);
+        const randomCreator = onlineCreators[Math.floor(Math.random() * onlineCreators.length)] || HIPA_CREATORS[0];
         this.startCall(randomCreator, 'video');
       };
     }
@@ -432,9 +432,9 @@ class HimaApp {
   renderHomeTab(container) {
     const categories = ['Chats', 'All', 'New', 'Marathi', 'Bengali', 'Odia', 'Hindi', 'Tamil', 'Telugu', 'Punjabi'];
 
-    let creators = HIMA_CREATORS;
+    let creators = HIPA_CREATORS;
     if (this.activeCategory !== 'All' && this.activeCategory !== 'Chats' && this.activeCategory !== 'New') {
-      creators = HIMA_CREATORS.filter(c => c.language.toLowerCase() === this.activeCategory.toLowerCase());
+      creators = HIPA_CREATORS.filter(c => c.language.toLowerCase() === this.activeCategory.toLowerCase());
     }
 
     container.innerHTML = `
@@ -517,7 +517,7 @@ class HimaApp {
       btn.onclick = (e) => {
         e.stopPropagation();
         const cid = Number(btn.getAttribute('data-id'));
-        const creator = HIMA_CREATORS.find(c => c.id === cid);
+        const creator = HIPA_CREATORS.find(c => c.id === cid);
         this.startCall(creator, 'voice');
       };
     });
@@ -526,7 +526,7 @@ class HimaApp {
       btn.onclick = (e) => {
         e.stopPropagation();
         const cid = Number(btn.getAttribute('data-id'));
-        const creator = HIMA_CREATORS.find(c => c.id === cid);
+        const creator = HIPA_CREATORS.find(c => c.id === cid);
         if (!creator.videoOnline) {
           alert(`${creator.name} is currently offline for video calls. You can connect via voice call!`);
           return;
@@ -540,7 +540,7 @@ class HimaApp {
   // TAB 2: RECENT CALLS (Exact as 3f248a15)
   // ==========================================
   renderRecentCallsTab(container) {
-    const logs = himaApi.getCallLogs();
+    const logs = hipaApi.getCallLogs();
 
     container.innerHTML = `
       <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;">
@@ -606,7 +606,7 @@ class HimaApp {
   // TAB 3: FRIENDS (Exact as 3c5acad2)
   // ==========================================
   renderFriendsTab(container) {
-    const friends = himaApi.getFriends();
+    const friends = hipaApi.getFriends();
 
     container.innerHTML = `
       <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;">
@@ -669,8 +669,8 @@ class HimaApp {
   // TAB 4: PROFILE (Exact as 53be8fee & ade99c7e)
   // ==========================================
   renderProfileTab(container) {
-    const user = this.user || { username: 'JgckA625', avatar: HIMA_AVATARS[0] };
-    const warnings = himaApi.getWarnings();
+    const user = this.user || { username: 'JgckA625', avatar: HIPA_AVATARS[0] };
+    const warnings = hipaApi.getWarnings();
 
     container.innerHTML = `
       <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;">
@@ -689,7 +689,7 @@ class HimaApp {
       <div class="glass-card" style="background: #ffffff; border: 1.5px solid var(--primary-pink); border-radius: var(--radius-lg); padding: 22px 18px; box-shadow: 0 4px 18px rgba(255, 0, 127, 0.12);">
         <div style="display: flex; align-items: center; gap: 16px;">
           <div style="width: 72px; height: 72px; border-radius: 50%; border: 2.5px solid var(--primary-pink); padding: 2px; position: relative;">
-            <img src="${user.avatar || HIMA_AVATARS[0]}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;" />
+            <img src="${user.avatar || HIPA_AVATARS[0]}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;" />
             <div style="position: absolute; bottom: 0; right: 0; width: 22px; height: 22px; background: var(--primary-pink); border: 2px solid #ffffff; border-radius: 50%; color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 0.7rem;">
               ✏️
             </div>
@@ -831,17 +831,17 @@ class HimaApp {
     container.querySelector('#btnMenuGuidelines').onclick = () => alert('📋 Community Guidelines: Harassment, hate speech & nudity are strictly banned.');
     container.querySelector('#btnMenuWarnings').onclick = () => this.showWarningsModal();
     container.querySelector('#btnMenuBlocklist').onclick = () => alert('🚫 Blocklist: You have 0 blocked users.');
-    container.querySelector('#btnMenuHelp').onclick = () => alert('❓ Help: Email us at support@hima-app.com or message 24/7 in app.');
+    container.querySelector('#btnMenuHelp').onclick = () => alert('❓ Help: Email us at support@hipa-app.com or message 24/7 in app.');
 
     container.querySelector('#chkDndToggle').onchange = (e) => {
       user.isDnd = e.target.checked;
-      himaApi.saveUser(user);
+      hipaApi.saveUser(user);
       alert(user.isDnd ? '🔕 Do Not Disturb mode activated.' : '🔔 Notifications enabled.');
     };
 
     container.querySelector('#btnMenuLogout').onclick = () => {
-      if (confirm('Are you sure you want to log out from Hima?')) {
-        himaApi.logout();
+      if (confirm('Are you sure you want to log out from Hipa?')) {
+        hipaApi.logout();
         this.renderOnboardingStep1();
       }
     };
@@ -853,7 +853,7 @@ class HimaApp {
   showWalletModal() {
     const modal = document.createElement('div');
     modal.className = 'offer-modal-overlay';
-    const packs = HIMA_COIN_PACKS;
+    const packs = HIPA_COIN_PACKS;
     let selectedPack = packs[0];
 
     modal.innerHTML = `
@@ -866,7 +866,7 @@ class HimaApp {
           </div>
           <div class="hima-coin-pill">
             <span class="coin-icon-circle">H</span>
-            <span>${himaApi.getCoins()}</span>
+            <span>${hipaApi.getCoins()}</span>
           </div>
         </div>
 
@@ -913,7 +913,7 @@ class HimaApp {
 
     addBtn.onclick = () => {
       modal.remove();
-      this.showPaymentCheckoutModal(selectedPack.price, selectedPack.coins, `${selectedPack.coins} Hima Coins Pack`);
+      this.showPaymentCheckoutModal(selectedPack.price, selectedPack.coins, `${selectedPack.coins} Hipa Coins Pack`);
     };
   }
 
@@ -939,7 +939,7 @@ class HimaApp {
           </div>
 
           <div class="offer-coins-large">60</div>
-          <div style="font-size: 1.05rem; font-weight: 800; letter-spacing: 0.5px;">Hima coins</div>
+          <div style="font-size: 1.05rem; font-weight: 800; letter-spacing: 0.5px;">Hipa coins</div>
         </div>
 
         <div class="offer-body-white">
@@ -1004,7 +1004,7 @@ class HimaApp {
   showPaymentCheckoutModal(amount, coins, title = "Coin Pack") {
     const modal = document.createElement('div');
     modal.className = 'offer-modal-overlay';
-    const cfg = himaApi.getGatewayConfigs();
+    const cfg = hipaApi.getGatewayConfigs();
     const upiVpa = cfg.payments?.upiDirect?.vpa || "hipabiz@icici";
 
     modal.innerHTML = `
@@ -1014,7 +1014,7 @@ class HimaApp {
           <div style="display: flex; align-items: center; gap: 14px;">
             <button id="btnClosePay" style="background: none; border: none; color: #ffffff; font-size: 1.3rem; cursor: pointer;">←</button>
             <div style="width: 32px; height: 32px; border-radius: 8px; background: rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; font-weight: 900;">H</div>
-            <span style="font-weight: 800; font-size: 1.15rem;">Hima</span>
+            <span style="font-weight: 800; font-size: 1.15rem;">Hipa</span>
           </div>
           <div style="width: 32px; height: 32px; border-radius: 50%; background: rgba(255,255,255,0.25); display: flex; align-items: center; justify-content: center;">👤</div>
         </div>
@@ -1034,7 +1034,7 @@ class HimaApp {
 
             <div style="display: flex; align-items: center; gap: 16px;">
               <div style="width: 100px; height: 100px; background: #ffffff; border: 1.5px solid #cbd5e1; border-radius: 12px; display: flex; align-items: center; justify-content: center; padding: 6px;">
-                <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(`upi://pay?pa=${upiVpa}&pn=HimaApp&am=${amount}&cu=INR`)}" style="width: 100%; height: 100%;" />
+                <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(`upi://pay?pa=${upiVpa}&pn=HipaApp&am=${amount}&cu=INR`)}" style="width: 100%; height: 100%;" />
               </div>
               <div style="flex: 1;">
                 <div style="font-size: 0.82rem; font-weight: 700; color: #334155; margin-bottom: 6px;">Scan the QR using any UPI App</div>
@@ -1101,10 +1101,10 @@ class HimaApp {
     modal.querySelector('#btnClosePay').onclick = () => modal.remove();
 
     modal.querySelector('#btnConfirmPay').onclick = () => {
-      himaApi.addCoins(coins, `${coins} Coins Pack`, "UTR-" + Date.now().toString().slice(-8));
-      alert(`🎉 Payment of ₹${amount} Successful!\n${coins} Hima coins have been credited to your wallet.`);
+      hipaApi.addCoins(coins, `${coins} Coins Pack`, "UTR-" + Date.now().toString().slice(-8));
+      alert(`🎉 Payment of ₹${amount} Successful!\n${coins} Hipa coins have been credited to your wallet.`);
       modal.remove();
-      document.getElementById('userCoinsCount').textContent = himaApi.getCoins();
+      document.getElementById('userCoinsCount').textContent = hipaApi.getCoins();
     };
   }
 
@@ -1113,7 +1113,7 @@ class HimaApp {
   // ==========================================
   startCall(creator, type = 'voice') {
     const costPerMin = type === 'video' ? creator.videoRate : creator.voiceRate;
-    const userCoins = himaApi.getCoins();
+    const userCoins = hipaApi.getCoins();
 
     if (userCoins < costPerMin) {
       alert(`⚠️ Low Coin Balance!\nYou have ${userCoins} coins, but this call requires ${costPerMin} coins/min.\nRecharge your wallet to start calling.`);
@@ -1147,7 +1147,7 @@ class HimaApp {
 
         <!-- Coin Balance live meter -->
         <div class="glass-pill" style="background: rgba(255, 215, 0, 0.2); color: #ffd700; border: 1px solid rgba(255, 215, 0, 0.4); font-size: 0.85rem; font-weight: 800;">
-          Wallet Balance: <span id="callLiveCoins">${himaApi.getCoins()}</span> coins
+          Wallet Balance: <span id="callLiveCoins">${hipaApi.getCoins()}</span> coins
         </div>
 
         <!-- In-Call Control Buttons -->
@@ -1177,14 +1177,14 @@ class HimaApp {
 
       // Deduct coins every full minute
       if (secondsElapsed > 0 && secondsElapsed % 60 === 0) {
-        const deducted = himaApi.deductCoins(costPerMin, `Call with ${creator.name}`);
+        const deducted = hipaApi.deductCoins(costPerMin, `Call with ${creator.name}`);
         if (!deducted) {
           alert('Coins exhausted! Call ended.');
           endCall();
         } else {
           const liveCoinEl = overlay.querySelector('#callLiveCoins');
-          if (liveCoinEl) liveCoinEl.textContent = himaApi.getCoins();
-          document.getElementById('userCoinsCount').textContent = himaApi.getCoins();
+          if (liveCoinEl) liveCoinEl.textContent = hipaApi.getCoins();
+          document.getElementById('userCoinsCount').textContent = hipaApi.getCoins();
         }
       }
     }, 1000);
@@ -1192,10 +1192,10 @@ class HimaApp {
     const endCall = () => {
       if (this.callTimer) clearInterval(this.callTimer);
       const coinsCharged = Math.max(costPerMin, Math.ceil(secondsElapsed / 60) * costPerMin);
-      himaApi.deductCoins(costPerMin, `Call with ${creator.name}`);
-      himaApi.recordCall(creator, type, secondsElapsed, coinsCharged);
-      himaApi.addFriend(creator);
-      document.getElementById('userCoinsCount').textContent = himaApi.getCoins();
+      hipaApi.deductCoins(costPerMin, `Call with ${creator.name}`);
+      hipaApi.recordCall(creator, type, secondsElapsed, coinsCharged);
+      hipaApi.addFriend(creator);
+      document.getElementById('userCoinsCount').textContent = hipaApi.getCoins();
       overlay.remove();
     };
 
@@ -1208,7 +1208,7 @@ class HimaApp {
   // PROFILE SUB-MODALS (Transactions, Warnings, Refer)
   // ==========================================
   showTransactionsModal() {
-    const txs = himaApi.getTransactions();
+    const txs = hipaApi.getTransactions();
     const modal = document.createElement('div');
     modal.className = 'offer-modal-overlay';
     modal.innerHTML = `
@@ -1238,7 +1238,7 @@ class HimaApp {
   }
 
   showWarningsModal() {
-    const warnings = himaApi.getWarnings();
+    const warnings = hipaApi.getWarnings();
     const modal = document.createElement('div');
     modal.className = 'offer-modal-overlay';
     modal.innerHTML = `
@@ -1271,7 +1271,7 @@ class HimaApp {
 
   showReferModal() {
     const user = this.user || { username: 'JgckA625' };
-    const myCode = "HIMA-" + user.username;
+    const myCode = "HIPA-" + user.username;
     const modal = document.createElement('div');
     modal.className = 'offer-modal-overlay';
     modal.innerHTML = `
@@ -1304,6 +1304,6 @@ class HimaApp {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  const app = new HimaApp();
+  const app = new HipaApp();
   app.init();
 });

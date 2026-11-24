@@ -702,7 +702,7 @@ class AdminController {
   }
 
   renderCreators(container) {
-    const creators = JSON.parse(localStorage.getItem('hima_creators_override') || 'null') || [
+    const creators = JSON.parse(localStorage.getItem('hipa_creators_override') || localStorage.getItem('hima_creators_override') || 'null') || [
       { id: 1, name: "jannatkhan", language: "Hindi", voiceRate: 10, videoRate: 0, status: "voice_only" },
       { id: 2, name: "khushi", language: "Bengali", voiceRate: 10, videoRate: 0, status: "voice_only" },
       { id: 3, name: "Simran", language: "Punjabi", voiceRate: 10, videoRate: 60, status: "online" },
@@ -778,13 +778,14 @@ class AdminController {
         creators[idx].videoRate = Number(row.querySelector('.rate-video').value) || 0;
         creators[idx].status = row.querySelector('.creator-status').value;
       });
+      localStorage.setItem('hipa_creators_override', JSON.stringify(creators));
       localStorage.setItem('hima_creators_override', JSON.stringify(creators));
       alert('🎉 Creator call rates and online availability updated successfully!');
     };
   }
 
   renderCoinManager(container) {
-    const offer = JSON.parse(localStorage.getItem('hima_welcome_offer_config') || 'null') || {
+    const offer = JSON.parse(localStorage.getItem('hipa_welcome_offer_config') || localStorage.getItem('hima_welcome_offer_config') || 'null') || {
       enabled: true,
       coins: 60,
       price: 14,
@@ -885,13 +886,14 @@ class AdminController {
         originalPrice: Number(container.querySelector('#cfgOfferCutPrice').value) || 40,
         timerMinutes: Number(container.querySelector('#cfgOfferTimer').value) || 5
       };
+      localStorage.setItem('hipa_welcome_offer_config', JSON.stringify(updated));
       localStorage.setItem('hima_welcome_offer_config', JSON.stringify(updated));
       alert('🎉 Welcome offer configuration saved and live on user app!');
     };
   }
 
   renderWarningManager(container) {
-    const warnings = JSON.parse(localStorage.getItem('hima_user_warnings') || '[]');
+    const warnings = JSON.parse(localStorage.getItem('hipa_user_warnings') || localStorage.getItem('hima_user_warnings') || '[]');
 
     container.innerHTML = `
       <div class="admin-topbar">
@@ -988,6 +990,7 @@ class AdminController {
         date: new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
       });
 
+      localStorage.setItem('hipa_user_warnings', JSON.stringify(warnings));
       localStorage.setItem('hima_user_warnings', JSON.stringify(warnings));
       alert(`⚠️ Warning successfully issued to user ${user}! It is now visible in their app profile under "My Warnings".`);
       this.renderWarningManager(container);
@@ -997,6 +1000,7 @@ class AdminController {
       btn.onclick = () => {
         const idx = Number(btn.getAttribute('data-idx'));
         warnings.splice(idx, 1);
+        localStorage.setItem('hipa_user_warnings', JSON.stringify(warnings));
         localStorage.setItem('hima_user_warnings', JSON.stringify(warnings));
         alert('Warning revoked.');
         this.renderWarningManager(container);

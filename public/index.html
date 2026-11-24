@@ -4,47 +4,64 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <meta name="theme-color" content="#ff007f">
-  <meta name="description" content="Hima — Where Feelings Connect. Audio & Video calling with verified creators.">
+  <meta name="description" content="Hipa — Where Feelings Connect. Audio & Video calling with verified creators.">
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <title>Hima — Where Feelings Connect</title>
+  <title>Hipa — Where Feelings Connect</title>
   
   <script>
-    // Force purge old PWA cache if any existed
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.getRegistrations().then(function(registrations) {
-        for (var registration of registrations) {
-          registration.unregister();
+    // Bulletproof Cache Purge & Migration to Hipa v3
+    (function() {
+      const CURRENT_BUILD = 'hipa_v3_2026';
+      
+      // 1. Unregister all existing Service Workers unconditionally
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then(function(regs) {
+          for (var r of regs) r.unregister();
+        });
+      }
+
+      // 2. Clear all browser cache storage unconditionally
+      if ('caches' in window) {
+        caches.keys().then(function(names) {
+          for (var name of names) caches.delete(name);
+        });
+      }
+
+      // 3. Purge obsolete Tinder/swipe app state keys from localStorage
+      const obsoleteKeys = ['dating_user', 'dating_profiles', 'dating_swipes', 'dating_matches', 'active_chat', 'hipa_matches', 'dating_users'];
+      obsoleteKeys.forEach(function(k) { localStorage.removeItem(k); });
+
+      // 4. Force hard reload if first time on v3 build
+      if (localStorage.getItem('hipa_build_version') !== CURRENT_BUILD) {
+        localStorage.setItem('hipa_build_version', CURRENT_BUILD);
+        if (window.location.search.indexOf('v=3') === -1) {
+          window.location.replace(window.location.pathname + '?v=3.5');
         }
-      });
-    }
-    if ('caches' in window) {
-      caches.keys().then(function(names) {
-        for (var name of names) caches.delete(name);
-      });
-    }
+      }
+    })();
   </script>
 
-  <link rel="stylesheet" href="/css/hima.css?v=2.1">
-  <link rel="stylesheet" href="/css/glass.css?v=2.1">
+  <link rel="stylesheet" href="/css/hipa.css?v=3.5">
+  <link rel="stylesheet" href="/css/hima.css?v=3.5">
 </head>
 <body>
-  <div class="hima-viewport" id="himaAppRoot">
+  <div class="hipa-viewport hima-viewport" id="hipaAppRoot">
     <!-- Top Bar (Shown when user is authenticated) -->
-    <header class="hima-topbar" id="himaTopBar">
-      <div class="hima-brand">
-        <div class="hima-logo-icon">💬</div>
-        <div class="hima-brand-info">
-          <h1>Hima</h1>
+    <header class="hipa-topbar hima-topbar" id="hipaTopBar">
+      <div class="hipa-brand">
+        <div class="hipa-logo-icon">💬</div>
+        <div class="hipa-brand-info">
+          <h1>Hipa</h1>
           <p>Where Feelings Connect</p>
         </div>
       </div>
       <div style="display: flex; align-items: center; gap: 8px;">
-        <a href="/downloads/hipa-dating.apk" download="hipa-dating.apk" class="cat-pill" style="padding: 4px 10px; font-size: 0.72rem; text-decoration: none; border-color: #ff007f; color: #ff007f;" title="Download Android APK">
+        <a href="/downloads/hipa-dating.apk" download="hipa-dating.apk" class="cat-pill" style="padding: 5px 12px; font-size: 0.75rem; text-decoration: none; border-color: #ff007f; color: #ff007f; font-weight: 800; background: rgba(255, 0, 127, 0.06);" title="Download Android APK">
           📲 APK
         </a>
-        <button class="hima-coin-pill" id="btnOpenWalletTop" title="My Coin Balance">
+        <button class="hipa-coin-pill hima-coin-pill" id="btnOpenWalletTop" title="My Coin Balance">
           <span class="coin-icon-circle">H</span>
           <span id="userCoinsCount">60</span>
         </button>
@@ -52,7 +69,7 @@
     </header>
 
     <!-- Main Dynamic Viewport -->
-    <main class="hima-scroll-area" id="mainViewport">
+    <main class="hipa-scroll-area hima-scroll-area" id="mainViewport">
       <!-- Injected dynamically via app.js -->
     </main>
 
@@ -61,27 +78,27 @@
       <span>🔀</span> Random
     </button>
 
-    <!-- Bottom Navigation Bar (4 Tabs) -->
-    <nav class="hima-bottom-nav" id="himaBottomNav" style="display: none;">
-      <button class="hima-nav-item active" data-tab="home">
-        <span class="hima-nav-icon">🏠</span>
+    <!-- Bottom Navigation Bar (4 Tabs matching reference images) -->
+    <nav class="hipa-bottom-nav hima-bottom-nav" id="hipaBottomNav" style="display: none;">
+      <button class="hipa-nav-item hima-nav-item active" data-tab="home">
+        <span class="hipa-nav-icon hima-nav-icon">🏠</span>
         <span>Home</span>
       </button>
-      <button class="hima-nav-item" data-tab="recent">
-        <span class="hima-nav-icon">🕒</span>
+      <button class="hipa-nav-item hima-nav-item" data-tab="recent">
+        <span class="hipa-nav-icon hima-nav-icon">🕒</span>
         <span>Recent</span>
       </button>
-      <button class="hima-nav-item" data-tab="friends">
-        <span class="hima-nav-icon">👥</span>
+      <button class="hipa-nav-item hima-nav-item" data-tab="friends">
+        <span class="hipa-nav-icon hima-nav-icon">👥</span>
         <span>Friends</span>
       </button>
-      <button class="hima-nav-item" data-tab="profile">
-        <span class="hima-nav-icon">👤</span>
+      <button class="hipa-nav-item hima-nav-item" data-tab="profile">
+        <span class="hipa-nav-icon hima-nav-icon">👤</span>
         <span>Profile</span>
       </button>
     </nav>
   </div>
 
-  <script type="module" src="/js/app.js?v=2.1"></script>
+  <script type="module" src="/js/app.js?v=3.5"></script>
 </body>
 </html>
