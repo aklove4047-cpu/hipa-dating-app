@@ -1,0 +1,18 @@
+{
+  "name": "hipa-dating-app",
+  "version": "1.0.0",
+  "description": "Hipa - Modern Glassmorphic Dating App (PWA + Admin Panel + Server)",
+  "main": "server/src/server.js",
+  "scripts": {
+    "start": "node server/src/server.js",
+    "dev": "node server/src/server.js",
+    "pages:dev": "wrangler pages dev public",
+    "deploy": "wrangler pages deploy public --project-name=hipa-dating-app"
+  },
+  "keywords": ["dating", "pwa", "webrtc", "glassmorphism", "cloudflare-pages"],
+  "author": "Hipa Team",
+  "license": "MIT",
+  "devDependencies": {
+    "wrangler": "^3.0.0"
+  }
+}

@@ -1,0 +1,235 @@
+/* =========================================================
+   Hipa Dating App — Admin Panel Stylesheet
+   Specification: PRD File 06
+   ========================================================= */
+
+.admin-layout {
+  display: flex;
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: var(--bg-gradient);
+  color: var(--text-main);
+  position: relative;
+  overflow-x: hidden;
+}
+
+.admin-sidebar {
+  width: 260px;
+  background: rgba(18, 12, 38, 0.75);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-right: 1px solid rgba(255, 255, 255, 0.15);
+  display: flex;
+  flex-direction: column;
+  padding: 24px 16px;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  z-index: 20;
+}
+
+.admin-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 10px 24px 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  margin-bottom: 20px;
+}
+
+.admin-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+  overflow-y: auto;
+}
+
+.admin-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  text-decoration: none;
+  font-size: 0.92rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition-smooth);
+}
+
+.admin-nav-item:hover, .admin-nav-item.active {
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+  border-left: 3px solid var(--accent-pink);
+}
+
+.admin-nav-badge {
+  margin-left: auto;
+  background: var(--accent-pink);
+  color: white;
+  font-size: 0.7rem;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+}
+
+.admin-main {
+  flex: 1;
+  padding: 28px 36px;
+  overflow-y: auto;
+}
+
+.admin-topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 28px;
+}
+
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 18px;
+  margin-bottom: 28px;
+}
+
+.kpi-card {
+  padding: 20px;
+  border-radius: var(--radius-lg);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.kpi-label {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  font-weight: 700;
+}
+
+.kpi-val {
+  font-size: 2.1rem;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+}
+
+.kpi-sub {
+  font-size: 0.8rem;
+  color: var(--accent-green);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Glass Table */
+.table-container {
+  overflow-x: auto;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--glass-border-subtle);
+  background: var(--glass-bg-subtle);
+  backdrop-filter: var(--glass-blur);
+  margin-bottom: 24px;
+}
+
+.glass-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 0.9rem;
+}
+
+.glass-table th {
+  padding: 16px 20px;
+  background: rgba(255, 255, 255, 0.08);
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  font-size: 0.78rem;
+  letter-spacing: 0.6px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.glass-table td {
+  padding: 16px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  vertical-align: middle;
+}
+
+.glass-table tr:hover td {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+/* Status Badges */
+.badge-status {
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+  font-size: 0.76rem;
+  font-weight: 700;
+  display: inline-block;
+}
+
+.badge-active { background: rgba(46, 230, 166, 0.2); color: #2ee6a6; border: 1px solid rgba(46, 230, 166, 0.4); }
+.badge-banned { background: rgba(239, 68, 68, 0.2); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.4); }
+.badge-pending { background: rgba(255, 209, 102, 0.2); color: #ffd166; border: 1px solid rgba(255, 209, 102, 0.4); }
+
+/* Verification Side-by-Side */
+.verify-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 20px;
+}
+
+.verify-card {
+  padding: 20px;
+  border-radius: var(--radius-lg);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.verify-comparison {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.verify-photo-box {
+  height: 200px;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  position: relative;
+  background: #150d2c;
+}
+
+.verify-photo-box img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.verify-photo-label {
+  position: absolute;
+  bottom: 8px;
+  left: 8px;
+  background: rgba(0, 0, 0, 0.65);
+  font-size: 0.72rem;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+}
+
+@media (max-width: 768px) {
+  .admin-layout {
+    flex-direction: column;
+  }
+  .admin-sidebar {
+    width: 100%;
+    height: auto;
+    position: relative;
+  }
+  .admin-main {
+    padding: 18px;
+  }
+}
