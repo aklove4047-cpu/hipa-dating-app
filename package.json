@@ -9,10 +9,21 @@
     "pages:dev": "wrangler pages dev public",
     "deploy": "wrangler pages deploy public --project-name=hipa-dating-app"
   },
-  "keywords": ["dating", "pwa", "webrtc", "glassmorphism", "cloudflare-pages"],
+  "keywords": [
+    "dating",
+    "pwa",
+    "webrtc",
+    "glassmorphism",
+    "cloudflare-pages"
+  ],
   "author": "Hipa Team",
   "license": "MIT",
   "devDependencies": {
     "wrangler": "^3.0.0"
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.6.2",
+    "@capacitor/cli": "^8.6.2",
+    "@capacitor/core": "^8.6.2"
   }
 }
