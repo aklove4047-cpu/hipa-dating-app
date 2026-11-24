@@ -1,6 +1,7 @@
 /* =========================================================
    Hipa Dating App — API Client & Data Layer
-   Specification: PRD File 03
+   Specification: PRD Files 01, 02, 03
+   Includes: Auth (Signup, OTP, Login, Logout), Profile Wizard, Photo Upload, Admin Auth
    ========================================================= */
 
 const INITIAL_PROFILES = [
@@ -98,26 +99,35 @@ const INITIAL_PROFILES = [
 
 class ApiService {
   constructor() {
-    this.token = localStorage.getItem('hipa_token') || 'demo_token';
-    this.user = JSON.parse(localStorage.getItem('hipa_user') || 'null') || {
-      id: 1,
-      name: "Aman Kapoor",
-      age: 25,
-      city: "Mumbai, Bandra",
-      email: "aman@example.com",
-      gender: "male",
-      interestedIn: "female",
-      isPremium: false,
-      photoVerified: true,
-      bio: "Tech entrepreneur, badminton player, and sunset lover. Let's grab some chai!",
-      photos: [
-        "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=800&q=80"
-      ],
-      swipesLeft: 25,
-      superLikesLeft: 3
-    };
+    this.session = JSON.parse(localStorage.getItem('hipa_session') || 'null');
+    this.user = JSON.parse(localStorage.getItem('hipa_user') || 'null');
+    this.registeredUsers = JSON.parse(localStorage.getItem('hipa_registered_users') || 'null') || [
+      {
+        email: "demo@hipa.com",
+        password: "password123",
+        dob: "1999-05-15",
+        name: "Aman Kapoor",
+        age: 25,
+        city: "Mumbai, Bandra",
+        gender: "male",
+        interestedIn: "female",
+        isPremium: false,
+        photoVerified: true,
+        bio: "Tech entrepreneur, badminton player, and sunset lover. Let's grab some chai! ☕",
+        job: "Tech Founder",
+        relationshipGoal: "long_term",
+        interests: ["Tech", "Coffee", "Fitness", "Travel", "Music"],
+        photos: [
+          "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=800&q=80"
+        ],
+        swipesLeft: 25,
+        superLikesLeft: 3
+      }
+    ];
 
-    // Initialize Local Data Collections
+    if (!localStorage.getItem('hipa_registered_users')) {
+      localStorage.setItem('hipa_registered_users', JSON.stringify(this.registeredUsers));
+    }
     if (!localStorage.getItem('hipa_profiles')) {
       localStorage.setItem('hipa_profiles', JSON.stringify(INITIAL_PROFILES));
     }
@@ -131,30 +141,135 @@ class ApiService {
           city: "Mumbai",
           online: true,
           unread: 1,
-          lastMessage: "Hey Aman! Loved your bio, do you really play badminton?",
+          lastMessage: "Hey! Loved your bio, do you really play badminton? 🏸",
           lastMessageTime: "2m ago",
           messages: [
-            { id: 1, sender: "them", text: "Hey Aman! Loved your bio, do you really play badminton? 🏸", time: "12:40 PM" }
-          ]
-        },
-        {
-          id: 502,
-          userId: 103,
-          name: "Pooja Malhotra",
-          photo: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=800&q=80",
-          city: "Delhi",
-          online: false,
-          unread: 0,
-          lastMessage: "The sunset in Hauz Khas was unreal today!",
-          lastMessageTime: "2h ago",
-          messages: [
-            { id: 1, sender: "me", text: "Hey Pooja! Any cafe recommendations?", time: "10:15 AM" },
-            { id: 2, sender: "them", text: "The sunset in Hauz Khas was unreal today!", time: "10:30 AM" }
+            { id: 1, sender: "them", text: "Hey! Loved your bio, do you really play badminton? 🏸", time: "12:40 PM" }
           ]
         }
       ];
       localStorage.setItem('hipa_matches', JSON.stringify(initialMatches));
     }
+  }
+
+  isLoggedIn() {
+    return !!this.session && !!this.user;
+  }
+
+  getCurrentSession() {
+    return this.session;
+  }
+
+  getUser() {
+    return this.user;
+  }
+
+  saveUser(user) {
+    this.user = user;
+    localStorage.setItem('hipa_user', JSON.stringify(user));
+    const idx = this.registeredUsers.findIndex((u) => u.email === user.email);
+    if (idx !== -1) {
+      this.registeredUsers[idx] = user;
+      localStorage.setItem('hipa_registered_users', JSON.stringify(this.registeredUsers));
+    }
+  }
+
+  calculateAge(dobString) {
+    const dob = new Date(dobString);
+    const diffMs = Date.now() - dob.getTime();
+    const ageDt = new Date(diffMs);
+    return Math.abs(ageDt.getUTCFullYear() - 1970);
+  }
+
+  async signup(email, password, dob) {
+    const age = this.calculateAge(dob);
+    if (age < 18) {
+      return { ok: false, error: "Under 18 not allowed. Hipa is strictly an 18+ dating community." };
+    }
+
+    const existing = this.registeredUsers.find((u) => u.email.toLowerCase() === email.toLowerCase());
+    if (existing) {
+      return { ok: false, error: "An account with this email already exists. Please log in." };
+    }
+
+    const otp = "123456";
+    sessionStorage.setItem('hipa_pending_signup', JSON.stringify({ email, password, dob, age, otp }));
+    return { ok: true, message: "OTP sent successfully to " + email, otpHint: "123456" };
+  }
+
+  async verifyOtp(code) {
+    const pending = JSON.parse(sessionStorage.getItem('hipa_pending_signup') || 'null');
+    if (!pending) {
+      return { ok: false, error: "No pending registration found. Please sign up again." };
+    }
+    if (code !== pending.otp && code !== '123456') {
+      return { ok: false, error: "Invalid OTP code. Please enter 123456." };
+    }
+    return { ok: true, pending };
+  }
+
+  async completeOnboarding(profileData) {
+    const pending = JSON.parse(sessionStorage.getItem('hipa_pending_signup') || 'null') || {};
+    
+    const newUser = {
+      id: Date.now(),
+      email: pending.email || "user@hipa.com",
+      password: pending.password || "password123",
+      dob: pending.dob || "2000-01-01",
+      age: pending.age || this.calculateAge(pending.dob || "2000-01-01"),
+      name: profileData.name || "New Explorer",
+      gender: profileData.gender || "male",
+      interestedIn: profileData.interestedIn || "female",
+      city: profileData.city || "Mumbai",
+      job: profileData.job || "",
+      bio: profileData.bio || "Excited to meet genuine people nearby!",
+      relationshipGoal: profileData.relationshipGoal || "long_term",
+      interests: profileData.interests || ["Coffee", "Travel"],
+      photos: profileData.photos && profileData.photos.length > 0 ? profileData.photos : [
+        "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=800&q=80"
+      ],
+      isPremium: false,
+      photoVerified: false,
+      swipesLeft: 25,
+      superLikesLeft: 3,
+      createdAt: new Date().toISOString()
+    };
+
+    this.registeredUsers.push(newUser);
+    localStorage.setItem('hipa_registered_users', JSON.stringify(this.registeredUsers));
+
+    const sessionToken = "hipa_jwt_" + Date.now();
+    this.session = { token: sessionToken, email: newUser.email };
+    this.user = newUser;
+    localStorage.setItem('hipa_session', JSON.stringify(this.session));
+    localStorage.setItem('hipa_user', JSON.stringify(this.user));
+    sessionStorage.removeItem('hipa_pending_signup');
+
+    return { ok: true, user: newUser, token: sessionToken };
+  }
+
+  async login(email, password) {
+    const found = this.registeredUsers.find(
+      (u) => u.email.toLowerCase() === email.toLowerCase() && u.password === password
+    );
+
+    if (!found) {
+      return { ok: false, error: "Invalid email or password. Please try again or create an account." };
+    }
+
+    const sessionToken = "hipa_jwt_" + Date.now();
+    this.session = { token: sessionToken, email: found.email };
+    this.user = found;
+    localStorage.setItem('hipa_session', JSON.stringify(this.session));
+    localStorage.setItem('hipa_user', JSON.stringify(this.user));
+    return { ok: true, user: found, token: sessionToken };
+  }
+
+  logout() {
+    this.session = null;
+    this.user = null;
+    localStorage.removeItem('hipa_session');
+    localStorage.removeItem('hipa_user');
   }
 
   getProfiles() {
@@ -173,21 +288,11 @@ class ApiService {
     localStorage.setItem('hipa_matches', JSON.stringify(matches));
   }
 
-  getUser() {
-    return this.user;
-  }
-
-  saveUser(user) {
-    this.user = user;
-    localStorage.setItem('hipa_user', JSON.stringify(user));
-  }
-
-  // Swipe Action
   async recordSwipe(profileId, action) {
+    if (!this.user) return { ok: false, error: "Not logged in" };
     const profiles = this.getProfiles();
     const target = profiles.find((p) => p.id === profileId);
-    
-    // Decrement swipe counter if not premium
+
     if (!this.user.isPremium && this.user.swipesLeft > 0) {
       this.user.swipesLeft -= 1;
       this.saveUser(this.user);
@@ -197,7 +302,6 @@ class ApiService {
     let matchObj = null;
 
     if (action === 'like' || action === 'superlike') {
-      // 70% chance of instant simulated match for delightful interactive demo
       isMatch = Math.random() < 0.75;
       if (isMatch && target) {
         const matches = this.getMatches();
@@ -223,7 +327,6 @@ class ApiService {
     return { ok: true, matched: isMatch, match: matchObj };
   }
 
-  // Send message
   async sendMessage(matchId, text) {
     const matches = this.getMatches();
     const match = matches.find((m) => m.id === matchId);
@@ -241,10 +344,9 @@ class ApiService {
     match.lastMessageTime = "Just now";
     this.saveMatches(matches);
 
-    // Simulated reply after 1.5 seconds
     setTimeout(() => {
       const replies = [
-        "That's so cool! Tell me more :)",
+        "That's awesome! Tell me more :)",
         "Haha totally agree! ☕",
         "Are you free for an audio or video call later?",
         "Sounds like a plan! Let's do it.",
@@ -267,14 +369,31 @@ class ApiService {
     return { ok: true, message: newMsg };
   }
 
-  // Upgrade Plan
   async upgradeToGold(planType = "gold", utr = "") {
+    if (!this.user) return { ok: false };
     this.user.isPremium = true;
     this.user.premiumType = planType;
     this.user.swipesLeft = 9999;
     this.user.superLikesLeft = 20;
     this.saveUser(this.user);
     return { ok: true, plan: planType, utr };
+  }
+
+  async adminLogin(email, password) {
+    if ((email === 'admin@hipa.com' || email === 'admin') && password === 'admin123') {
+      const adminSession = { token: 'admin_token_' + Date.now(), email, role: 'Super Admin' };
+      localStorage.setItem('hipa_admin_session', JSON.stringify(adminSession));
+      return { ok: true, session: adminSession };
+    }
+    return { ok: false, error: "Invalid admin credentials. Use admin@hipa.com / admin123" };
+  }
+
+  isAdminLoggedIn() {
+    return !!localStorage.getItem('hipa_admin_session');
+  }
+
+  adminLogout() {
+    localStorage.removeItem('hipa_admin_session');
   }
 }
 

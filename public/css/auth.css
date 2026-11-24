@@ -1,0 +1,181 @@
+/* =========================================================
+   Auth, Registration, Onboarding Wizard & Photo Upload Styles
+   ========================================================= */
+
+.auth-landing {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 36px 24px 28px 24px;
+  text-align: center;
+  position: relative;
+  z-index: 5;
+}
+
+.auth-brand-hero {
+  margin-top: 40px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.auth-hero-logo {
+  width: 76px;
+  height: 76px;
+  background: linear-gradient(135deg, var(--accent-pink) 0%, #ff758c 100%);
+  border-radius: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.4rem;
+  box-shadow: 0 10px 30px var(--accent-pink-glow);
+  margin-bottom: 18px;
+  animation: bounceHeart 1.5s infinite alternate;
+}
+
+.auth-hero-title {
+  font-size: 2.6rem;
+  font-weight: 900;
+  letter-spacing: -1px;
+  background: linear-gradient(135deg, #ffffff 0%, #ffb4c2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-bottom: 8px;
+}
+
+.auth-hero-tagline {
+  font-size: 1.05rem;
+  color: var(--text-muted);
+  max-width: 300px;
+  line-height: 1.45;
+}
+
+.auth-actions-group {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  max-width: 360px;
+  margin: 0 auto;
+}
+
+/* Photo Uploader Grid */
+.photo-upload-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin: 16px 0;
+}
+
+.photo-slot {
+  position: relative;
+  height: 110px;
+  border-radius: var(--radius-md);
+  border: 2px dashed rgba(255, 255, 255, 0.35);
+  background: rgba(255, 255, 255, 0.08);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  cursor: pointer;
+  transition: var(--transition-smooth);
+}
+
+.photo-slot:hover {
+  border-color: var(--accent-pink);
+  background: rgba(255, 77, 126, 0.12);
+}
+
+.photo-slot.has-image {
+  border-style: solid;
+  border-color: var(--glass-border);
+}
+
+.photo-slot img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.photo-slot .badge-main {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  background: var(--accent-pink);
+  color: white;
+  font-size: 0.65rem;
+  font-weight: 800;
+  padding: 2px 6px;
+  border-radius: 999px;
+  z-index: 2;
+}
+
+.photo-slot .btn-remove-photo {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 20px;
+  height: 20px;
+  background: rgba(0, 0, 0, 0.75);
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  border: none;
+  cursor: pointer;
+  z-index: 2;
+}
+
+/* Interests selector chips */
+.interests-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 14px 0;
+}
+
+.interest-chip {
+  padding: 8px 14px;
+  border-radius: var(--radius-full);
+  font-size: 0.82rem;
+  font-weight: 600;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: var(--transition-bounce);
+  user-select: none;
+}
+
+.interest-chip.selected {
+  background: linear-gradient(135deg, var(--accent-pink) 0%, #ff758c 100%);
+  color: white;
+  border-color: rgba(255, 255, 255, 0.4);
+  box-shadow: 0 4px 12px var(--accent-pink-glow);
+  transform: scale(1.04);
+}
+
+/* Wizard Steps */
+.wizard-progress-bar {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 20px;
+}
+
+.wizard-bar-segment {
+  flex: 1;
+  height: 5px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 999px;
+  transition: background 0.3s;
+}
+
+.wizard-bar-segment.active {
+  background: var(--accent-pink);
+  box-shadow: 0 0 8px var(--accent-pink);
+}

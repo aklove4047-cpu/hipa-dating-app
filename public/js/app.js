@@ -1,5 +1,7 @@
 /* =========================================================
    Hipa Dating App — Main Application Logic
+   Includes: Auth Gate (Register, 18+ Verification, OTP, Multi-step Profile Wizard,
+             Real Photo Upload, Login, Logout, Discover, Chat, WebRTC Calling)
    ========================================================= */
 
 import { api } from './api.js';
@@ -24,10 +26,19 @@ class HipaApp {
 
   async init() {
     await i18n.init();
-    this.profiles = api.getProfiles();
-    this.setupNavigation();
     this.setupTopBar();
-    this.renderCurrentTab();
+    this.setupNavigation();
+
+    // Check Login State
+    if (!api.isLoggedIn()) {
+      this.hideAppChrome();
+      this.renderAuthLanding();
+    } else {
+      this.showAppChrome();
+      this.user = api.getUser();
+      this.profiles = api.getProfiles();
+      this.renderCurrentTab();
+    }
 
     // Listen for incoming simulated messages
     window.addEventListener('hipa_new_message', (e) => {
@@ -42,18 +53,32 @@ class HipaApp {
     }
   }
 
+  showAppChrome() {
+    const nav = document.querySelector('.bottom-nav');
+    if (nav) nav.style.display = 'flex';
+    const pill = document.getElementById('userSwipesCount');
+    if (pill) pill.style.display = 'inline-flex';
+  }
+
+  hideAppChrome() {
+    const nav = document.querySelector('.bottom-nav');
+    if (nav) nav.style.display = 'none';
+    const pill = document.getElementById('userSwipesCount');
+    if (pill) pill.style.display = 'none';
+  }
+
   setupTopBar() {
     const langBtn = document.getElementById('btnLangToggle');
     if (langBtn) {
       langBtn.textContent = i18n.currentLang === 'en' ? 'हिन्दी' : 'English';
-      langBtn.addEventListener('click', () => {
+      langBtn.onclick = () => {
         i18n.toggle();
         langBtn.textContent = i18n.currentLang === 'en' ? 'हिन्दी' : 'English';
-      });
+      };
     }
 
     const coinsPill = document.getElementById('userSwipesCount');
-    if (coinsPill) {
+    if (coinsPill && this.user) {
       coinsPill.textContent = this.user.isPremium ? '∞ Swipes' : `${this.user.swipesLeft} Swipes`;
     }
   }
@@ -83,6 +108,11 @@ class HipaApp {
     const viewport = document.getElementById('mainViewport');
     if (!viewport) return;
 
+    if (!api.isLoggedIn()) {
+      this.renderAuthLanding();
+      return;
+    }
+
     if (this.currentTab === 'discover') {
       this.renderDiscover(viewport);
     } else if (this.currentTab === 'likes') {
@@ -92,6 +122,521 @@ class HipaApp {
     } else if (this.currentTab === 'profile') {
       this.renderProfile(viewport);
     }
+  }
+
+  // ==========================================
+  // AUTH LANDING & WELCOME SCREEN
+  // ==========================================
+  renderAuthLanding() {
+    const viewport = document.getElementById('mainViewport');
+    if (!viewport) return;
+
+    viewport.innerHTML = `
+      <div class="auth-landing">
+        <div class="auth-brand-hero">
+          <div class="auth-hero-logo">♥</div>
+          <h1 class="auth-hero-title">Hipa</h1>
+          <p class="auth-hero-tagline">
+            Connect, Match & Vibe Nearby.<br/>
+            Real people, instant matching, and audio/video calls.
+          </p>
+        </div>
+
+        <div class="glass-card" style="padding: 18px 20px; margin: 20px 0; border-color: rgba(255, 77, 126, 0.35);">
+          <div style="font-size: 0.84rem; color: #ffd166; font-weight: 700; margin-bottom: 4px;">🔞 18+ Safe Dating Community</div>
+          <div style="font-size: 0.76rem; color: var(--text-muted); line-height: 1.4;">
+            Verified adult profiles only. Photo verification, report moderation, and zero fake accounts.
+          </div>
+        </div>
+
+        <div class="auth-actions-group">
+          <button class="btn-primary" id="btnOpenSignup" style="padding: 15px; font-size: 1.05rem;">
+            Create New Account 🚀
+          </button>
+          <button class="btn-secondary" id="btnOpenLogin" style="padding: 14px; font-size: 1rem;">
+            Log In
+          </button>
+          <button class="btn-gold" id="btnQuickDemoLogin" style="padding: 12px; font-size: 0.88rem; margin-top: 6px;">
+            ⚡ Quick Demo Login (Aman, 25)
+          </button>
+          
+          <div style="margin-top: 14px;">
+            <a href="/downloads/hipa-dating.apk" download="hipa-dating.apk" class="apk-download-btn" style="padding: 8px 16px;">
+              📲 Download Android APK (3.75 MB)
+            </a>
+          </div>
+        </div>
+      </div>
+    `;
+
+    viewport.querySelector('#btnOpenSignup').onclick = () => this.showSignupModal();
+    viewport.querySelector('#btnOpenLogin').onclick = () => this.showLoginModal();
+    viewport.querySelector('#btnQuickDemoLogin').onclick = async () => {
+      const res = await api.login('demo@hipa.com', 'password123');
+      if (res.ok) {
+        this.user = res.user;
+        this.init();
+      }
+    };
+  }
+
+  // ==========================================
+  // SIGNUP STEP 1: Email, Password, 18+ DOB
+  // ==========================================
+  showSignupModal() {
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay';
+    modal.innerHTML = `
+      <div class="bottom-sheet" style="max-height: 90vh;">
+        <div class="sheet-handle"></div>
+        <h2 style="font-size: 1.55rem; font-weight: 800; margin-bottom: 6px;">Create Your Account</h2>
+        <p style="color: var(--text-muted); font-size: 0.88rem; margin-bottom: 20px;">
+          Step 1 of 3: Account Credentials & Age Verification
+        </p>
+
+        <form id="formSignup" style="display: flex; flex-direction: column; gap: 14px;">
+          <div>
+            <label style="font-size: 0.82rem; font-weight: 700; color: var(--text-muted);">Email Address</label>
+            <input type="email" id="signupEmail" required class="glass-input" placeholder="you@example.com" style="margin-top: 4px;" />
+          </div>
+
+          <div>
+            <label style="font-size: 0.82rem; font-weight: 700; color: var(--text-muted);">Password (min 8 characters)</label>
+            <input type="password" id="signupPass" required minlength="8" class="glass-input" placeholder="••••••••" style="margin-top: 4px;" />
+          </div>
+
+          <div>
+            <label style="font-size: 0.82rem; font-weight: 700; color: var(--text-muted);">
+              Date of Birth <span style="color: #ef4444;">* Mandatory 18+</span>
+            </label>
+            <input type="date" id="signupDob" required class="glass-input" style="margin-top: 4px; color-scheme: dark;" />
+            <div id="dobError" style="font-size: 0.78rem; color: #ef4444; margin-top: 4px; display: none;"></div>
+          </div>
+
+          <div style="display: flex; gap: 8px; align-items: flex-start; margin-top: 4px;">
+            <input type="checkbox" id="signupConsent" required style="margin-top: 3px;" />
+            <label for="signupConsent" style="font-size: 0.78rem; color: var(--text-muted); line-height: 1.35;">
+              I certify that I am at least 18 years of age and agree to Hipa's Terms of Service, Privacy Policy, and Community Guidelines.
+            </label>
+          </div>
+
+          <div id="signupError" style="color: #ef4444; font-size: 0.82rem; display: none;"></div>
+
+          <button type="submit" class="btn-primary" style="padding: 14px; margin-top: 10px;">
+            Continue & Send OTP ➔
+          </button>
+          <button type="button" class="btn-secondary" id="btnCancelSignup">Cancel</button>
+        </form>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    modal.querySelector('#btnCancelSignup').onclick = () => modal.remove();
+
+    const form = modal.querySelector('#formSignup');
+    form.onsubmit = async (e) => {
+      e.preventDefault();
+      const email = modal.querySelector('#signupEmail').value.trim();
+      const pass = modal.querySelector('#signupPass').value;
+      const dob = modal.querySelector('#signupDob').value;
+      const errorEl = modal.querySelector('#signupError');
+
+      const res = await api.signup(email, pass, dob);
+      if (!res.ok) {
+        errorEl.textContent = res.error;
+        errorEl.style.display = 'block';
+        return;
+      }
+
+      modal.remove();
+      this.showOtpModal(email);
+    };
+  }
+
+  // ==========================================
+  // SIGNUP STEP 2: OTP Verification
+  // ==========================================
+  showOtpModal(email) {
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay';
+    modal.innerHTML = `
+      <div class="bottom-sheet">
+        <div class="sheet-handle"></div>
+        <h2 style="font-size: 1.55rem; font-weight: 800; margin-bottom: 6px;">Verify Email</h2>
+        <p style="color: var(--text-muted); font-size: 0.88rem; margin-bottom: 20px;">
+          Enter the 6-digit verification code sent to <strong>${email}</strong>
+        </p>
+
+        <div class="glass-card" style="padding: 12px; margin-bottom: 16px; text-align: center; border-color: rgba(46, 230, 166, 0.4);">
+          <span style="font-size: 0.8rem; color: #2ee6a6;">⚡ Simulated Demo OTP Code: <strong>123456</strong></span>
+        </div>
+
+        <div style="margin-bottom: 20px;">
+          <input type="text" id="otpInput" maxlength="6" class="glass-input" value="123456" 
+                 style="text-align: center; font-size: 1.8rem; letter-spacing: 8px; font-weight: 800;" />
+          <div id="otpError" style="font-size: 0.8rem; color: #ef4444; margin-top: 6px; display: none;"></div>
+        </div>
+
+        <button class="btn-primary" id="btnVerifyOtp" style="width: 100%; padding: 14px;">
+          Verify & Setup Profile ➔
+        </button>
+        <button class="btn-secondary" id="btnCancelOtp" style="width: 100%; margin-top: 10px;">Cancel</button>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    modal.querySelector('#btnCancelOtp').onclick = () => modal.remove();
+    modal.querySelector('#btnVerifyOtp').onclick = async () => {
+      const code = modal.querySelector('#otpInput').value.trim();
+      const errEl = modal.querySelector('#otpError');
+      const res = await api.verifyOtp(code);
+      if (!res.ok) {
+        errEl.textContent = res.error;
+        errEl.style.display = 'block';
+        return;
+      }
+      modal.remove();
+      this.showProfileWizardModal();
+    };
+  }
+
+  // ==========================================
+  // SIGNUP STEP 3: Multi-step Profile Wizard
+  // With Real Photo Upload from Device
+  // ==========================================
+  showProfileWizardModal() {
+    let currentStep = 1;
+    const wizardData = {
+      name: '',
+      gender: 'male',
+      interestedIn: 'female',
+      city: 'Mumbai, Bandra',
+      job: '',
+      bio: '',
+      relationshipGoal: 'long_term',
+      interests: ['Coffee', 'Music'],
+      photos: []
+    };
+
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay';
+
+    const renderStep = () => {
+      modal.innerHTML = `
+        <div class="bottom-sheet" style="max-height: 92vh;">
+          <div class="sheet-handle"></div>
+          
+          <div class="wizard-progress-bar">
+            <div class="wizard-bar-segment ${currentStep >= 1 ? 'active' : ''}"></div>
+            <div class="wizard-bar-segment ${currentStep >= 2 ? 'active' : ''}"></div>
+            <div class="wizard-bar-segment ${currentStep >= 3 ? 'active' : ''}"></div>
+          </div>
+
+          ${currentStep === 1 ? `
+            <h2 style="font-size: 1.5rem; font-weight: 800; margin-bottom: 4px;">Tell Us About Yourself</h2>
+            <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 18px;">How you'll appear to your matches</p>
+
+            <div style="display: flex; flex-direction: column; gap: 14px;">
+              <div>
+                <label style="font-size: 0.82rem; font-weight: 700;">Your Display Name</label>
+                <input type="text" id="wName" class="glass-input" placeholder="e.g. Rahul, Priya, Alex" value="${wizardData.name}" style="margin-top: 4px;" />
+              </div>
+
+              <div>
+                <label style="font-size: 0.82rem; font-weight: 700;">I am</label>
+                <select id="wGender" class="glass-input" style="margin-top: 4px;">
+                  <option value="male" ${wizardData.gender === 'male' ? 'selected' : ''}>Male</option>
+                  <option value="female" ${wizardData.gender === 'female' ? 'selected' : ''}>Female</option>
+                  <option value="other" ${wizardData.gender === 'other' ? 'selected' : ''}>Non-Binary / Other</option>
+                </select>
+              </div>
+
+              <div>
+                <label style="font-size: 0.82rem; font-weight: 700;">Looking to meet</label>
+                <select id="wInterestedIn" class="glass-input" style="margin-top: 4px;">
+                  <option value="female" ${wizardData.interestedIn === 'female' ? 'selected' : ''}>Women</option>
+                  <option value="male" ${wizardData.interestedIn === 'male' ? 'selected' : ''}>Men</option>
+                  <option value="everyone" ${wizardData.interestedIn === 'everyone' ? 'selected' : ''}>Everyone</option>
+                </select>
+              </div>
+
+              <div>
+                <label style="font-size: 0.82rem; font-weight: 700;">Your City / Location</label>
+                <input type="text" id="wCity" class="glass-input" placeholder="e.g. Mumbai, Delhi, Bengaluru" value="${wizardData.city}" style="margin-top: 4px;" />
+              </div>
+
+              <button class="btn-primary" id="btnStep1Next" style="padding: 14px; margin-top: 10px;">Next: Upload Photos ➔</button>
+            </div>
+          ` : currentStep === 2 ? `
+            <h2 style="font-size: 1.5rem; font-weight: 800; margin-bottom: 4px;">Add Your Best Photos</h2>
+            <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 12px;">
+              Upload photos from your device or camera. First photo is your main card.
+            </p>
+
+            <div class="photo-upload-grid" id="photoGridContainer"></div>
+
+            <input type="file" id="filePhotoInput" accept="image/*" style="display: none;" />
+
+            <div style="display: flex; gap: 8px; margin-bottom: 18px;">
+              <button type="button" class="btn-secondary" id="btnTriggerFileInput" style="flex: 1; padding: 11px; font-size: 0.85rem;">
+                📷 Choose Image File
+              </button>
+              <button type="button" class="btn-secondary" id="btnUseSamplePhotos" style="flex: 1; padding: 11px; font-size: 0.85rem; color: #ffd166;">
+                ✨ Use Sample Photo
+              </button>
+            </div>
+
+            <div style="display: flex; gap: 10px;">
+              <button class="btn-secondary" id="btnStep2Back" style="flex: 1;">← Back</button>
+              <button class="btn-primary" id="btnStep2Next" style="flex: 2;">Next: Bio & Goals ➔</button>
+            </div>
+          ` : `
+            <h2 style="font-size: 1.5rem; font-weight: 800; margin-bottom: 4px;">Bio & Interests</h2>
+            <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 14px;">Show what you love and your dating goals</p>
+
+            <div style="display: flex; flex-direction: column; gap: 12px;">
+              <div>
+                <label style="font-size: 0.82rem; font-weight: 700;">Your Bio</label>
+                <textarea id="wBio" rows="3" class="glass-input" placeholder="A little about you, your weekend vibe, and what brings you here...">${wizardData.bio}</textarea>
+              </div>
+
+              <div>
+                <label style="font-size: 0.82rem; font-weight: 700;">Relationship Goal</label>
+                <select id="wGoal" class="glass-input">
+                  <option value="long_term" ${wizardData.relationshipGoal === 'long_term' ? 'selected' : ''}>Long-term relationship</option>
+                  <option value="short_term" ${wizardData.relationshipGoal === 'short_term' ? 'selected' : ''}>Casual dating / Fun</option>
+                  <option value="friendship" ${wizardData.relationshipGoal === 'friendship' ? 'selected' : ''}>New friends</option>
+                  <option value="marriage" ${wizardData.relationshipGoal === 'marriage' ? 'selected' : ''}>Marriage / Serious</option>
+                </select>
+              </div>
+
+              <div>
+                <label style="font-size: 0.82rem; font-weight: 700;">Occupation / Job</label>
+                <input type="text" id="wJob" class="glass-input" placeholder="e.g. Software Engineer, Designer, Doctor" value="${wizardData.job}" />
+              </div>
+
+              <div>
+                <label style="font-size: 0.82rem; font-weight: 700;">Select Interests (click to toggle)</label>
+                <div class="interests-grid" id="interestsGridContainer"></div>
+              </div>
+
+              <div style="display: flex; gap: 10px; margin-top: 10px;">
+                <button class="btn-secondary" id="btnStep3Back" style="flex: 1;">← Back</button>
+                <button class="btn-primary" id="btnFinishOnboarding" style="flex: 2; padding: 14px;">
+                  Complete & Start Swiping 🚀
+                </button>
+              </div>
+            </div>
+          `}
+        </div>
+      `;
+
+      // Bind Step 1
+      if (currentStep === 1) {
+        modal.querySelector('#btnStep1Next').onclick = () => {
+          const name = modal.querySelector('#wName').value.trim();
+          if (!name) {
+            alert('Please enter your display name.');
+            return;
+          }
+          wizardData.name = name;
+          wizardData.gender = modal.querySelector('#wGender').value;
+          wizardData.interestedIn = modal.querySelector('#wInterestedIn').value;
+          wizardData.city = modal.querySelector('#wCity').value.trim() || 'Mumbai';
+          currentStep = 2;
+          renderStep();
+        };
+      }
+
+      // Bind Step 2 (Photo Upload)
+      if (currentStep === 2) {
+        const grid = modal.querySelector('#photoGridContainer');
+        const fileInput = modal.querySelector('#filePhotoInput');
+
+        const renderPhotoGrid = () => {
+          grid.innerHTML = '';
+          for (let i = 0; i < 6; i++) {
+            const photoUrl = wizardData.photos[i];
+            const slot = document.createElement('div');
+            slot.className = `photo-slot ${photoUrl ? 'has-image' : ''}`;
+            
+            if (photoUrl) {
+              slot.innerHTML = `
+                <img src="${photoUrl}" />
+                ${i === 0 ? '<span class="badge-main">MAIN</span>' : ''}
+                <button class="btn-remove-photo" data-idx="${i}">✕</button>
+              `;
+            } else {
+              slot.innerHTML = `
+                <div style="font-size: 1.4rem; color: rgba(255,255,255,0.4);">+</div>
+                <span style="font-size: 0.65rem; color: var(--text-faint);">Add Photo</span>
+              `;
+              slot.onclick = () => fileInput.click();
+            }
+            grid.appendChild(slot);
+          }
+
+          grid.querySelectorAll('.btn-remove-photo').forEach((btn) => {
+            btn.onclick = (ev) => {
+              ev.stopPropagation();
+              const idx = Number(btn.getAttribute('data-idx'));
+              wizardData.photos.splice(idx, 1);
+              renderPhotoGrid();
+            };
+          });
+        };
+
+        renderPhotoGrid();
+
+        modal.querySelector('#btnTriggerFileInput').onclick = () => fileInput.click();
+
+        fileInput.onchange = (ev) => {
+          const file = ev.target.files[0];
+          if (!file) return;
+          const reader = new FileReader();
+          reader.onload = (re) => {
+            wizardData.photos.push(re.target.result);
+            renderPhotoGrid();
+          };
+          reader.readAsDataURL(file);
+        };
+
+        modal.querySelector('#btnUseSamplePhotos').onclick = () => {
+          wizardData.photos = [
+            "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=800&q=80",
+            "https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=800&q=80"
+          ];
+          renderPhotoGrid();
+        };
+
+        modal.querySelector('#btnStep2Back').onclick = () => {
+          currentStep = 1;
+          renderStep();
+        };
+
+        modal.querySelector('#btnStep2Next').onclick = () => {
+          if (wizardData.photos.length === 0) {
+            // Auto add default photo if none uploaded
+            wizardData.photos.push("https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=800&q=80");
+          }
+          currentStep = 3;
+          renderStep();
+        };
+      }
+
+      // Bind Step 3 (Bio & Interests)
+      if (currentStep === 3) {
+        const ALL_INTERESTS = [
+          "Coffee", "Chai", "Music", "Travel", "Tech", "Fitness", "Dogs",
+          "Art", "Cooking", "Cinema", "Yoga", "Books", "Startups", "Photography"
+        ];
+        const grid = modal.querySelector('#interestsGridContainer');
+        ALL_INTERESTS.forEach((tag) => {
+          const chip = document.createElement('span');
+          const isSel = wizardData.interests.includes(tag);
+          chip.className = `interest-chip ${isSel ? 'selected' : ''}`;
+          chip.textContent = `#${tag}`;
+          chip.onclick = () => {
+            if (wizardData.interests.includes(tag)) {
+              wizardData.interests = wizardData.interests.filter((t) => t !== tag);
+              chip.classList.remove('selected');
+            } else {
+              wizardData.interests.push(tag);
+              chip.classList.add('selected');
+            }
+          };
+          grid.appendChild(chip);
+        });
+
+        modal.querySelector('#btnStep3Back').onclick = () => {
+          currentStep = 2;
+          renderStep();
+        };
+
+        modal.querySelector('#btnFinishOnboarding').onclick = async () => {
+          wizardData.bio = modal.querySelector('#wBio').value.trim() || 'Excited to vibe!';
+          wizardData.relationshipGoal = modal.querySelector('#wGoal').value;
+          wizardData.job = modal.querySelector('#wJob').value.trim();
+
+          const res = await api.completeOnboarding(wizardData);
+          if (res.ok) {
+            modal.remove();
+            this.user = res.user;
+            this.init();
+          }
+        };
+      }
+    };
+
+    renderStep();
+    document.body.appendChild(modal);
+  }
+
+  // ==========================================
+  // LOGIN MODAL
+  // ==========================================
+  showLoginModal() {
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay';
+    modal.innerHTML = `
+      <div class="bottom-sheet">
+        <div class="sheet-handle"></div>
+        <h2 style="font-size: 1.55rem; font-weight: 800; margin-bottom: 6px;">Welcome Back</h2>
+        <p style="color: var(--text-muted); font-size: 0.88rem; margin-bottom: 18px;">
+          Log in with your Hipa credentials
+        </p>
+
+        <form id="formLogin" style="display: flex; flex-direction: column; gap: 14px;">
+          <div>
+            <label style="font-size: 0.82rem; font-weight: 700; color: var(--text-muted);">Email Address</label>
+            <input type="email" id="loginEmail" required class="glass-input" value="demo@hipa.com" style="margin-top: 4px;" />
+          </div>
+
+          <div>
+            <label style="font-size: 0.82rem; font-weight: 700; color: var(--text-muted);">Password</label>
+            <input type="password" id="loginPass" required class="glass-input" value="password123" style="margin-top: 4px;" />
+          </div>
+
+          <div id="loginError" style="color: #ef4444; font-size: 0.82rem; display: none;"></div>
+
+          <button type="submit" class="btn-primary" style="padding: 14px; margin-top: 6px;">Log In</button>
+          
+          <button type="button" class="btn-secondary" id="btnSwitchToSignup">
+            Don't have an account? Sign Up
+          </button>
+          <button type="button" class="btn-secondary" id="btnCancelLogin">Cancel</button>
+        </form>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    modal.querySelector('#btnCancelLogin').onclick = () => modal.remove();
+    modal.querySelector('#btnSwitchToSignup').onclick = () => {
+      modal.remove();
+      this.showSignupModal();
+    };
+
+    const form = modal.querySelector('#formLogin');
+    form.onsubmit = async (e) => {
+      e.preventDefault();
+      const email = modal.querySelector('#loginEmail').value.trim();
+      const pass = modal.querySelector('#loginPass').value;
+      const errEl = modal.querySelector('#loginError');
+
+      const res = await api.login(email, pass);
+      if (!res.ok) {
+        errEl.textContent = res.error;
+        errEl.style.display = 'block';
+        return;
+      }
+
+      modal.remove();
+      this.user = res.user;
+      this.init();
+    };
   }
 
   // ==========================================
@@ -153,7 +698,6 @@ class HipaApp {
       return;
     }
 
-    // Render top 2 cards for depth performance
     remaining.slice(0, 2).reverse().forEach((profile, idx, arr) => {
       const isTop = idx === arr.length - 1;
       const card = document.createElement('div');
@@ -218,7 +762,6 @@ class HipaApp {
 
       card.style.transform = `translate(${deltaX}px, ${deltaY}px) rotate(${rotate}deg)`;
 
-      // Stamp visibility
       const likeStamp = card.querySelector('.stamp-like');
       const passStamp = card.querySelector('.stamp-pass');
       const superStamp = card.querySelector('.stamp-superlike');
@@ -251,7 +794,6 @@ class HipaApp {
       } else if (deltaX < -110) {
         this.executeSwipe('pass', card, profile);
       } else {
-        // Return to center
         card.style.transform = 'translate(0, 0) rotate(0deg)';
         const stamps = card.querySelectorAll('.swipe-stamp');
         stamps.forEach((s) => (s.style.opacity = 0));
@@ -506,7 +1048,6 @@ class HipaApp {
       </div>
     `;
 
-    // Bind chat events
     chatScreen.querySelector('#btnCloseChat').onclick = () => {
       chatScreen.remove();
       this.activeChatMatchId = null;
@@ -578,7 +1119,7 @@ class HipaApp {
   }
 
   // ==========================================
-  // PROFILE & SETTINGS VIEW
+  // PROFILE & SETTINGS VIEW (With Edit Profile & Logout)
   // ==========================================
   renderProfile(container) {
     const isGold = this.user.isPremium;
@@ -592,6 +1133,7 @@ class HipaApp {
           </div>
           <h2 style="font-size: 1.45rem; font-weight: 800;">${this.user.name}, ${this.user.age}</h2>
           <p style="color: var(--text-muted); font-size: 0.88rem; margin-top: 2px;">📍 ${this.user.city}</p>
+          <p style="font-size: 0.85rem; color: rgba(255,255,255,0.85); margin-top: 6px; max-width: 280px;">${this.user.bio || ''}</p>
           
           <div style="margin-top: 10px;">
             ${isGold ? '<span class="badge-gold">👑 HIPA GOLD MEMBER</span>' : '<span class="glass-pill">Free Tier</span>'}
@@ -609,6 +1151,17 @@ class HipaApp {
         </div>
 
         <div class="settings-group">
+          <div class="settings-item glass-card" id="btnEditMyProfile" style="border-color: rgba(56, 189, 248, 0.4);">
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <span style="font-size: 1.4rem;">✏️</span>
+              <div>
+                <div style="font-weight: 700; color: #38bdf8;">Edit Profile & Photos</div>
+                <div style="font-size: 0.78rem; color: var(--text-muted);">Upload new pictures, edit bio & details</div>
+              </div>
+            </div>
+            <span>➔</span>
+          </div>
+
           <a href="/downloads/hipa-dating.apk" download="hipa-dating.apk" class="settings-item glass-card" style="text-decoration: none; color: inherit; border-color: rgba(16, 185, 129, 0.4);">
             <div style="display: flex; align-items: center; gap: 12px;">
               <span style="font-size: 1.4rem;">📲</span>
@@ -653,23 +1206,142 @@ class HipaApp {
             <span>➔</span>
           </div>
 
-          <a href="/admin/" target="_blank" class="settings-item glass-card" style="text-decoration: none; color: inherit;">
+          <div class="settings-item glass-card" id="btnLogout" style="border-color: rgba(239, 68, 68, 0.4);">
             <div style="display: flex; align-items: center; gap: 12px;">
-              <span style="font-size: 1.4rem;">⚙️</span>
+              <span style="font-size: 1.4rem;">🚪</span>
               <div>
-                <div style="font-weight: 700;">Admin Moderation Panel</div>
-                <div style="font-size: 0.78rem; color: #a855f7;">Dashboard, users, queues & reports</div>
+                <div style="font-weight: 700; color: #ef4444;">Log Out</div>
+                <div style="font-size: 0.78rem; color: var(--text-muted);">Switch account or sign in later</div>
               </div>
             </div>
-            <span>➔</span>
-          </a>
+            <span style="color: #ef4444;">➔</span>
+          </div>
         </div>
       </div>
     `;
 
+    container.querySelector('#btnEditMyProfile').onclick = () => this.showEditProfileModal();
     container.querySelector('#btnOpenPremium').onclick = () => this.showPremiumModal();
     container.querySelector('#btnOpenSafety').onclick = () => this.showSafetyModal();
     container.querySelector('#btnRequestVerify').onclick = () => alert("Blue Tick verification request submitted! A moderator will review your selfie pose shortly.");
+    container.querySelector('#btnLogout').onclick = () => {
+      if (confirm("Are you sure you want to log out?")) {
+        api.logout();
+        this.init();
+      }
+    };
+  }
+
+  // Edit Profile & Photo Uploader Modal
+  showEditProfileModal() {
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay';
+    const photos = [...(this.user.photos || [])];
+
+    modal.innerHTML = `
+      <div class="bottom-sheet" style="max-height: 92vh;">
+        <div class="sheet-handle"></div>
+        <h2 style="font-size: 1.55rem; font-weight: 800; margin-bottom: 6px;">Edit Profile</h2>
+        <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 16px;">Update your photos, bio, and details</p>
+
+        <div style="display: flex; flex-direction: column; gap: 14px;">
+          <div>
+            <label style="font-size: 0.82rem; font-weight: 700;">Profile Photos (up to 6)</label>
+            <div class="photo-upload-grid" id="editPhotoGrid"></div>
+            <input type="file" id="editFileInput" accept="image/*" style="display: none;" />
+            <button type="button" class="btn-secondary" id="btnEditUploadPhoto" style="width: 100%; padding: 10px; font-size: 0.85rem;">
+              📷 Add Photo from Device
+            </button>
+          </div>
+
+          <div>
+            <label style="font-size: 0.82rem; font-weight: 700;">Display Name</label>
+            <input type="text" id="editName" class="glass-input" value="${this.user.name}" />
+          </div>
+
+          <div>
+            <label style="font-size: 0.82rem; font-weight: 700;">Bio</label>
+            <textarea id="editBio" rows="3" class="glass-input">${this.user.bio || ''}</textarea>
+          </div>
+
+          <div>
+            <label style="font-size: 0.82rem; font-weight: 700;">City</label>
+            <input type="text" id="editCity" class="glass-input" value="${this.user.city}" />
+          </div>
+
+          <div>
+            <label style="font-size: 0.82rem; font-weight: 700;">Occupation</label>
+            <input type="text" id="editJob" class="glass-input" value="${this.user.job || ''}" />
+          </div>
+
+          <button class="btn-primary" id="btnSaveProfile" style="padding: 14px; margin-top: 8px;">Save Changes ✓</button>
+          <button class="btn-secondary" id="btnCancelEdit">Cancel</button>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    const grid = modal.querySelector('#editPhotoGrid');
+    const fileInput = modal.querySelector('#editFileInput');
+
+    const renderGrid = () => {
+      grid.innerHTML = '';
+      for (let i = 0; i < 6; i++) {
+        const photoUrl = photos[i];
+        const slot = document.createElement('div');
+        slot.className = `photo-slot ${photoUrl ? 'has-image' : ''}`;
+        if (photoUrl) {
+          slot.innerHTML = `
+            <img src="${photoUrl}" />
+            ${i === 0 ? '<span class="badge-main">MAIN</span>' : ''}
+            <button class="btn-remove-photo" data-idx="${i}">✕</button>
+          `;
+        } else {
+          slot.innerHTML = `<span style="font-size: 1.3rem; color: rgba(255,255,255,0.4);">+</span>`;
+          slot.onclick = () => fileInput.click();
+        }
+        grid.appendChild(slot);
+      }
+
+      grid.querySelectorAll('.btn-remove-photo').forEach((btn) => {
+        btn.onclick = (e) => {
+          e.stopPropagation();
+          const idx = Number(btn.getAttribute('data-idx'));
+          photos.splice(idx, 1);
+          renderGrid();
+        };
+      });
+    };
+
+    renderGrid();
+
+    modal.querySelector('#btnEditUploadPhoto').onclick = () => fileInput.click();
+    fileInput.onchange = (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (re) => {
+        photos.push(re.target.result);
+        renderGrid();
+      };
+      reader.readAsDataURL(file);
+    };
+
+    modal.querySelector('#btnCancelEdit').onclick = () => modal.remove();
+
+    modal.querySelector('#btnSaveProfile').onclick = () => {
+      this.user.name = modal.querySelector('#editName').value.trim() || this.user.name;
+      this.user.bio = modal.querySelector('#editBio').value.trim();
+      this.user.city = modal.querySelector('#editCity').value.trim() || this.user.city;
+      this.user.job = modal.querySelector('#editJob').value.trim();
+      if (photos.length > 0) {
+        this.user.photos = photos;
+      }
+      api.saveUser(this.user);
+      modal.remove();
+      this.renderProfile(document.getElementById('mainViewport'));
+    };
   }
 
   showPremiumModal(title = "Upgrade to Hipa Gold") {

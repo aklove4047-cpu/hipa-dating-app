@@ -1,6 +1,9 @@
 /* =========================================================
    Hipa Dating App — Admin Panel Controller
    Specification: PRD File 06
+   Includes: Admin Authentication Guard, Role Checks, Dashboard KPIs,
+             User Ban/Suspend/Verify, Side-by-Side Selfie Queue,
+             Photo Moderation, Reports Resolution, Calls Log, UPI Approvals, Broadcast
    ========================================================= */
 
 const ADMIN_DATA = {
@@ -75,9 +78,142 @@ const ADMIN_DATA = {
 class AdminController {
   constructor() {
     this.currentView = 'dashboard';
+    this.adminSession = JSON.parse(localStorage.getItem('hipa_admin_session') || 'null');
   }
 
   init() {
+    if (!this.adminSession) {
+      this.renderLoginScreen();
+    } else {
+      this.renderApp();
+    }
+  }
+
+  renderLoginScreen() {
+    const layout = document.querySelector('.admin-layout');
+    if (!layout) return;
+
+    layout.innerHTML = `
+      <div style="flex: 1; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px;">
+        <div class="glass-panel" style="width: 100%; max-width: 440px; padding: 36px 30px; text-align: center; border-color: rgba(255, 77, 126, 0.4);">
+          <div style="width: 60px; height: 60px; background: var(--accent-pink); border-radius: 18px; margin: 0 auto 16px auto; display: flex; align-items: center; justify-content: center; font-size: 2rem; box-shadow: 0 8px 24px var(--accent-pink-glow);">
+            🛡️
+          </div>
+          <h1 style="font-size: 1.8rem; font-weight: 800; margin-bottom: 6px;">Hipa Admin Portal</h1>
+          <p style="color: var(--text-muted); font-size: 0.88rem; margin-bottom: 24px;">
+            Authorized Moderation & Staff Login Only
+          </p>
+
+          <div class="glass-card" style="padding: 12px; margin-bottom: 20px; text-align: left; font-size: 0.78rem; border-color: rgba(56, 189, 248, 0.4); color: #bae6fd;">
+            🔒 Protected under IT Rules 2021 & DPDP Act 2023. All admin audit events are cryptographically logged.
+          </div>
+
+          <form id="formAdminLogin" style="display: flex; flex-direction: column; gap: 14px; text-align: left;">
+            <div>
+              <label style="font-size: 0.82rem; font-weight: 700; color: var(--text-muted);">Admin Email</label>
+              <input type="text" id="adminEmail" required class="glass-input" value="admin@hipa.com" style="margin-top: 4px;" />
+            </div>
+
+            <div>
+              <label style="font-size: 0.82rem; font-weight: 700; color: var(--text-muted);">Master Password</label>
+              <input type="password" id="adminPassword" required class="glass-input" value="admin123" style="margin-top: 4px;" />
+            </div>
+
+            <div id="adminLoginError" style="color: #ef4444; font-size: 0.82rem; display: none;"></div>
+
+            <button type="submit" class="btn-primary" style="padding: 14px; margin-top: 8px;">
+              Access Control Center ➔
+            </button>
+          </form>
+
+          <div style="margin-top: 20px; font-size: 0.82rem; color: var(--text-faint);">
+            Demo Credentials: <code>admin@hipa.com</code> / <code>admin123</code>
+          </div>
+        </div>
+      </div>
+    `;
+
+    const form = layout.querySelector('#formAdminLogin');
+    form.onsubmit = (e) => {
+      e.preventDefault();
+      const email = layout.querySelector('#adminEmail').value.trim();
+      const pass = layout.querySelector('#adminPassword').value;
+      const errEl = layout.querySelector('#adminLoginError');
+
+      if ((email === 'admin@hipa.com' || email === 'admin') && pass === 'admin123') {
+        this.adminSession = { email, role: 'Super Admin', token: 'adm_' + Date.now() };
+        localStorage.setItem('hipa_admin_session', JSON.stringify(this.adminSession));
+        this.renderApp();
+      } else {
+        errEl.textContent = 'Invalid admin credentials. Use admin@hipa.com / admin123';
+        errEl.style.display = 'block';
+      }
+    };
+  }
+
+  renderApp() {
+    const layout = document.querySelector('.admin-layout');
+    if (!layout) return;
+
+    layout.innerHTML = `
+      <!-- Sidebar -->
+      <aside class="admin-sidebar">
+        <div class="admin-brand">
+          <div class="btn-icon-circle" style="width: 38px; height: 38px; background: var(--accent-pink);">♥</div>
+          <div>
+            <h2 style="font-size: 1.2rem; font-weight: 800;">Hipa Admin</h2>
+            <span style="font-size: 0.72rem; color: #2ee6a6;">Super Admin Role</span>
+          </div>
+        </div>
+
+        <nav class="admin-nav">
+          <a class="admin-nav-item active" data-view="dashboard">
+            <span>📊</span> Dashboard
+          </a>
+          <a class="admin-nav-item" data-view="users">
+            <span>👥</span> Users
+            <span class="admin-nav-badge">1,248</span>
+          </a>
+          <a class="admin-nav-item" data-view="verifications">
+            <span>🤳</span> Verifications
+            <span class="admin-nav-badge" style="background: #38bdf8;">3</span>
+          </a>
+          <a class="admin-nav-item" data-view="reports">
+            <span>🚨</span> Reports
+            <span class="admin-nav-badge" style="background: #ef4444;">2</span>
+          </a>
+          <a class="admin-nav-item" data-view="calls">
+            <span>📞</span> Calls Log
+          </a>
+          <a class="admin-nav-item" data-view="payments">
+            <span>💳</span> UPI Payments
+            <span class="admin-nav-badge" style="background: #10b981;">1</span>
+          </a>
+          <a class="admin-nav-item" data-view="broadcast">
+            <span>📢</span> Broadcast Alert
+          </a>
+          <a class="admin-nav-item" data-view="settings">
+            <span>⚙️</span> App Settings
+          </a>
+        </nav>
+
+        <div style="margin-top: auto; padding-top: 14px; border-top: 1px solid rgba(255,255,255,0.1); display: flex; flex-direction: column; gap: 8px;">
+          <button id="btnAdminLogout" class="btn-secondary" style="width: 100%; font-size: 0.85rem; padding: 10px; color: #ef4444; border-color: rgba(239, 68, 68, 0.4);">
+            🚪 Log Out Admin
+          </button>
+        </div>
+      </aside>
+
+      <!-- Main Content Panel -->
+      <main class="admin-main" id="adminMainContent"></main>
+    `;
+
+    layout.querySelector('#btnAdminLogout').onclick = () => {
+      localStorage.removeItem('hipa_admin_session');
+      this.adminSession = null;
+      this.renderLoginScreen();
+    };
+
     this.bindSidebar();
     this.renderView('dashboard');
   }
