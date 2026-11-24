@@ -92,6 +92,39 @@
   transition: var(--transition-smooth);
 }
 
+.apk-download-btn {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  box-shadow: 0 2px 10px rgba(16, 185, 129, 0.4);
+  padding: 5px 11px;
+  border-radius: 20px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: var(--transition-bounce);
+}
+
+.apk-download-btn:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.6);
+}
+
+.apk-promo-banner {
+  padding: 12px 16px;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.25), rgba(5, 150, 105, 0.15));
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  border-radius: var(--radius-md);
+}
+
 .lang-btn:hover {
   background: rgba(255, 255, 255, 0.28);
 }

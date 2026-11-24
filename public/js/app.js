@@ -100,6 +100,16 @@ class HipaApp {
   renderDiscover(container) {
     container.innerHTML = `
       <div class="discover-view">
+        <div class="apk-promo-banner glass-card">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="font-size: 1.4rem;">📱</span>
+            <div>
+              <strong style="font-size: 0.88rem; color: #2ee6a6;">Hipa for Android</strong>
+              <div style="font-size: 0.74rem; color: var(--text-muted);">Get native fullscreen video calls</div>
+            </div>
+          </div>
+          <a href="/downloads/hipa-dating.apk" download="hipa-dating.apk" class="apk-download-btn">⬇ Download APK</a>
+        </div>
         <div class="card-deck" id="cardDeckContainer"></div>
         <div class="swipe-actions">
           <button class="btn-icon-circle btn-action-sm btn-undo" id="btnUndo" title="Undo Swipe">↺</button>
@@ -599,6 +609,17 @@ class HipaApp {
         </div>
 
         <div class="settings-group">
+          <a href="/downloads/hipa-dating.apk" download="hipa-dating.apk" class="settings-item glass-card" style="text-decoration: none; color: inherit; border-color: rgba(16, 185, 129, 0.4);">
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <span style="font-size: 1.4rem;">📲</span>
+              <div>
+                <div style="font-weight: 700; color: #2ee6a6;">Download Android App (APK)</div>
+                <div style="font-size: 0.78rem; color: var(--text-muted);">Direct APK install for Android phones</div>
+              </div>
+            </div>
+            <span style="font-size: 1.2rem; color: #2ee6a6;">⬇</span>
+          </a>
+
           <div class="settings-item glass-card" id="btnOpenPremium">
             <div style="display: flex; align-items: center; gap: 12px;">
               <span style="font-size: 1.4rem;">👑</span>
