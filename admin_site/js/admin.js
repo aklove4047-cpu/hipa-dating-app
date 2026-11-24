@@ -299,6 +299,16 @@ class AdminController {
             <span>💳</span> UPI Payments
             <span class="admin-nav-badge" style="background: #10b981;">1</span>
           </a>
+          <a class="admin-nav-item" data-view="creators">
+            <span>🎭</span> Creators & Call Rates
+            <span class="admin-nav-badge" style="background: #ec4899;">10</span>
+          </a>
+          <a class="admin-nav-item" data-view="coins">
+            <span>🪙</span> Coin Packs & Offers
+          </a>
+          <a class="admin-nav-item" data-view="warnings">
+            <span>⚠️</span> User Warnings
+          </a>
           <a class="admin-nav-item" data-view="gateways">
             <span>⚡</span> Payment & APIs Hub
             <span class="admin-nav-badge" style="background: #8b5cf6;">PRO</span>
@@ -360,6 +370,12 @@ class AdminController {
       this.renderCalls(container);
     } else if (view === 'payments') {
       this.renderPayments(container);
+    } else if (view === 'creators') {
+      this.renderCreators(container);
+    } else if (view === 'coins') {
+      this.renderCoinManager(container);
+    } else if (view === 'warnings') {
+      this.renderWarningManager(container);
     } else if (view === 'gateways') {
       this.renderGateways(container);
     } else if (view === 'broadcast') {
@@ -683,6 +699,309 @@ class AdminController {
         <button class="btn-primary" onclick="alert('Broadcast successfully dispatched to 1,248 active users!')">Send Broadcast 🚀</button>
       </div>
     `;
+  }
+
+  renderCreators(container) {
+    const creators = JSON.parse(localStorage.getItem('hima_creators_override') || 'null') || [
+      { id: 1, name: "jannatkhan", language: "Hindi", voiceRate: 10, videoRate: 0, status: "voice_only" },
+      { id: 2, name: "khushi", language: "Bengali", voiceRate: 10, videoRate: 0, status: "voice_only" },
+      { id: 3, name: "Simran", language: "Punjabi", voiceRate: 10, videoRate: 60, status: "online" },
+      { id: 4, name: "Heena", language: "Marathi", voiceRate: 10, videoRate: 60, status: "online" },
+      { id: 5, name: "Susmita", language: "Odia", voiceRate: 10, videoRate: 60, status: "online" },
+      { id: 6, name: "Damini", language: "Telugu", voiceRate: 10, videoRate: 60, status: "online" },
+      { id: 7, name: "Pallavi", language: "Tamil", voiceRate: 0, videoRate: 60, status: "video_only" },
+      { id: 8, name: "mahiqueen", language: "Marathi", voiceRate: 10, videoRate: 0, status: "voice_only" },
+      { id: 9, name: "Priya", language: "Hindi", voiceRate: 10, videoRate: 60, status: "online" },
+      { id: 10, name: "xvsea", language: "Bengali", voiceRate: 10, videoRate: 60, status: "online" }
+    ];
+
+    container.innerHTML = `
+      <div class="admin-topbar">
+        <div>
+          <h1 style="font-size: 1.8rem; font-weight: 800;">🎭 Creators Directory & Calling Rates</h1>
+          <p style="color: var(--text-muted); font-size: 0.9rem;">
+            Control per-minute calling rates (coins/min), online status, and creator availability.
+          </p>
+        </div>
+        <button class="btn-primary" id="btnSaveCreatorsRates">💾 Save Changes</button>
+      </div>
+
+      <div class="glass-panel" style="padding: 20px; overflow-x: auto;">
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>Creator</th>
+              <th>Language</th>
+              <th>Voice Rate (Coins/min)</th>
+              <th>Video Rate (Coins/min)</th>
+              <th>Calling Status</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${creators.map((c, idx) => `
+              <tr data-idx="${idx}">
+                <td>
+                  <strong>${c.name}</strong>
+                </td>
+                <td>
+                  <span class="glass-pill">${c.language}</span>
+                </td>
+                <td>
+                  <input type="number" class="glass-input rate-voice" value="${c.voiceRate}" style="width: 100px; padding: 6px;" />
+                </td>
+                <td>
+                  <input type="number" class="glass-input rate-video" value="${c.videoRate}" style="width: 100px; padding: 6px;" />
+                </td>
+                <td>
+                  <select class="glass-input creator-status" style="width: 130px; padding: 6px;">
+                    <option value="online" ${c.status === 'online' ? 'selected' : ''}>🟢 Full Online</option>
+                    <option value="voice_only" ${c.status === 'voice_only' ? 'selected' : ''}>📞 Voice Only</option>
+                    <option value="video_only" ${c.status === 'video_only' ? 'selected' : ''}>📹 Video Only</option>
+                    <option value="offline" ${c.status === 'offline' ? 'selected' : ''}>⚪ Offline</option>
+                  </select>
+                </td>
+                <td>
+                  <button class="btn-secondary" style="color: #ef4444; padding: 4px 10px; font-size: 0.75rem;">Block</button>
+                </td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    `;
+
+    container.querySelector('#btnSaveCreatorsRates').onclick = () => {
+      const rows = container.querySelectorAll('tbody tr');
+      rows.forEach((row, idx) => {
+        creators[idx].voiceRate = Number(row.querySelector('.rate-voice').value) || 0;
+        creators[idx].videoRate = Number(row.querySelector('.rate-video').value) || 0;
+        creators[idx].status = row.querySelector('.creator-status').value;
+      });
+      localStorage.setItem('hima_creators_override', JSON.stringify(creators));
+      alert('🎉 Creator call rates and online availability updated successfully!');
+    };
+  }
+
+  renderCoinManager(container) {
+    const offer = JSON.parse(localStorage.getItem('hima_welcome_offer_config') || 'null') || {
+      enabled: true,
+      coins: 60,
+      price: 14,
+      originalPrice: 40,
+      timerMinutes: 5
+    };
+
+    const packs = [
+      { coins: 40, price: 25, discount: "Save 30%" },
+      { coins: 90, price: 49, discount: "" },
+      { coins: 200, price: 64, discount: "Save 30%" },
+      { coins: 440, price: 129, discount: "Save 20%" },
+      { coins: 1200, price: 299, discount: "Save 30%" },
+      { coins: 2500, price: 699, discount: "Save 30%" },
+      { coins: 5500, price: 1199, discount: "Save 33%" },
+      { coins: 15000, price: 2999, discount: "Save 40%" },
+      { coins: 33000, price: 6999, discount: "Save 45%" }
+    ];
+
+    container.innerHTML = `
+      <div class="admin-topbar">
+        <div>
+          <h1 style="font-size: 1.8rem; font-weight: 800;">🪙 Coin Packs & Welcome Offer Manager</h1>
+          <p style="color: var(--text-muted); font-size: 0.9rem;">
+            Control the ₹14 promotional welcome offer popup, pricing tiers, and coin values.
+          </p>
+        </div>
+      </div>
+
+      <!-- Welcome Offer Control Card -->
+      <div class="glass-panel" style="padding: 24px; margin-bottom: 24px; border: 1.5px solid #ff007f;">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;">
+          <div>
+            <h2 style="font-size: 1.25rem; font-weight: 800; color: #ff007f;">🎁 Promotional Welcome Offer Popup</h2>
+            <p style="font-size: 0.82rem; color: var(--text-muted);">Displays to all new users when entering the app or tapping Claim</p>
+          </div>
+          <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-weight: 700;">
+            <input type="checkbox" id="chkOfferEnabled" ${offer.enabled ? 'checked' : ''} style="width: 20px; height: 20px; accent-color: #ff007f;" />
+            Popup Active
+          </label>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 18px;">
+          <div>
+            <label style="font-size: 0.8rem; font-weight: 700; color: var(--text-muted);">Coins Offered</label>
+            <input type="number" class="glass-input" id="cfgOfferCoins" value="${offer.coins}" />
+          </div>
+          <div>
+            <label style="font-size: 0.8rem; font-weight: 700; color: var(--text-muted);">Offer Price (₹)</label>
+            <input type="number" class="glass-input" id="cfgOfferPrice" value="${offer.price}" />
+          </div>
+          <div>
+            <label style="font-size: 0.8rem; font-weight: 700; color: var(--text-muted);">Original Cut Price (₹)</label>
+            <input type="number" class="glass-input" id="cfgOfferCutPrice" value="${offer.originalPrice}" />
+          </div>
+          <div>
+            <label style="font-size: 0.8rem; font-weight: 700; color: var(--text-muted);">Countdown Timer (Mins)</label>
+            <input type="number" class="glass-input" id="cfgOfferTimer" value="${offer.timerMinutes}" />
+          </div>
+        </div>
+
+        <button class="btn-primary" id="btnSaveOfferConfig">Save Welcome Offer</button>
+      </div>
+
+      <!-- Wallet Packages Tiers -->
+      <div class="glass-panel" style="padding: 24px;">
+        <h2 style="font-size: 1.2rem; font-weight: 800; margin-bottom: 14px;">Standard Wallet Coin Packs (3x3 Grid)</h2>
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>Tier</th>
+              <th>Coins</th>
+              <th>Selling Price (₹)</th>
+              <th>Discount Tag</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${packs.map((p, idx) => `
+              <tr>
+                <td>Tier ${idx + 1}</td>
+                <td><strong>🪙 ${p.coins}</strong></td>
+                <td>₹${p.price}</td>
+                <td><span class="glass-pill" style="color: #ef4444;">${p.discount || 'Standard'}</span></td>
+                <td><span class="glass-pill" style="color: #10b981;">Active</span></td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    `;
+
+    container.querySelector('#btnSaveOfferConfig').onclick = () => {
+      const updated = {
+        enabled: container.querySelector('#chkOfferEnabled').checked,
+        coins: Number(container.querySelector('#cfgOfferCoins').value) || 60,
+        price: Number(container.querySelector('#cfgOfferPrice').value) || 14,
+        originalPrice: Number(container.querySelector('#cfgOfferCutPrice').value) || 40,
+        timerMinutes: Number(container.querySelector('#cfgOfferTimer').value) || 5
+      };
+      localStorage.setItem('hima_welcome_offer_config', JSON.stringify(updated));
+      alert('🎉 Welcome offer configuration saved and live on user app!');
+    };
+  }
+
+  renderWarningManager(container) {
+    const warnings = JSON.parse(localStorage.getItem('hima_user_warnings') || '[]');
+
+    container.innerHTML = `
+      <div class="admin-topbar">
+        <div>
+          <h1 style="font-size: 1.8rem; font-weight: 800;">⚠️ User Warnings & Sanctions Dispatcher</h1>
+          <p style="color: var(--text-muted); font-size: 0.9rem;">
+            Issue official warnings for policy breaches. Warnings appear directly in the user app profile under "My Warnings".
+          </p>
+        </div>
+      </div>
+
+      <!-- Warning Issue Form -->
+      <div class="glass-panel" style="padding: 24px; max-width: 680px; margin-bottom: 24px;">
+        <h2 style="font-size: 1.2rem; font-weight: 800; margin-bottom: 16px;">Issue New Warning to User</h2>
+
+        <div style="display: flex; flex-direction: column; gap: 14px;">
+          <div>
+            <label style="font-size: 0.82rem; font-weight: 700; color: var(--text-muted);">Target User (ID or Phone)</label>
+            <input type="text" class="glass-input" id="warnTargetUser" value="JgckA625" placeholder="e.g. JgckA625 or +919511088531" />
+          </div>
+
+          <div>
+            <label style="font-size: 0.82rem; font-weight: 700; color: var(--text-muted);">Violation Reason</label>
+            <select class="glass-input" id="warnReason">
+              <option value="Inappropriate Call Conduct">Inappropriate Call Conduct (Nudity/Language)</option>
+              <option value="Spam & Commercial Solicitation">Spam & Commercial Solicitation</option>
+              <option value="Harassment & Disrespect">Harassment & Disrespectful Behavior</option>
+              <option value="Terms & Policy Breach">Terms & Community Policy Breach</option>
+            </select>
+          </div>
+
+          <div>
+            <label style="font-size: 0.82rem; font-weight: 700; color: var(--text-muted);">Warning Message (Shown to User)</label>
+            <textarea class="glass-input" id="warnMessage" rows="3">Your account has been flagged for violating community call guidelines. Further infractions will result in a permanent hardware ban.</textarea>
+          </div>
+
+          <button class="btn-primary" id="btnDispatchWarning" style="background: #ef4444; border-color: #ef4444; align-self: flex-start;">
+            ⚠️ Issue Official Warning
+          </button>
+        </div>
+      </div>
+
+      <!-- Active Warnings Table -->
+      <div class="glass-panel" style="padding: 24px;">
+        <h2 style="font-size: 1.2rem; font-weight: 800; margin-bottom: 14px;">Active Warnings Log (${warnings.length})</h2>
+        ${warnings.length > 0 ? `
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Target User</th>
+                <th>Reason</th>
+                <th>Message</th>
+                <th>Date</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${warnings.map((w, idx) => `
+                <tr>
+                  <td><strong>${w.user}</strong></td>
+                  <td><span class="glass-pill" style="color: #ef4444;">${w.reason}</span></td>
+                  <td style="font-size: 0.8rem;">${w.message}</td>
+                  <td>${w.date}</td>
+                  <td>
+                    <button class="btn-secondary btn-revoke-warn" data-idx="${idx}" style="color: #10b981; padding: 4px 10px; font-size: 0.75rem;">
+                      Revoke
+                    </button>
+                  </td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        ` : `
+          <p style="color: var(--text-muted); font-size: 0.9rem;">No active warnings currently issued.</p>
+        `}
+      </div>
+    `;
+
+    container.querySelector('#btnDispatchWarning').onclick = () => {
+      const user = container.querySelector('#warnTargetUser').value.trim();
+      const reason = container.querySelector('#warnReason').value;
+      const message = container.querySelector('#warnMessage').value.trim();
+
+      if (!user || !message) {
+        alert('Please specify user and message.');
+        return;
+      }
+
+      warnings.unshift({
+        id: 'W-' + Date.now().toString().slice(-5),
+        user,
+        reason,
+        message,
+        date: new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+      });
+
+      localStorage.setItem('hima_user_warnings', JSON.stringify(warnings));
+      alert(`⚠️ Warning successfully issued to user ${user}! It is now visible in their app profile under "My Warnings".`);
+      this.renderWarningManager(container);
+    };
+
+    container.querySelectorAll('.btn-revoke-warn').forEach(btn => {
+      btn.onclick = () => {
+        const idx = Number(btn.getAttribute('data-idx'));
+        warnings.splice(idx, 1);
+        localStorage.setItem('hima_user_warnings', JSON.stringify(warnings));
+        alert('Warning revoked.');
+        this.renderWarningManager(container);
+      };
+    });
   }
 
   renderGateways(container) {

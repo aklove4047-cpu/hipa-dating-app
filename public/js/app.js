@@ -1,1489 +1,1309 @@
 /* =========================================================
-   Hipa Dating App — Main Application Logic
-   Includes: Auth Gate (Register, 18+ Verification, OTP, Multi-step Profile Wizard,
-             Real Photo Upload, Login, Logout, Discover, Chat, WebRTC Calling)
+   Hima Dating App — Main Application Controller
+   Exact Replica of Hima Mobile UI & Feature Set
+   Includes: Mobile OTP Login, 9-Language Selector, Gender/Avatar Wizard,
+             Creators Directory, Live Calling (Voice/Video with Coin Meter),
+             Wallet Recharge (40 to 33,000 Coins), ₹14 Welcome Offer Popup,
+             Recent Calls Log, Friends Deck, User Profile & Settings.
    ========================================================= */
 
-import { api } from './api.js';
-import { i18n } from './i18n.js';
-import { callManager } from './call-manager.js';
+import { himaApi, HIMA_CREATORS, HIMA_COIN_PACKS, HIMA_LANGUAGES, HIMA_AVATARS } from './api.js';
 
-class HipaApp {
+class HimaApp {
   constructor() {
-    this.currentTab = 'discover';
-    this.profiles = [];
-    this.currentCardIndex = 0;
-    this.activeChatMatchId = null;
-    this.user = api.getUser();
-    this.dragState = {
-      isDragging: false,
-      startX: 0,
-      startY: 0,
-      currentX: 0,
-      currentY: 0
-    };
+    this.currentTab = 'home';
+    this.selectedLanguage = 'Hindi';
+    this.selectedGender = 'male';
+    this.selectedAvatar = HIMA_AVATARS[0];
+    this.selectedCoinPack = HIMA_COIN_PACKS[0];
+    this.activeCategory = 'All';
+    this.user = himaApi.getUser();
+    this.callTimer = null;
+    this.offerTimer = null;
+    this.offerSeconds = 297; // 04:57
   }
 
-  async init() {
-    await i18n.init();
-    this.setupTopBar();
-    this.setupNavigation();
-
-    // Check Login State
-    if (!api.isLoggedIn()) {
-      this.hideAppChrome();
-      this.renderAuthLanding();
+  init() {
+    if (!himaApi.isLoggedIn()) {
+      this.renderOnboardingStep1();
     } else {
-      this.showAppChrome();
-      this.user = api.getUser();
-      this.profiles = api.getProfiles();
-      this.renderCurrentTab();
-    }
-
-    // Listen for incoming simulated messages
-    window.addEventListener('hipa_new_message', (e) => {
-      this.handleIncomingMessage(e.detail);
-    });
-
-    // Register Service Worker
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js').catch((err) => {
-        console.log('SW registration note:', err);
-      });
-    }
-  }
-
-  showAppChrome() {
-    const nav = document.querySelector('.bottom-nav');
-    if (nav) nav.style.display = 'flex';
-    const pill = document.getElementById('userSwipesCount');
-    if (pill) pill.style.display = 'inline-flex';
-  }
-
-  hideAppChrome() {
-    const nav = document.querySelector('.bottom-nav');
-    if (nav) nav.style.display = 'none';
-    const pill = document.getElementById('userSwipesCount');
-    if (pill) pill.style.display = 'none';
-  }
-
-  setupTopBar() {
-    const langBtn = document.getElementById('btnLangToggle');
-    if (langBtn) {
-      langBtn.textContent = i18n.currentLang === 'en' ? 'हिन्दी' : 'English';
-      langBtn.onclick = () => {
-        i18n.toggle();
-        langBtn.textContent = i18n.currentLang === 'en' ? 'हिन्दी' : 'English';
-      };
-    }
-
-    const coinsPill = document.getElementById('userSwipesCount');
-    if (coinsPill && this.user) {
-      coinsPill.textContent = this.user.isPremium ? '∞ Swipes' : `${this.user.swipesLeft} Swipes`;
-    }
-  }
-
-  setupNavigation() {
-    const navItems = document.querySelectorAll('.bottom-nav .nav-item');
-    navItems.forEach((item) => {
-      item.addEventListener('click', (e) => {
-        e.preventDefault();
-        const tab = item.getAttribute('data-tab');
-        if (tab) {
-          this.switchTab(tab);
-        }
-      });
-    });
-  }
-
-  switchTab(tab) {
-    this.currentTab = tab;
-    document.querySelectorAll('.bottom-nav .nav-item').forEach((el) => {
-      el.classList.toggle('active', el.getAttribute('data-tab') === tab);
-    });
-    this.renderCurrentTab();
-  }
-
-  renderCurrentTab() {
-    const viewport = document.getElementById('mainViewport');
-    if (!viewport) return;
-
-    if (!api.isLoggedIn()) {
-      this.renderAuthLanding();
-      return;
-    }
-
-    if (this.currentTab === 'discover') {
-      this.renderDiscover(viewport);
-    } else if (this.currentTab === 'likes') {
-      this.renderLikes(viewport);
-    } else if (this.currentTab === 'chats') {
-      this.renderChats(viewport);
-    } else if (this.currentTab === 'profile') {
-      this.renderProfile(viewport);
+      this.renderMainApp();
     }
   }
 
   // ==========================================
-  // AUTH LANDING & WELCOME SCREEN
+  // ONBOARDING SCREENS (Exact UI as Screenshots)
   // ==========================================
-  renderAuthLanding() {
-    const viewport = document.getElementById('mainViewport');
-    if (!viewport) return;
 
-    viewport.innerHTML = `
-      <div class="auth-landing">
-        <div class="auth-brand-hero">
-          <div class="auth-hero-logo">♥</div>
-          <h1 class="auth-hero-title">Hipa</h1>
-          <p class="auth-hero-tagline">
-            Connect, Match & Vibe Nearby.<br/>
-            Real people, instant matching, and audio/video calls.
+  // Step 1: Get Started / Mobile Number
+  renderOnboardingStep1() {
+    const root = document.getElementById('mainViewport');
+    document.getElementById('himaTopBar').style.display = 'none';
+    document.getElementById('himaBottomNav').style.display = 'none';
+    document.getElementById('btnFloatingRandom').style.display = 'none';
+
+    root.innerHTML = `
+      <div class="onboarding-container" style="justify-content: space-between;">
+        <div class="onboarding-header-decor">
+          <div class="onboarding-logo">💬</div>
+          <h1 style="font-size: 1.8rem; font-weight: 900; color: #111827;">Hima</h1>
+          <p style="font-size: 0.85rem; color: var(--text-muted); font-weight: 600;">Where Feelings Connect</p>
+
+          <div class="features-row">
+            <div class="feat-item">
+              <div class="feat-icon-sq" style="background: #ff007f;">💬</div>
+              <span>Chat</span>
+            </div>
+            <div class="feat-item">
+              <div class="feat-icon-sq" style="background: #3b82f6;">📹</div>
+              <span>Video</span>
+            </div>
+            <div class="feat-item">
+              <div class="feat-icon-sq" style="background: #10b981;">📞</div>
+              <span>Voice</span>
+            </div>
+            <div class="feat-item">
+              <div class="feat-icon-sq" style="background: #8b5cf6;">💜</div>
+              <span>Connect</span>
+            </div>
+          </div>
+        </div>
+
+        <div style="background: #ffffff; border-radius: 24px 24px 0 0; margin-top: auto; padding-top: 10px;">
+          <h2 style="font-size: 1.5rem; font-weight: 800; color: #111827; margin-bottom: 4px;">Get Started</h2>
+          <label style="font-size: 0.82rem; font-weight: 700; color: #4b5563;">Mobile number</label>
+
+          <div class="phone-input-wrap">
+            <div class="country-flag">
+              <span>🇮🇳</span> +91
+            </div>
+            <input type="tel" id="inputPhone" class="phone-text-input" placeholder="Enter mobile number" maxlength="10" value="9511088531" />
+          </div>
+          <p style="font-size: 0.75rem; color: var(--text-faint); margin-top: -10px; margin-bottom: 14px;">
+            You will receive an OTP on this number.
           </p>
-        </div>
 
-        <div class="glass-card" style="padding: 18px 20px; margin: 20px 0; border-color: rgba(255, 77, 126, 0.35);">
-          <div style="font-size: 0.84rem; color: #ffd166; font-weight: 700; margin-bottom: 4px;">🔞 18+ Safe Dating Community</div>
-          <div style="font-size: 0.76rem; color: var(--text-muted); line-height: 1.4;">
-            Verified adult profiles only. Photo verification, report moderation, and zero fake accounts.
+          <!-- Referral Code Toggle -->
+          <label class="checkbox-row">
+            <input type="checkbox" id="chkReferral" checked />
+            <span style="font-weight: 700; color: #1f2937;">Have a referral code?</span>
+          </label>
+          <div id="referralCodeBox" style="margin-bottom: 14px; display: flex; gap: 8px;">
+            <input type="text" id="inputRefCode" class="glass-input" value="HIMA2026" placeholder="Enter referral code" style="background: #f9fafb; border-color: #e5e7eb; color: #111827; font-weight: 700;" />
+            <button class="btn-secondary" id="btnApplyRef" style="padding: 0 18px; font-weight: 800; background: #4b5563; color: #ffffff;">Apply</button>
           </div>
-        </div>
+          <div id="refSuccessMsg" style="font-size: 0.75rem; color: #10b981; font-weight: 700; margin-top: -10px; margin-bottom: 14px;">
+            ✓ Referral code applied! +20 bonus coins on signup.
+          </div>
 
-        <div class="auth-actions-group">
-          <button class="btn-primary" id="btnOpenSignup" style="padding: 15px; font-size: 1.05rem;">
-            Create New Account 🚀
+          <!-- Age & Policy Checkboxes -->
+          <label class="checkbox-row">
+            <input type="checkbox" id="chkAge" checked />
+            <span style="font-weight: 600;">I am 18 years or older</span>
+          </label>
+          <label class="checkbox-row">
+            <input type="checkbox" id="chkTerms" checked />
+            <span>I accept <strong style="color: var(--primary-pink);">terms & conditions</strong>, and <strong style="color: var(--primary-pink);">community guidelines & moderation policy</strong> of Hima.</span>
+          </label>
+
+          <button class="btn-pink-block" id="btnSendOtp" style="margin-top: 10px;">
+            Send OTP
           </button>
-          <button class="btn-secondary" id="btnOpenLogin" style="padding: 14px; font-size: 1rem;">
-            Log In
-          </button>
-          <button class="btn-gold" id="btnQuickDemoLogin" style="padding: 12px; font-size: 0.88rem; margin-top: 6px;">
-            ⚡ Quick Demo Login (Aman, 25)
-          </button>
-          
-          <div style="margin-top: 14px;">
-            <a href="/downloads/hipa-dating.apk" download="hipa-dating.apk" class="apk-download-btn" style="padding: 8px 16px;">
-              📲 Download Android APK (3.75 MB)
-            </a>
-          </div>
         </div>
       </div>
     `;
 
-    viewport.querySelector('#btnOpenSignup').onclick = () => this.showSignupModal();
-    viewport.querySelector('#btnOpenLogin').onclick = () => this.showLoginModal();
-    viewport.querySelector('#btnQuickDemoLogin').onclick = async () => {
-      const res = await api.login('demo@hipa.com', 'password123');
+    root.querySelector('#btnApplyRef').onclick = () => {
+      alert('🎉 Referral code applied! You will get 20 free coins.');
+    };
+
+    root.querySelector('#btnSendOtp').onclick = async () => {
+      const phone = root.querySelector('#inputPhone').value.trim();
+      const ageChk = root.querySelector('#chkAge').checked;
+      const termsChk = root.querySelector('#chkTerms').checked;
+
+      if (!ageChk) {
+        alert('You must be 18 years or older to use Hima.');
+        return;
+      }
+      if (!termsChk) {
+        alert('Please accept terms and community guidelines.');
+        return;
+      }
+
+      const res = await himaApi.sendPhoneOtp(phone);
       if (res.ok) {
-        this.user = res.user;
-        this.init();
+        this.renderOnboardingStep2(phone);
+      } else {
+        alert(res.error);
       }
     };
   }
 
-  // ==========================================
-  // SIGNUP STEP 1: Email, Password, 18+ DOB
-  // ==========================================
-  showSignupModal() {
-    const modal = document.createElement('div');
-    modal.className = 'modal-overlay';
-    modal.innerHTML = `
-      <div class="bottom-sheet" style="max-height: 90vh;">
-        <div class="sheet-handle"></div>
-        <h2 style="font-size: 1.55rem; font-weight: 800; margin-bottom: 6px;">Create Your Account</h2>
-        <p style="color: var(--text-muted); font-size: 0.88rem; margin-bottom: 20px;">
-          Step 1 of 3: Account Credentials & Age Verification
-        </p>
+  // Step 2: Verify OTP
+  renderOnboardingStep2(phone) {
+    const root = document.getElementById('mainViewport');
 
-        <form id="formSignup" style="display: flex; flex-direction: column; gap: 14px;">
-          <div>
-            <label style="font-size: 0.82rem; font-weight: 700; color: var(--text-muted);">Email Address</label>
-            <input type="email" id="signupEmail" required class="glass-input" placeholder="you@example.com" style="margin-top: 4px;" />
+    root.innerHTML = `
+      <div class="onboarding-container" style="justify-content: space-between;">
+        <div style="display: flex; align-items: center; justify-content: space-between;">
+          <button class="btn-secondary" id="btnBackToPhone" style="width: 40px; height: 40px; border-radius: 50%; padding: 0;">←</button>
+        </div>
+
+        <div class="onboarding-header-decor">
+          <div class="onboarding-logo">💬</div>
+          <h1 style="font-size: 1.8rem; font-weight: 900; color: #111827;">Hima</h1>
+          <p style="font-size: 0.85rem; color: var(--text-muted); font-weight: 600;">Where Feelings Connect</p>
+        </div>
+
+        <div style="background: #ffffff; border-radius: 24px 24px 0 0; padding-top: 10px;">
+          <h2 style="font-size: 1.6rem; font-weight: 800; color: #111827; margin-bottom: 4px;">Verify OTP</h2>
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px;">
+            <span style="font-size: 0.88rem; color: var(--text-muted);">
+              OTP sent to <strong style="color: #111827;">+91${phone}</strong>
+            </span>
+            <button id="btnChangeNumber" style="background: none; border: none; color: var(--primary-pink); font-weight: 800; cursor: pointer;">Change</button>
           </div>
 
-          <div>
-            <label style="font-size: 0.82rem; font-weight: 700; color: var(--text-muted);">Password (min 8 characters)</label>
-            <input type="password" id="signupPass" required minlength="8" class="glass-input" placeholder="••••••••" style="margin-top: 4px;" />
+          <label style="display: block; font-size: 0.82rem; font-weight: 700; color: #4b5563; text-align: center; margin-bottom: 12px;">
+            Enter 6-digit OTP
+          </label>
+
+          <!-- 6 OTP Boxes -->
+          <div style="display: flex; justify-content: center; gap: 8px; margin-bottom: 24px;">
+            ${[0, 1, 2, 3, 4, 5].map((i) => `
+              <input type="text" maxlength="1" class="otp-box-digit" data-idx="${i}" 
+                     value="${['1', '2', '3', '4', '5', '6'][i]}"
+                     style="width: 46px; height: 52px; text-align: center; font-size: 1.4rem; font-weight: 900; border: 2px solid var(--primary-pink); border-radius: 12px; outline: none; background: #ffffff; color: #111827;" />
+            `).join('')}
           </div>
 
-          <div>
-            <label style="font-size: 0.82rem; font-weight: 700; color: var(--text-muted);">
-              Date of Birth <span style="color: #ef4444;">* Mandatory 18+</span>
-            </label>
-            <input type="date" id="signupDob" required class="glass-input" style="margin-top: 4px; color-scheme: dark;" />
-            <div id="dobError" style="font-size: 0.78rem; color: #ef4444; margin-top: 4px; display: none;"></div>
-          </div>
-
-          <div style="display: flex; gap: 8px; align-items: flex-start; margin-top: 4px;">
-            <input type="checkbox" id="signupConsent" required style="margin-top: 3px;" />
-            <label for="signupConsent" style="font-size: 0.78rem; color: var(--text-muted); line-height: 1.35;">
-              I certify that I am at least 18 years of age and agree to Hipa's Terms of Service, Privacy Policy, and Community Guidelines.
-            </label>
-          </div>
-
-          <div id="signupError" style="color: #ef4444; font-size: 0.82rem; display: none;"></div>
-
-          <button type="submit" class="btn-primary" style="padding: 14px; margin-top: 10px;">
-            Continue & Send OTP ➔
+          <button class="btn-pink-block" id="btnVerifyOtp">
+            Verify OTP
           </button>
-          <button type="button" class="btn-secondary" id="btnCancelSignup">Cancel</button>
-        </form>
-      </div>
-    `;
 
-    document.body.appendChild(modal);
-
-    modal.querySelector('#btnCancelSignup').onclick = () => modal.remove();
-
-    const form = modal.querySelector('#formSignup');
-    form.onsubmit = async (e) => {
-      e.preventDefault();
-      const email = modal.querySelector('#signupEmail').value.trim();
-      const pass = modal.querySelector('#signupPass').value;
-      const dob = modal.querySelector('#signupDob').value;
-      const errorEl = modal.querySelector('#signupError');
-
-      const res = await api.signup(email, pass, dob);
-      if (!res.ok) {
-        errorEl.textContent = res.error;
-        errorEl.style.display = 'block';
-        return;
-      }
-
-      modal.remove();
-      this.showOtpModal(email);
-    };
-  }
-
-  // ==========================================
-  // SIGNUP STEP 2: OTP Verification
-  // ==========================================
-  showOtpModal(email) {
-    const modal = document.createElement('div');
-    modal.className = 'modal-overlay';
-    modal.innerHTML = `
-      <div class="bottom-sheet">
-        <div class="sheet-handle"></div>
-        <h2 style="font-size: 1.55rem; font-weight: 800; margin-bottom: 6px;">Verify Email</h2>
-        <p style="color: var(--text-muted); font-size: 0.88rem; margin-bottom: 20px;">
-          Enter the 6-digit verification code sent to <strong>${email}</strong>
-        </p>
-
-        <div class="glass-card" style="padding: 12px; margin-bottom: 16px; text-align: center; border-color: rgba(46, 230, 166, 0.4);">
-          <span style="font-size: 0.8rem; color: #2ee6a6;">⚡ Simulated Demo OTP Code: <strong>123456</strong></span>
-        </div>
-
-        <div style="margin-bottom: 20px;">
-          <input type="text" id="otpInput" maxlength="6" class="glass-input" value="123456" 
-                 style="text-align: center; font-size: 1.8rem; letter-spacing: 8px; font-weight: 800;" />
-          <div id="otpError" style="font-size: 0.8rem; color: #ef4444; margin-top: 6px; display: none;"></div>
-        </div>
-
-        <button class="btn-primary" id="btnVerifyOtp" style="width: 100%; padding: 14px;">
-          Verify & Setup Profile ➔
-        </button>
-        <button class="btn-secondary" id="btnCancelOtp" style="width: 100%; margin-top: 10px;">Cancel</button>
-      </div>
-    `;
-
-    document.body.appendChild(modal);
-
-    modal.querySelector('#btnCancelOtp').onclick = () => modal.remove();
-    modal.querySelector('#btnVerifyOtp').onclick = async () => {
-      const code = modal.querySelector('#otpInput').value.trim();
-      const errEl = modal.querySelector('#otpError');
-      const res = await api.verifyOtp(code);
-      if (!res.ok) {
-        errEl.textContent = res.error;
-        errEl.style.display = 'block';
-        return;
-      }
-      modal.remove();
-      this.showProfileWizardModal();
-    };
-  }
-
-  // ==========================================
-  // SIGNUP STEP 3: Multi-step Profile Wizard
-  // With Real Photo Upload from Device
-  // ==========================================
-  showProfileWizardModal() {
-    let currentStep = 1;
-    const wizardData = {
-      name: '',
-      gender: 'male',
-      interestedIn: 'female',
-      city: 'Mumbai, Bandra',
-      job: '',
-      bio: '',
-      relationshipGoal: 'long_term',
-      interests: ['Coffee', 'Music'],
-      photos: []
-    };
-
-    const modal = document.createElement('div');
-    modal.className = 'modal-overlay';
-
-    const renderStep = () => {
-      modal.innerHTML = `
-        <div class="bottom-sheet" style="max-height: 92vh;">
-          <div class="sheet-handle"></div>
-          
-          <div class="wizard-progress-bar">
-            <div class="wizard-bar-segment ${currentStep >= 1 ? 'active' : ''}"></div>
-            <div class="wizard-bar-segment ${currentStep >= 2 ? 'active' : ''}"></div>
-            <div class="wizard-bar-segment ${currentStep >= 3 ? 'active' : ''}"></div>
-          </div>
-
-          ${currentStep === 1 ? `
-            <h2 style="font-size: 1.5rem; font-weight: 800; margin-bottom: 4px;">Tell Us About Yourself</h2>
-            <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 18px;">How you'll appear to your matches</p>
-
-            <div style="display: flex; flex-direction: column; gap: 14px;">
-              <div>
-                <label style="font-size: 0.82rem; font-weight: 700;">Your Display Name</label>
-                <input type="text" id="wName" class="glass-input" placeholder="e.g. Rahul, Priya, Alex" value="${wizardData.name}" style="margin-top: 4px;" />
-              </div>
-
-              <div>
-                <label style="font-size: 0.82rem; font-weight: 700;">I am</label>
-                <select id="wGender" class="glass-input" style="margin-top: 4px;">
-                  <option value="male" ${wizardData.gender === 'male' ? 'selected' : ''}>Male</option>
-                  <option value="female" ${wizardData.gender === 'female' ? 'selected' : ''}>Female</option>
-                  <option value="other" ${wizardData.gender === 'other' ? 'selected' : ''}>Non-Binary / Other</option>
-                </select>
-              </div>
-
-              <div>
-                <label style="font-size: 0.82rem; font-weight: 700;">Looking to meet</label>
-                <select id="wInterestedIn" class="glass-input" style="margin-top: 4px;">
-                  <option value="female" ${wizardData.interestedIn === 'female' ? 'selected' : ''}>Women</option>
-                  <option value="male" ${wizardData.interestedIn === 'male' ? 'selected' : ''}>Men</option>
-                  <option value="everyone" ${wizardData.interestedIn === 'everyone' ? 'selected' : ''}>Everyone</option>
-                </select>
-              </div>
-
-              <div>
-                <label style="font-size: 0.82rem; font-weight: 700;">Your City / Location</label>
-                <input type="text" id="wCity" class="glass-input" placeholder="e.g. Mumbai, Delhi, Bengaluru" value="${wizardData.city}" style="margin-top: 4px;" />
-              </div>
-
-              <button class="btn-primary" id="btnStep1Next" style="padding: 14px; margin-top: 10px;">Next: Upload Photos ➔</button>
-            </div>
-          ` : currentStep === 2 ? `
-            <h2 style="font-size: 1.5rem; font-weight: 800; margin-bottom: 4px;">Add Your Best Photos</h2>
-            <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 12px;">
-              Upload photos from your device or camera. First photo is your main card.
-            </p>
-
-            <div class="photo-upload-grid" id="photoGridContainer"></div>
-
-            <input type="file" id="filePhotoInput" accept="image/*" style="display: none;" />
-
-            <div style="display: flex; gap: 8px; margin-bottom: 18px;">
-              <button type="button" class="btn-secondary" id="btnTriggerFileInput" style="flex: 1; padding: 11px; font-size: 0.85rem;">
-                📷 Choose Image File
-              </button>
-              <button type="button" class="btn-secondary" id="btnUseSamplePhotos" style="flex: 1; padding: 11px; font-size: 0.85rem; color: #ffd166;">
-                ✨ Use Sample Photo
-              </button>
-            </div>
-
-            <div style="display: flex; gap: 10px;">
-              <button class="btn-secondary" id="btnStep2Back" style="flex: 1;">← Back</button>
-              <button class="btn-primary" id="btnStep2Next" style="flex: 2;">Next: Bio & Goals ➔</button>
-            </div>
-          ` : `
-            <h2 style="font-size: 1.5rem; font-weight: 800; margin-bottom: 4px;">Bio & Interests</h2>
-            <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 14px;">Show what you love and your dating goals</p>
-
-            <div style="display: flex; flex-direction: column; gap: 12px;">
-              <div>
-                <label style="font-size: 0.82rem; font-weight: 700;">Your Bio</label>
-                <textarea id="wBio" rows="3" class="glass-input" placeholder="A little about you, your weekend vibe, and what brings you here...">${wizardData.bio}</textarea>
-              </div>
-
-              <div>
-                <label style="font-size: 0.82rem; font-weight: 700;">Relationship Goal</label>
-                <select id="wGoal" class="glass-input">
-                  <option value="long_term" ${wizardData.relationshipGoal === 'long_term' ? 'selected' : ''}>Long-term relationship</option>
-                  <option value="short_term" ${wizardData.relationshipGoal === 'short_term' ? 'selected' : ''}>Casual dating / Fun</option>
-                  <option value="friendship" ${wizardData.relationshipGoal === 'friendship' ? 'selected' : ''}>New friends</option>
-                  <option value="marriage" ${wizardData.relationshipGoal === 'marriage' ? 'selected' : ''}>Marriage / Serious</option>
-                </select>
-              </div>
-
-              <div>
-                <label style="font-size: 0.82rem; font-weight: 700;">Occupation / Job</label>
-                <input type="text" id="wJob" class="glass-input" placeholder="e.g. Software Engineer, Designer, Doctor" value="${wizardData.job}" />
-              </div>
-
-              <div>
-                <label style="font-size: 0.82rem; font-weight: 700;">Select Interests (click to toggle)</label>
-                <div class="interests-grid" id="interestsGridContainer"></div>
-              </div>
-
-              <div style="display: flex; gap: 10px; margin-top: 10px;">
-                <button class="btn-secondary" id="btnStep3Back" style="flex: 1;">← Back</button>
-                <button class="btn-primary" id="btnFinishOnboarding" style="flex: 2; padding: 14px;">
-                  Complete & Start Swiping 🚀
-                </button>
-              </div>
-            </div>
-          `}
-        </div>
-      `;
-
-      // Bind Step 1
-      if (currentStep === 1) {
-        modal.querySelector('#btnStep1Next').onclick = () => {
-          const name = modal.querySelector('#wName').value.trim();
-          if (!name) {
-            alert('Please enter your display name.');
-            return;
-          }
-          wizardData.name = name;
-          wizardData.gender = modal.querySelector('#wGender').value;
-          wizardData.interestedIn = modal.querySelector('#wInterestedIn').value;
-          wizardData.city = modal.querySelector('#wCity').value.trim() || 'Mumbai';
-          currentStep = 2;
-          renderStep();
-        };
-      }
-
-      // Bind Step 2 (Photo Upload)
-      if (currentStep === 2) {
-        const grid = modal.querySelector('#photoGridContainer');
-        const fileInput = modal.querySelector('#filePhotoInput');
-
-        const renderPhotoGrid = () => {
-          grid.innerHTML = '';
-          for (let i = 0; i < 6; i++) {
-            const photoUrl = wizardData.photos[i];
-            const slot = document.createElement('div');
-            slot.className = `photo-slot ${photoUrl ? 'has-image' : ''}`;
-            
-            if (photoUrl) {
-              slot.innerHTML = `
-                <img src="${photoUrl}" />
-                ${i === 0 ? '<span class="badge-main">MAIN</span>' : ''}
-                <button class="btn-remove-photo" data-idx="${i}">✕</button>
-              `;
-            } else {
-              slot.innerHTML = `
-                <div style="font-size: 1.4rem; color: rgba(255,255,255,0.4);">+</div>
-                <span style="font-size: 0.65rem; color: var(--text-faint);">Add Photo</span>
-              `;
-              slot.onclick = () => fileInput.click();
-            }
-            grid.appendChild(slot);
-          }
-
-          grid.querySelectorAll('.btn-remove-photo').forEach((btn) => {
-            btn.onclick = (ev) => {
-              ev.stopPropagation();
-              const idx = Number(btn.getAttribute('data-idx'));
-              wizardData.photos.splice(idx, 1);
-              renderPhotoGrid();
-            };
-          });
-        };
-
-        renderPhotoGrid();
-
-        modal.querySelector('#btnTriggerFileInput').onclick = () => fileInput.click();
-
-        fileInput.onchange = (ev) => {
-          const file = ev.target.files[0];
-          if (!file) return;
-          const reader = new FileReader();
-          reader.onload = (re) => {
-            wizardData.photos.push(re.target.result);
-            renderPhotoGrid();
-          };
-          reader.readAsDataURL(file);
-        };
-
-        modal.querySelector('#btnUseSamplePhotos').onclick = () => {
-          wizardData.photos = [
-            "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=800&q=80",
-            "https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=800&q=80"
-          ];
-          renderPhotoGrid();
-        };
-
-        modal.querySelector('#btnStep2Back').onclick = () => {
-          currentStep = 1;
-          renderStep();
-        };
-
-        modal.querySelector('#btnStep2Next').onclick = () => {
-          if (wizardData.photos.length === 0) {
-            // Auto add default photo if none uploaded
-            wizardData.photos.push("https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=800&q=80");
-          }
-          currentStep = 3;
-          renderStep();
-        };
-      }
-
-      // Bind Step 3 (Bio & Interests)
-      if (currentStep === 3) {
-        const ALL_INTERESTS = [
-          "Coffee", "Chai", "Music", "Travel", "Tech", "Fitness", "Dogs",
-          "Art", "Cooking", "Cinema", "Yoga", "Books", "Startups", "Photography"
-        ];
-        const grid = modal.querySelector('#interestsGridContainer');
-        ALL_INTERESTS.forEach((tag) => {
-          const chip = document.createElement('span');
-          const isSel = wizardData.interests.includes(tag);
-          chip.className = `interest-chip ${isSel ? 'selected' : ''}`;
-          chip.textContent = `#${tag}`;
-          chip.onclick = () => {
-            if (wizardData.interests.includes(tag)) {
-              wizardData.interests = wizardData.interests.filter((t) => t !== tag);
-              chip.classList.remove('selected');
-            } else {
-              wizardData.interests.push(tag);
-              chip.classList.add('selected');
-            }
-          };
-          grid.appendChild(chip);
-        });
-
-        modal.querySelector('#btnStep3Back').onclick = () => {
-          currentStep = 2;
-          renderStep();
-        };
-
-        modal.querySelector('#btnFinishOnboarding').onclick = async () => {
-          wizardData.bio = modal.querySelector('#wBio').value.trim() || 'Excited to vibe!';
-          wizardData.relationshipGoal = modal.querySelector('#wGoal').value;
-          wizardData.job = modal.querySelector('#wJob').value.trim();
-
-          const res = await api.completeOnboarding(wizardData);
-          if (res.ok) {
-            modal.remove();
-            this.user = res.user;
-            this.init();
-          }
-        };
-      }
-    };
-
-    renderStep();
-    document.body.appendChild(modal);
-  }
-
-  // ==========================================
-  // LOGIN MODAL
-  // ==========================================
-  showLoginModal() {
-    const modal = document.createElement('div');
-    modal.className = 'modal-overlay';
-    modal.innerHTML = `
-      <div class="bottom-sheet">
-        <div class="sheet-handle"></div>
-        <h2 style="font-size: 1.55rem; font-weight: 800; margin-bottom: 6px;">Welcome Back</h2>
-        <p style="color: var(--text-muted); font-size: 0.88rem; margin-bottom: 18px;">
-          Log in with your Hipa credentials
-        </p>
-
-        <form id="formLogin" style="display: flex; flex-direction: column; gap: 14px;">
-          <div>
-            <label style="font-size: 0.82rem; font-weight: 700; color: var(--text-muted);">Email Address</label>
-            <input type="email" id="loginEmail" required class="glass-input" value="demo@hipa.com" style="margin-top: 4px;" />
-          </div>
-
-          <div>
-            <label style="font-size: 0.82rem; font-weight: 700; color: var(--text-muted);">Password</label>
-            <input type="password" id="loginPass" required class="glass-input" value="password123" style="margin-top: 4px;" />
-          </div>
-
-          <div id="loginError" style="color: #ef4444; font-size: 0.82rem; display: none;"></div>
-
-          <button type="submit" class="btn-primary" style="padding: 14px; margin-top: 6px;">Log In</button>
-          
-          <button type="button" class="btn-secondary" id="btnSwitchToSignup">
-            Don't have an account? Sign Up
-          </button>
-          <button type="button" class="btn-secondary" id="btnCancelLogin">Cancel</button>
-        </form>
-      </div>
-    `;
-
-    document.body.appendChild(modal);
-
-    modal.querySelector('#btnCancelLogin').onclick = () => modal.remove();
-    modal.querySelector('#btnSwitchToSignup').onclick = () => {
-      modal.remove();
-      this.showSignupModal();
-    };
-
-    const form = modal.querySelector('#formLogin');
-    form.onsubmit = async (e) => {
-      e.preventDefault();
-      const email = modal.querySelector('#loginEmail').value.trim();
-      const pass = modal.querySelector('#loginPass').value;
-      const errEl = modal.querySelector('#loginError');
-
-      const res = await api.login(email, pass);
-      if (!res.ok) {
-        errEl.textContent = res.error;
-        errEl.style.display = 'block';
-        return;
-      }
-
-      modal.remove();
-      this.user = res.user;
-      this.init();
-    };
-  }
-
-  // ==========================================
-  // DISCOVER VIEW
-  // ==========================================
-  renderDiscover(container) {
-    container.innerHTML = `
-      <div class="discover-view">
-        <div class="apk-promo-banner glass-card">
-          <div style="display: flex; align-items: center; gap: 8px;">
-            <span style="font-size: 1.4rem;">📱</span>
-            <div>
-              <strong style="font-size: 0.88rem; color: #2ee6a6;">Hipa for Android</strong>
-              <div style="font-size: 0.74rem; color: var(--text-muted);">Get native fullscreen video calls</div>
-            </div>
-          </div>
-          <a href="/downloads/hipa-dating.apk" download="hipa-dating.apk" class="apk-download-btn">⬇ Download APK</a>
-        </div>
-        <div class="card-deck" id="cardDeckContainer"></div>
-        <div class="swipe-actions">
-          <button class="btn-icon-circle btn-action-sm btn-undo" id="btnUndo" title="Undo Swipe">↺</button>
-          <button class="btn-icon-circle btn-action-lg btn-pass" id="btnPass" title="Pass">✕</button>
-          <button class="btn-icon-circle btn-action-sm btn-superlike" id="btnSuperlike" title="Super Like">★</button>
-          <button class="btn-icon-circle btn-action-lg btn-like" id="btnLike" title="Like">♥</button>
-          <button class="btn-icon-circle btn-action-sm btn-boost" id="btnBoost" title="Boost">⚡</button>
-        </div>
-      </div>
-    `;
-
-    this.renderCards();
-    this.bindActionButtons();
-  }
-
-  renderCards() {
-    const deck = document.getElementById('cardDeckContainer');
-    if (!deck) return;
-    deck.innerHTML = '';
-
-    const remaining = this.profiles.slice(this.currentCardIndex);
-
-    if (remaining.length === 0) {
-      deck.innerHTML = `
-        <div class="deck-empty glass-card">
-          <div class="radar-spinner"></div>
-          <h3 style="font-size: 1.35rem; margin-bottom: 8px;">No More Profiles Nearby</h3>
-          <p style="color: var(--text-muted); font-size: 0.92rem; margin-bottom: 20px;">
-            Expand your filters or check back in a few minutes for new people!
+          <p style="text-align: center; font-size: 0.82rem; color: var(--text-muted); margin-top: 18px;">
+            Didn't receive the OTP? <span style="color: var(--primary-pink); font-weight: 800;">Retry in 23s</span>
           </p>
-          <button class="btn-primary" id="btnResetDeck">Reset Deck 🔄</button>
         </div>
-      `;
-      const resetBtn = document.getElementById('btnResetDeck');
-      if (resetBtn) {
-        resetBtn.addEventListener('click', () => {
-          this.currentCardIndex = 0;
-          this.renderCards();
-        });
-      }
-      return;
-    }
-
-    remaining.slice(0, 2).reverse().forEach((profile, idx, arr) => {
-      const isTop = idx === arr.length - 1;
-      const card = document.createElement('div');
-      card.className = `swipe-card ${isTop ? 'active-top-card' : ''}`;
-      card.setAttribute('data-id', profile.id);
-      if (!isTop) {
-        card.style.transform = 'scale(0.95) translateY(14px)';
-        card.style.opacity = '0.7';
-      }
-
-      card.innerHTML = `
-        <div class="card-img-container">
-          <img src="${profile.photos[0]}" class="card-img" alt="${profile.name}" />
-          <div class="card-gradient-overlay"></div>
-          <div class="swipe-stamp stamp-like">LIKE</div>
-          <div class="swipe-stamp stamp-pass">NOPE</div>
-          <div class="swipe-stamp stamp-superlike">SUPER</div>
-          <div class="card-carousel-dots">
-            ${profile.photos.map((_, i) => `<div class="dot ${i === 0 ? 'active' : ''}"></div>`).join('')}
-          </div>
-          <div class="card-content">
-            <div class="card-header-row">
-              <span class="card-name">${profile.name}</span>
-              <span class="card-age">${profile.age}</span>
-              ${profile.verified ? '<span class="badge-verified">✓ Verified</span>' : ''}
-            </div>
-            <div class="card-location">
-              📍 <span>${profile.city} • ${profile.distanceKm} km away</span>
-            </div>
-            <p class="card-bio">${profile.bio}</p>
-            <div class="card-tags">
-              ${profile.interests.map((tag) => `<span class="card-tag">#${tag}</span>`).join('')}
-            </div>
-          </div>
-        </div>
-      `;
-
-      if (isTop) {
-        this.attachSwipePhysics(card, profile);
-      }
-      deck.appendChild(card);
-    });
-  }
-
-  attachSwipePhysics(card, profile) {
-    const onStart = (e) => {
-      this.dragState.isDragging = true;
-      const clientX = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
-      const clientY = e.type.includes('touch') ? e.touches[0].clientY : e.clientY;
-      this.dragState.startX = clientX;
-      this.dragState.startY = clientY;
-      card.classList.add('dragging');
-    };
-
-    const onMove = (e) => {
-      if (!this.dragState.isDragging) return;
-      const clientX = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
-      const clientY = e.type.includes('touch') ? e.touches[0].clientY : e.clientY;
-      const deltaX = clientX - this.dragState.startX;
-      const deltaY = clientY - this.dragState.startY;
-      const rotate = deltaX * 0.08;
-
-      card.style.transform = `translate(${deltaX}px, ${deltaY}px) rotate(${rotate}deg)`;
-
-      const likeStamp = card.querySelector('.stamp-like');
-      const passStamp = card.querySelector('.stamp-pass');
-      const superStamp = card.querySelector('.stamp-superlike');
-
-      if (deltaX > 40 && likeStamp) {
-        likeStamp.style.opacity = Math.min(deltaX / 120, 1);
-        if (passStamp) passStamp.style.opacity = 0;
-      } else if (deltaX < -40 && passStamp) {
-        passStamp.style.opacity = Math.min(Math.abs(deltaX) / 120, 1);
-        if (likeStamp) likeStamp.style.opacity = 0;
-      } else if (deltaY < -60 && superStamp) {
-        superStamp.style.opacity = Math.min(Math.abs(deltaY) / 100, 1);
-      } else {
-        if (likeStamp) likeStamp.style.opacity = 0;
-        if (passStamp) passStamp.style.opacity = 0;
-        if (superStamp) superStamp.style.opacity = 0;
-      }
-    };
-
-    const onEnd = (e) => {
-      if (!this.dragState.isDragging) return;
-      this.dragState.isDragging = false;
-      card.classList.remove('dragging');
-
-      const clientX = e.type.includes('touch') ? (e.changedTouches ? e.changedTouches[0].clientX : 0) : e.clientX;
-      const deltaX = clientX - this.dragState.startX;
-
-      if (deltaX > 110) {
-        this.executeSwipe('like', card, profile);
-      } else if (deltaX < -110) {
-        this.executeSwipe('pass', card, profile);
-      } else {
-        card.style.transform = 'translate(0, 0) rotate(0deg)';
-        const stamps = card.querySelectorAll('.swipe-stamp');
-        stamps.forEach((s) => (s.style.opacity = 0));
-      }
-    };
-
-    card.addEventListener('mousedown', onStart);
-    window.addEventListener('mousemove', onMove);
-    window.addEventListener('mouseup', onEnd);
-
-    card.addEventListener('touchstart', onStart, { passive: true });
-    window.addEventListener('touchmove', onMove, { passive: true });
-    window.addEventListener('touchend', onEnd);
-  }
-
-  bindActionButtons() {
-    const passBtn = document.getElementById('btnPass');
-    const likeBtn = document.getElementById('btnLike');
-    const superBtn = document.getElementById('btnSuperlike');
-    const undoBtn = document.getElementById('btnUndo');
-    const boostBtn = document.getElementById('btnBoost');
-
-    if (passBtn) passBtn.onclick = () => this.triggerAction('pass');
-    if (likeBtn) likeBtn.onclick = () => this.triggerAction('like');
-    if (superBtn) superBtn.onclick = () => this.triggerAction('superlike');
-    if (undoBtn) undoBtn.onclick = () => this.triggerUndo();
-    if (boostBtn) boostBtn.onclick = () => this.triggerBoost();
-  }
-
-  triggerAction(action) {
-    const topCard = document.querySelector('.active-top-card');
-    const currentProfile = this.profiles[this.currentCardIndex];
-    if (topCard && currentProfile) {
-      this.executeSwipe(action, topCard, currentProfile);
-    }
-  }
-
-  async executeSwipe(action, card, profile) {
-    if (action === 'like') {
-      card.style.transform = 'translate(140%, 40px) rotate(30deg)';
-    } else if (action === 'pass') {
-      card.style.transform = 'translate(-140%, 40px) rotate(-30deg)';
-    } else if (action === 'superlike') {
-      card.style.transform = 'translate(0, -140%) scale(1.1)';
-    }
-    card.style.opacity = '0';
-
-    const result = await api.recordSwipe(profile.id, action);
-
-    setTimeout(() => {
-      this.currentCardIndex++;
-      this.renderCards();
-      this.setupTopBar();
-
-      if (result.matched) {
-        this.showMatchCelebration(profile, result.match);
-      }
-    }, 280);
-  }
-
-  triggerUndo() {
-    if (!this.user.isPremium) {
-      this.showPremiumModal('Undo Swipe requires Hipa Gold!');
-      return;
-    }
-    if (this.currentCardIndex > 0) {
-      this.currentCardIndex--;
-      this.renderCards();
-    }
-  }
-
-  triggerBoost() {
-    alert("⚡ Profile Boosted! Your profile is now prioritized in your area for the next 30 minutes!");
-  }
-
-  showMatchCelebration(profile, matchObj) {
-    const overlay = document.createElement('div');
-    overlay.className = 'match-overlay';
-    overlay.innerHTML = `
-      <div class="match-heart-badge">♥</div>
-      <h1 class="match-title">It's a Match!</h1>
-      <p class="match-subtext">You and ${profile.name} liked each other.</p>
-      <div class="match-avatars-pair">
-        <img src="${this.user.photos[0]}" class="match-avatar" />
-        <img src="${profile.photos[0]}" class="match-avatar" />
-      </div>
-      <div class="match-actions">
-        <button class="btn-primary" id="btnSayHi">Say Hi 👋</button>
-        <button class="btn-secondary" id="btnDismissMatch">Keep Swiping</button>
       </div>
     `;
 
-    document.body.appendChild(overlay);
+    root.querySelector('#btnBackToPhone').onclick = () => this.renderOnboardingStep1();
+    root.querySelector('#btnChangeNumber').onclick = () => this.renderOnboardingStep1();
 
-    overlay.querySelector('#btnDismissMatch').onclick = () => overlay.remove();
-    overlay.querySelector('#btnSayHi').onclick = () => {
-      overlay.remove();
-      this.switchTab('chats');
-      if (matchObj) {
-        this.openChatRoom(matchObj.id);
+    // OTP box auto-advance
+    const digits = root.querySelectorAll('.otp-box-digit');
+    digits.forEach((el, idx) => {
+      el.oninput = (e) => {
+        if (e.target.value && idx < 5) digits[idx + 1].focus();
+      };
+      el.onkeydown = (e) => {
+        if (e.key === 'Backspace' && !e.target.value && idx > 0) digits[idx - 1].focus();
+      };
+    });
+
+    root.querySelector('#btnVerifyOtp').onclick = async () => {
+      const code = Array.from(digits).map(d => d.value).join('');
+      const res = await himaApi.verifyPhoneOtp(code);
+      if (res.ok) {
+        this.renderOnboardingStep3();
+      } else {
+        alert(res.error);
       }
     };
   }
 
-  // ==========================================
-  // LIKES VIEW
-  // ==========================================
-  renderLikes(container) {
-    const isGold = this.user.isPremium;
-    const profiles = this.profiles.slice(0, 4);
+  // Step 3: Choose Your Language
+  renderOnboardingStep3() {
+    const root = document.getElementById('mainViewport');
 
-    container.innerHTML = `
-      <div class="likes-view">
-        <div class="likes-header-banner glass-card">
-          <div>
-            <h3 style="font-size: 1.15rem; font-weight: 800; color: #ffd166;">⭐ Who Liked You (4)</h3>
-            <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 2px;">
-              ${isGold ? 'You have full Gold access to see everyone!' : 'Upgrade to see who liked you instantly.'}
-            </p>
+    root.innerHTML = `
+      <div class="onboarding-container" style="justify-content: flex-start; overflow-y: auto;">
+        <!-- Top Progress Bar -->
+        <div style="display: flex; align-items: center; gap: 14px; margin-bottom: 20px;">
+          <button class="btn-secondary" id="btnBackToOtp" style="width: 40px; height: 40px; border-radius: 50%; padding: 0;">←</button>
+          <div style="flex: 1; height: 6px; background: #e5e7eb; border-radius: 10px; overflow: hidden;">
+            <div style="width: 50%; height: 100%; background: var(--primary-pink);"></div>
           </div>
-          ${!isGold ? '<button class="btn-gold" id="btnUpgradeLikes">Unlock Gold</button>' : ''}
         </div>
 
-        <div class="likes-grid">
-          ${profiles.map((p) => `
-            <div class="like-card ${!isGold ? 'blurred' : ''}">
-              <img src="${p.photos[0]}" class="like-card-img" />
-              ${!isGold ? `
-                <div class="unlock-overlay-center">
-                  <div style="font-size: 1.8rem;">🔒</div>
-                  <span style="font-size: 0.82rem; font-weight: 700;">Hipa Gold</span>
-                </div>
-              ` : `
-                <div class="like-card-overlay">
-                  <div style="font-weight: 700;">${p.name}, ${p.age}</div>
-                  <div style="font-size: 0.75rem; color: var(--text-muted);">${p.city}</div>
-                </div>
-              `}
+        <h1 style="font-size: 1.8rem; font-weight: 900; color: #111827; margin-bottom: 6px;">Choose your language</h1>
+        <p style="font-size: 0.88rem; color: var(--text-muted); font-weight: 600; margin-bottom: 20px;">
+          Pick the language you're most comfortable in 🌐
+        </p>
+
+        <!-- Languages List -->
+        <div style="flex: 1; padding-bottom: 80px;">
+          ${HIMA_LANGUAGES.map((lang) => `
+            <div class="lang-card-item ${this.selectedLanguage === lang.name ? 'selected' : ''}" data-lang="${lang.name}">
+              <div class="lang-letter-circle">${lang.char}</div>
+              <div>
+                <div style="font-size: 1.05rem; font-weight: 800; color: #111827;">${lang.name}</div>
+                <div style="font-size: 0.82rem; color: var(--text-muted);">${lang.native}</div>
+              </div>
             </div>
           `).join('')}
         </div>
+
+        <!-- Sticky Continue Button -->
+        <div style="position: absolute; bottom: 16px; left: 20px; right: 20px; background: #ffffff; padding-top: 10px;">
+          <button class="btn-pink-block" id="btnContinueLanguage">
+            Continue
+          </button>
+        </div>
       </div>
     `;
 
-    const upgradeBtn = container.querySelector('#btnUpgradeLikes');
-    if (upgradeBtn) {
-      upgradeBtn.onclick = () => this.showPremiumModal('Unlock Who Liked You with Hipa Gold!');
+    root.querySelector('#btnBackToOtp').onclick = () => this.renderOnboardingStep2('9511088531');
+
+    root.querySelectorAll('.lang-card-item').forEach((card) => {
+      card.onclick = () => {
+        root.querySelectorAll('.lang-card-item').forEach(c => c.classList.remove('selected'));
+        card.classList.add('selected');
+        this.selectedLanguage = card.getAttribute('data-lang');
+      };
+    });
+
+    root.querySelector('#btnContinueLanguage').onclick = () => {
+      this.renderOnboardingStep4();
+    };
+  }
+
+  // Step 4: Who are you? (Gender & Avatar Wizard)
+  renderOnboardingStep4() {
+    const root = document.getElementById('mainViewport');
+
+    root.innerHTML = `
+      <div class="onboarding-container" style="justify-content: flex-start; overflow-y: auto;">
+        <!-- Top Progress Bar -->
+        <div style="display: flex; align-items: center; gap: 14px; margin-bottom: 20px;">
+          <button class="btn-secondary" id="btnBackToLang" style="width: 40px; height: 40px; border-radius: 50%; padding: 0;">←</button>
+          <div style="flex: 1; height: 6px; background: #e5e7eb; border-radius: 10px; overflow: hidden;">
+            <div style="width: 100%; height: 100%; background: var(--primary-pink);"></div>
+          </div>
+        </div>
+
+        <h1 style="font-size: 1.8rem; font-weight: 900; color: #111827; margin-bottom: 6px;">Who are you?</h1>
+        <p style="font-size: 0.88rem; color: var(--text-muted); font-weight: 600; margin-bottom: 20px;">
+          Choose your gender to personalize your experience
+        </p>
+
+        <!-- Gender Cards -->
+        <div class="gender-cards-row">
+          <div class="gender-box ${this.selectedGender === 'male' ? 'selected' : ''}" data-gender="male">
+            <div class="gender-circle-icon">♂</div>
+            <div style="font-size: 1.1rem; font-weight: 800; color: var(--primary-pink); margin-bottom: 4px;">Male</div>
+            <div style="font-size: 0.74rem; color: var(--text-muted); font-weight: 600;">Connect with creators</div>
+          </div>
+
+          <div class="gender-box ${this.selectedGender === 'female' ? 'selected' : ''}" data-gender="female">
+            <div class="gender-circle-icon">♀</div>
+            <div style="font-size: 1.1rem; font-weight: 800; color: #111827; margin-bottom: 4px;">Female</div>
+            <div style="font-size: 0.74rem; color: var(--text-muted); font-weight: 600;">Become a creator</div>
+          </div>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+          <span style="font-size: 0.95rem; font-weight: 800; color: #111827;">Pick your avatar</span>
+          <span style="font-size: 0.76rem; color: var(--text-muted); font-weight: 600;">Swipe to explore →</span>
+        </div>
+
+        <!-- 3D Avatars Carousel -->
+        <div class="avatar-carousel">
+          ${HIMA_AVATARS.map((av, idx) => `
+            <div class="avatar-item-wrap ${this.selectedAvatar === av ? 'selected' : ''}" data-avatar="${av}">
+              <img src="${av}" alt="Avatar ${idx + 1}" />
+              ${this.selectedAvatar === av ? '<div class="avatar-check-badge">✓</div>' : ''}
+            </div>
+          `).join('')}
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 8px; color: var(--primary-pink); font-size: 0.82rem; font-weight: 700; margin-top: auto; margin-bottom: 20px;">
+          <span>ℹ️</span> Gender can't be changed later
+        </div>
+
+        <button class="btn-pink-block" id="btnFinishOnboarding">
+          Continue
+        </button>
+      </div>
+    `;
+
+    root.querySelector('#btnBackToLang').onclick = () => this.renderOnboardingStep3();
+
+    root.querySelectorAll('.gender-box').forEach((box) => {
+      box.onclick = () => {
+        root.querySelectorAll('.gender-box').forEach(b => b.classList.remove('selected'));
+        box.classList.add('selected');
+        this.selectedGender = box.getAttribute('data-gender');
+      };
+    });
+
+    root.querySelectorAll('.avatar-item-wrap').forEach((wrap) => {
+      wrap.onclick = () => {
+        root.querySelectorAll('.avatar-item-wrap').forEach(w => {
+          w.classList.remove('selected');
+          const badge = w.querySelector('.avatar-check-badge');
+          if (badge) badge.remove();
+        });
+        wrap.classList.add('selected');
+        const badge = document.createElement('div');
+        badge.className = 'avatar-check-badge';
+        badge.textContent = '✓';
+        wrap.appendChild(badge);
+        this.selectedAvatar = wrap.getAttribute('data-avatar');
+      };
+    });
+
+    root.querySelector('#btnFinishOnboarding').onclick = () => {
+      this.user = himaApi.finishOnboarding(this.selectedLanguage, this.selectedGender, this.selectedAvatar);
+      this.renderMainApp();
+      // Show Welcome Offer automatically on first entry!
+      setTimeout(() => this.showWelcomeOfferModal(), 800);
+    };
+  }
+
+  // ==========================================
+  // MAIN APP VIEWPORT & NAVIGATION
+  // ==========================================
+
+  renderMainApp() {
+    this.user = himaApi.getUser();
+    document.getElementById('himaTopBar').style.display = 'flex';
+    document.getElementById('himaBottomNav').style.display = 'flex';
+    document.getElementById('btnFloatingRandom').style.display = 'flex';
+    document.getElementById('userCoinsCount').textContent = himaApi.getCoins();
+
+    this.bindGlobalEvents();
+    this.renderCurrentTab();
+  }
+
+  bindGlobalEvents() {
+    // Open Wallet on Coin pill tap
+    const coinBtn = document.getElementById('btnOpenWalletTop');
+    if (coinBtn) {
+      coinBtn.onclick = () => this.showWalletModal();
+    }
+
+    // Bottom Navigation click
+    document.querySelectorAll('.hima-nav-item').forEach((item) => {
+      item.onclick = () => {
+        document.querySelectorAll('.hima-nav-item').forEach(i => i.classList.remove('active'));
+        item.classList.add('active');
+        this.currentTab = item.getAttribute('data-tab');
+
+        // Toggle random button visibility
+        const randBtn = document.getElementById('btnFloatingRandom');
+        if (randBtn) {
+          randBtn.style.display = this.currentTab === 'home' ? 'flex' : 'none';
+        }
+
+        this.renderCurrentTab();
+      };
+    });
+
+    // Floating Random Match
+    const randomBtn = document.getElementById('btnFloatingRandom');
+    if (randomBtn) {
+      randomBtn.onclick = () => {
+        const onlineCreators = HIMA_CREATORS.filter(c => c.online);
+        const randomCreator = onlineCreators[Math.floor(Math.random() * onlineCreators.length)] || HIMA_CREATORS[0];
+        this.startCall(randomCreator, 'video');
+      };
+    }
+  }
+
+  renderCurrentTab() {
+    const root = document.getElementById('mainViewport');
+    if (this.currentTab === 'home') {
+      this.renderHomeTab(root);
+    } else if (this.currentTab === 'recent') {
+      this.renderRecentCallsTab(root);
+    } else if (this.currentTab === 'friends') {
+      this.renderFriendsTab(root);
+    } else if (this.currentTab === 'profile') {
+      this.renderProfileTab(root);
     }
   }
 
   // ==========================================
-  // CHATS VIEW
+  // TAB 1: HOME (Creators List & Category Filters)
   // ==========================================
-  renderChats(container) {
-    const matches = api.getMatches();
+  renderHomeTab(container) {
+    const categories = ['Chats', 'All', 'New', 'Marathi', 'Bengali', 'Odia', 'Hindi', 'Tamil', 'Telugu', 'Punjabi'];
+
+    let creators = HIMA_CREATORS;
+    if (this.activeCategory !== 'All' && this.activeCategory !== 'Chats' && this.activeCategory !== 'New') {
+      creators = HIMA_CREATORS.filter(c => c.language.toLowerCase() === this.activeCategory.toLowerCase());
+    }
 
     container.innerHTML = `
-      <div class="chats-view">
-        <div class="matches-rail">
-          <div class="rail-title">Recent Matches (${matches.length})</div>
-          <div class="matches-horizontal-list">
-            ${matches.map((m) => `
-              <div class="match-bubble" data-match-id="${m.id}">
-                <div class="match-bubble-img-wrapper">
-                  <img src="${m.photo}" class="match-bubble-img" />
+      <!-- Horizontal Category Pills -->
+      <div class="hima-categories" style="margin: -16px -16px 14px -16px;">
+        ${categories.map(cat => `
+          <button class="cat-pill ${this.activeCategory === cat ? 'active' : ''}" data-cat="${cat}">
+            ${cat === 'Chats' ? '💬 ' : (cat === 'All' ? '👥 ' : (cat === 'New' ? '✨ ' : ''))}${cat}
+          </button>
+        `).join('')}
+      </div>
+
+      <!-- Welcome Offer Banner Card -->
+      <div class="glass-card" id="bannerWelcomeOffer" style="background: var(--primary-gradient); color: #ffffff; padding: 14px 18px; border-radius: var(--radius-md); display: flex; align-items: center; justify-content: space-between; cursor: pointer; margin-bottom: 14px; box-shadow: var(--shadow-pink);">
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <div style="font-size: 2rem;">🪙</div>
+          <div>
+            <div style="font-weight: 900; font-size: 1.05rem;">Get 60 Coins for only ₹14</div>
+            <div style="font-size: 0.75rem; opacity: 0.9;">Save 65% • Limited welcome offer</div>
+          </div>
+        </div>
+        <button class="btn-secondary" style="background: #ffffff; color: var(--primary-pink); font-size: 0.8rem; font-weight: 800; border: none; padding: 8px 14px; border-radius: var(--radius-full);">
+          Claim 🎁
+        </button>
+      </div>
+
+      <!-- Creators List -->
+      <div class="creators-list">
+        ${creators.map(c => `
+          <div class="creator-card" data-id="${c.id}">
+            <div class="creator-left">
+              <div class="creator-avatar-wrap">
+                <img src="${c.avatar}" alt="${c.name}" />
+                <span class="status-dot ${c.online ? 'online' : 'offline'}"></span>
+              </div>
+              <div>
+                <div class="creator-name">${c.name}</div>
+                <div style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600;">
+                  ${c.language} • ⭐ ${c.rating}
                 </div>
-                <span class="match-bubble-name">${m.name.split(' ')[0]}</span>
+              </div>
+            </div>
+
+            <div class="creator-actions">
+              <!-- Voice Call Button -->
+              <button class="creator-call-action btn-voice-call" data-id="${c.id}" title="Start Voice Call">
+                <div class="call-icon-round voice">📞</div>
+                <span class="call-rate-tag">🪙 ${c.voiceRate}/min</span>
+              </button>
+
+              <!-- Video Call Button -->
+              <button class="creator-call-action btn-video-call" data-id="${c.id}" title="Start Video Call">
+                <div class="call-icon-round video ${!c.videoOnline ? 'disabled' : ''}">📹</div>
+                <span class="call-rate-tag ${!c.videoOnline ? 'offline-text' : ''}">
+                  ${c.videoOnline ? '🪙 ' + c.videoRate + '/min' : 'Offline'}
+                </span>
+              </button>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    `;
+
+    // Category click
+    container.querySelectorAll('.cat-pill').forEach(btn => {
+      btn.onclick = () => {
+        this.activeCategory = btn.getAttribute('data-cat');
+        this.renderHomeTab(container);
+      };
+    });
+
+    // Banner click
+    const banner = container.querySelector('#bannerWelcomeOffer');
+    if (banner) {
+      banner.onclick = () => this.showWelcomeOfferModal();
+    }
+
+    // Call buttons
+    container.querySelectorAll('.btn-voice-call').forEach(btn => {
+      btn.onclick = (e) => {
+        e.stopPropagation();
+        const cid = Number(btn.getAttribute('data-id'));
+        const creator = HIMA_CREATORS.find(c => c.id === cid);
+        this.startCall(creator, 'voice');
+      };
+    });
+
+    container.querySelectorAll('.btn-video-call').forEach(btn => {
+      btn.onclick = (e) => {
+        e.stopPropagation();
+        const cid = Number(btn.getAttribute('data-id'));
+        const creator = HIMA_CREATORS.find(c => c.id === cid);
+        if (!creator.videoOnline) {
+          alert(`${creator.name} is currently offline for video calls. You can connect via voice call!`);
+          return;
+        }
+        this.startCall(creator, 'video');
+      };
+    });
+  }
+
+  // ==========================================
+  // TAB 2: RECENT CALLS (Exact as 3f248a15)
+  // ==========================================
+  renderRecentCallsTab(container) {
+    const logs = himaApi.getCallLogs();
+
+    container.innerHTML = `
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <div style="width: 44px; height: 44px; border-radius: 12px; background: var(--primary-pink); display: flex; align-items: center; justify-content: center; color: #ffffff; font-size: 1.3rem;">
+            🕒
+          </div>
+          <div>
+            <h1 style="font-size: 1.3rem; font-weight: 800; color: #111827; margin: 0;">Recent Calls</h1>
+            <p style="font-size: 0.78rem; color: var(--text-muted); margin: 0;">Your call history</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Filter Pills -->
+      <div style="display: flex; gap: 8px; margin-bottom: 14px; overflow-x: auto; padding-bottom: 4px;">
+        <button class="cat-pill active">👥 All</button>
+        <button class="cat-pill">📞 Missed</button>
+        <button class="cat-pill">⏱️ Talk Time</button>
+        <button class="cat-pill">🔤 A → Z</button>
+      </div>
+
+      <!-- Search Input -->
+      <div style="position: relative; margin-bottom: 20px;">
+        <input type="text" class="glass-input" placeholder="Search by name" style="background: #ffffff; border: 1.5px solid #ff007f; border-radius: var(--radius-full); padding: 12px 42px 12px 18px; color: #111827;" />
+        <span style="position: absolute; right: 16px; top: 12px; font-size: 1.1rem; color: #ff007f;">🔍</span>
+      </div>
+
+      <!-- Logs List or Empty State -->
+      ${logs.length > 0 ? `
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+          ${logs.map(log => `
+            <div class="creator-card">
+              <div class="creator-left">
+                <div class="creator-avatar-wrap">
+                  <img src="${log.avatar}" />
+                </div>
+                <div>
+                  <div class="creator-name">${log.creatorName}</div>
+                  <div style="font-size: 0.75rem; color: var(--text-muted);">
+                    ${log.type === 'video' ? '📹 Video' : '📞 Voice'} • ${log.duration} • ${log.time}
+                  </div>
+                </div>
+              </div>
+              <div style="text-align: right;">
+                <div style="font-size: 0.85rem; font-weight: 800; color: #ef4444;">-${log.coinsSpent} coins</div>
+                <button class="cat-pill" style="margin-top: 6px; padding: 4px 10px; font-size: 0.72rem;">Call Back</button>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      ` : `
+        <div style="text-align: center; padding: 80px 20px;">
+          <div style="font-size: 3.5rem; color: #9ca3af; margin-bottom: 12px;">📞</div>
+          <h3 style="font-size: 1.25rem; font-weight: 800; color: #111827; margin-bottom: 6px;">No Data Found</h3>
+          <p style="font-size: 0.85rem; color: var(--text-muted);">Your call history will appear here</p>
+        </div>
+      `}
+    `;
+  }
+
+  // ==========================================
+  // TAB 3: FRIENDS (Exact as 3c5acad2)
+  // ==========================================
+  renderFriendsTab(container) {
+    const friends = himaApi.getFriends();
+
+    container.innerHTML = `
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <div style="width: 44px; height: 44px; border-radius: 12px; background: var(--primary-pink); display: flex; align-items: center; justify-content: center; color: #ffffff; font-size: 1.3rem;">
+            👥
+          </div>
+          <div>
+            <h1 style="font-size: 1.3rem; font-weight: 800; color: #111827; margin: 0;">Friends</h1>
+            <p style="font-size: 0.78rem; color: var(--text-muted); margin: 0;">Your friends and requests</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sub-tabs -->
+      <div style="display: flex; gap: 8px; margin-bottom: 14px; overflow-x: auto; padding-bottom: 4px;">
+        <button class="cat-pill active">Friends</button>
+        <button class="cat-pill">Favourite</button>
+        <button class="cat-pill">Requests</button>
+        <button class="cat-pill">Sent</button>
+      </div>
+
+      <!-- Search Input -->
+      <div style="position: relative; margin-bottom: 20px;">
+        <input type="text" class="glass-input" placeholder="Search by name" style="background: #ffffff; border: 1.5px solid #ff007f; border-radius: var(--radius-full); padding: 12px 42px 12px 18px; color: #111827;" />
+        <span style="position: absolute; right: 16px; top: 12px; font-size: 1.1rem; color: #ff007f;">🔍</span>
+      </div>
+
+      <!-- Friends List or Empty State -->
+      ${friends.length > 0 ? `
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+          ${friends.map(f => `
+            <div class="creator-card">
+              <div class="creator-left">
+                <div class="creator-avatar-wrap">
+                  <img src="${f.avatar}" />
+                </div>
+                <div>
+                  <div class="creator-name">${f.name}</div>
+                  <div style="font-size: 0.75rem; color: var(--text-muted);">${f.language} • Connected</div>
+                </div>
+              </div>
+              <div style="display: flex; gap: 8px;">
+                <button class="cat-pill active" style="padding: 6px 12px;">Chat</button>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      ` : `
+        <div style="text-align: center; padding: 80px 20px;">
+          <div style="font-size: 3.5rem; color: #9ca3af; margin-bottom: 12px;">👤➕</div>
+          <h3 style="font-size: 1.25rem; font-weight: 800; color: #111827; margin-bottom: 6px;">No friends yet</h3>
+          <p style="font-size: 0.85rem; color: var(--text-muted);">Accept friend requests to chat with them here</p>
+        </div>
+      `}
+    `;
+  }
+
+  // ==========================================
+  // TAB 4: PROFILE (Exact as 53be8fee & ade99c7e)
+  // ==========================================
+  renderProfileTab(container) {
+    const user = this.user || { username: 'JgckA625', avatar: HIMA_AVATARS[0] };
+    const warnings = himaApi.getWarnings();
+
+    container.innerHTML = `
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <div style="width: 44px; height: 44px; border-radius: 12px; background: var(--primary-pink); display: flex; align-items: center; justify-content: center; color: #ffffff; font-size: 1.3rem;">
+            👤
+          </div>
+          <div>
+            <h1 style="font-size: 1.3rem; font-weight: 800; color: #111827; margin: 0;">My Profile</h1>
+            <p style="font-size: 0.78rem; color: var(--text-muted); margin: 0;">Manage your account & preferences</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Profile Summary Card -->
+      <div class="glass-card" style="background: #ffffff; border: 1.5px solid var(--primary-pink); border-radius: var(--radius-lg); padding: 22px 18px; box-shadow: 0 4px 18px rgba(255, 0, 127, 0.12);">
+        <div style="display: flex; align-items: center; gap: 16px;">
+          <div style="width: 72px; height: 72px; border-radius: 50%; border: 2.5px solid var(--primary-pink); padding: 2px; position: relative;">
+            <img src="${user.avatar || HIMA_AVATARS[0]}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;" />
+            <div style="position: absolute; bottom: 0; right: 0; width: 22px; height: 22px; background: var(--primary-pink); border: 2px solid #ffffff; border-radius: 50%; color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 0.7rem;">
+              ✏️
+            </div>
+          </div>
+          <div>
+            <h2 style="font-size: 1.35rem; font-weight: 800; color: #111827;">${user.username}</h2>
+            <div style="font-size: 0.8rem; color: var(--text-muted);">${user.phone || '+91 95110 88531'}</div>
+          </div>
+        </div>
+
+        <div style="height: 1px; background: #f3f4f6; margin: 18px 0 14px 0;"></div>
+
+        <!-- 4 Quick Actions Row -->
+        <div class="profile-quick-actions">
+          <div class="quick-act-card" id="btnProfileWallet">
+            <div class="quick-act-icon" style="background: rgba(255, 0, 127, 0.1); color: var(--primary-pink);">👛</div>
+            <span class="quick-act-label">Wallet</span>
+          </div>
+          <div class="quick-act-card" id="btnProfileTransactions">
+            <div class="quick-act-icon" style="background: rgba(16, 185, 129, 0.1); color: #10b981;">🛒</div>
+            <span class="quick-act-label">Transactions</span>
+          </div>
+          <div class="quick-act-card" id="btnProfileRefer">
+            <div class="quick-act-icon" style="background: rgba(139, 92, 246, 0.1); color: #8b5cf6;">👥</div>
+            <span class="quick-act-label">Refer & Earn</span>
+          </div>
+          <div class="quick-act-card" id="btnProfilePrivacy">
+            <div class="quick-act-icon" style="background: rgba(59, 130, 246, 0.1); color: #3b82f6;">🛡️</div>
+            <span class="quick-act-label">Privacy</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Settings & Support Section -->
+      <h3 style="font-size: 1rem; font-weight: 800; color: #374151; margin: 24px 0 10px 4px;">Settings & Support</h3>
+
+      <div class="settings-list-card">
+        <div class="setting-item-row" id="btnMenuTerms">
+          <div class="setting-item-left">
+            <div class="setting-item-icon" style="background: rgba(245, 158, 11, 0.1); color: #f59e0b;">📄</div>
+            <div>
+              <div class="setting-title">Terms & Conditions</div>
+              <div class="setting-desc">Read our terms and conditions</div>
+            </div>
+          </div>
+          <span style="color: #9ca3af;">›</span>
+        </div>
+
+        <div class="setting-item-row" id="btnMenuRefund">
+          <div class="setting-item-left">
+            <div class="setting-item-icon" style="background: rgba(16, 185, 129, 0.1); color: #10b981;">💲</div>
+            <div>
+              <div class="setting-title">Refund & Cancellation</div>
+              <div class="setting-desc">Request refunds and cancellations</div>
+            </div>
+          </div>
+          <span style="color: #9ca3af;">›</span>
+        </div>
+
+        <div class="setting-item-row" id="btnMenuGuidelines">
+          <div class="setting-item-left">
+            <div class="setting-item-icon" style="background: rgba(59, 130, 246, 0.1); color: #3b82f6;">📋</div>
+            <div>
+              <div class="setting-title">Community Guidelines</div>
+              <div class="setting-desc">Policies and community standards</div>
+            </div>
+          </div>
+          <span style="color: #9ca3af;">›</span>
+        </div>
+
+        <div class="setting-item-row" id="btnMenuWarnings">
+          <div class="setting-item-left">
+            <div class="setting-item-icon" style="background: rgba(249, 115, 22, 0.1); color: #f97316;">ℹ️</div>
+            <div>
+              <div class="setting-title">My Warnings</div>
+              <div class="setting-desc">
+                ${warnings.length > 0 ? `<strong style="color: #ef4444;">${warnings.length} Active Warnings from Admin</strong>` : 'View warnings from admins'}
+              </div>
+            </div>
+          </div>
+          <span style="color: #9ca3af;">›</span>
+        </div>
+
+        <div class="setting-item-row" id="btnMenuBlocklist">
+          <div class="setting-item-left">
+            <div class="setting-item-icon" style="background: rgba(239, 68, 68, 0.1); color: #ef4444;">🚫</div>
+            <div>
+              <div class="setting-title">My Blocklist</div>
+              <div class="setting-desc">See and unblock people</div>
+            </div>
+          </div>
+          <span style="color: #9ca3af;">›</span>
+        </div>
+
+        <div class="setting-item-row">
+          <div class="setting-item-left">
+            <div class="setting-item-icon" style="background: rgba(236, 72, 153, 0.1); color: #ec4899;">🔕</div>
+            <div>
+              <div class="setting-title">Do Not Disturb</div>
+              <div class="setting-desc">Mute incoming notifications</div>
+            </div>
+          </div>
+          <input type="checkbox" id="chkDndToggle" ${user.isDnd ? 'checked' : ''} style="width: 22px; height: 22px; accent-color: var(--primary-pink); cursor: pointer;" />
+        </div>
+
+        <div class="setting-item-row" id="btnMenuHelp">
+          <div class="setting-item-left">
+            <div class="setting-item-icon" style="background: rgba(139, 92, 246, 0.1); color: #8b5cf6;">❓</div>
+            <div>
+              <div class="setting-title">Help & Support</div>
+              <div class="setting-desc">Get help and contact support</div>
+            </div>
+          </div>
+          <span style="color: #9ca3af;">›</span>
+        </div>
+
+        <div class="setting-item-row" id="btnMenuLogout">
+          <div class="setting-item-left">
+            <div class="setting-item-icon" style="background: rgba(239, 68, 68, 0.1); color: #ef4444;">🚪</div>
+            <div>
+              <div class="setting-title" style="color: #ef4444;">Logout</div>
+              <div class="setting-desc">Sign out from your account</div>
+            </div>
+          </div>
+          <span style="color: #9ca3af;">›</span>
+        </div>
+      </div>
+    `;
+
+    // Bind Quick Actions
+    container.querySelector('#btnProfileWallet').onclick = () => this.showWalletModal();
+    container.querySelector('#btnProfileTransactions').onclick = () => this.showTransactionsModal();
+    container.querySelector('#btnProfileRefer').onclick = () => this.showReferModal();
+    container.querySelector('#btnProfilePrivacy').onclick = () => alert('🛡️ Privacy Policy: Your mobile number & live location are 100% encrypted.');
+
+    // Bind Menu items
+    container.querySelector('#btnMenuTerms').onclick = () => alert('📄 Terms & Conditions: Users must be 18+ and follow respectful communication.');
+    container.querySelector('#btnMenuRefund').onclick = () => alert('💲 Refund Policy: Unused coin packages can be refunded within 48 hours via support.');
+    container.querySelector('#btnMenuGuidelines').onclick = () => alert('📋 Community Guidelines: Harassment, hate speech & nudity are strictly banned.');
+    container.querySelector('#btnMenuWarnings').onclick = () => this.showWarningsModal();
+    container.querySelector('#btnMenuBlocklist').onclick = () => alert('🚫 Blocklist: You have 0 blocked users.');
+    container.querySelector('#btnMenuHelp').onclick = () => alert('❓ Help: Email us at support@hima-app.com or message 24/7 in app.');
+
+    container.querySelector('#chkDndToggle').onchange = (e) => {
+      user.isDnd = e.target.checked;
+      himaApi.saveUser(user);
+      alert(user.isDnd ? '🔕 Do Not Disturb mode activated.' : '🔔 Notifications enabled.');
+    };
+
+    container.querySelector('#btnMenuLogout').onclick = () => {
+      if (confirm('Are you sure you want to log out from Hima?')) {
+        himaApi.logout();
+        this.renderOnboardingStep1();
+      }
+    };
+  }
+
+  // ==========================================
+  // WALLET & COIN STORE (Exact as 4b86b2e8)
+  // ==========================================
+  showWalletModal() {
+    const modal = document.createElement('div');
+    modal.className = 'offer-modal-overlay';
+    const packs = HIMA_COIN_PACKS;
+    let selectedPack = packs[0];
+
+    modal.innerHTML = `
+      <div class="offer-card-sheet" style="height: 90vh; display: flex; flex-direction: column;">
+        <!-- Top Bar -->
+        <div style="display: flex; align-items: center; justify-content: space-between; padding: 18px 20px; border-bottom: 1px solid #f1f2f6;">
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <button class="btn-secondary" id="btnCloseWallet" style="width: 36px; height: 36px; border-radius: 50%; padding: 0;">←</button>
+            <h2 style="font-size: 1.35rem; font-weight: 900; color: #111827; margin: 0;">Wallet</h2>
+          </div>
+          <div class="hima-coin-pill">
+            <span class="coin-icon-circle">H</span>
+            <span>${himaApi.getCoins()}</span>
+          </div>
+        </div>
+
+        <!-- 3x3 Packs Grid -->
+        <div style="flex: 1; overflow-y: auto; padding: 16px 20px 80px 20px;">
+          <div class="wallet-grid">
+            ${packs.map((p, idx) => `
+              <div class="wallet-pack-card ${idx === 0 ? 'selected' : ''}" data-id="${p.id}">
+                ${p.popular ? '<span class="pack-popular-tag">★ Popular</span>' : ''}
+                <div style="font-size: 1.8rem; margin-top: 4px;">🪙</div>
+                <div class="pack-coins-num">${p.coins}</div>
+                <div class="pack-coins-label">Coins</div>
+                ${p.discount ? `<div class="pack-discount-tag">${p.discount}</div>` : '<div style="height: 14px;"></div>'}
+                <div class="pack-price-btn">₹${p.price}</div>
               </div>
             `).join('')}
           </div>
         </div>
 
-        <div class="conversations-list">
-          <div class="rail-title" style="padding-left: 6px; margin-top: 6px;">Messages</div>
-          ${matches.map((m) => `
-            <div class="conv-item glass-card" data-match-id="${m.id}">
-              <div class="conv-avatar-wrap">
-                <img src="${m.photo}" class="conv-avatar" />
-                ${m.online ? '<div class="badge-online conv-online-dot"></div>' : ''}
-              </div>
-              <div class="conv-content">
-                <div class="conv-top-row">
-                  <span class="conv-name">${m.name}</span>
-                  <span class="conv-time">${m.lastMessageTime}</span>
-                </div>
-                <div class="conv-preview">${m.lastMessage}</div>
-              </div>
-            </div>
-          `).join('')}
+        <!-- Sticky Bottom Add Coins Button -->
+        <div style="padding: 16px 20px; background: #ffffff; border-top: 1px solid #f1f2f6;">
+          <button class="btn-pink-block" id="btnAddCoinsAction">
+            Add 40 Coins
+          </button>
         </div>
       </div>
     `;
 
-    container.querySelectorAll('[data-match-id]').forEach((el) => {
-      el.onclick = () => {
-        const mId = Number(el.getAttribute('data-match-id'));
-        this.openChatRoom(mId);
+    document.body.appendChild(modal);
+
+    modal.querySelector('#btnCloseWallet').onclick = () => modal.remove();
+
+    const addBtn = modal.querySelector('#btnAddCoinsAction');
+
+    modal.querySelectorAll('.wallet-pack-card').forEach(card => {
+      card.onclick = () => {
+        modal.querySelectorAll('.wallet-pack-card').forEach(c => c.classList.remove('selected'));
+        card.classList.add('selected');
+        const pid = Number(card.getAttribute('data-id'));
+        selectedPack = packs.find(p => p.id === pid);
+        addBtn.textContent = `Add ${selectedPack.coins} Coins (₹${selectedPack.price})`;
       };
     });
+
+    addBtn.onclick = () => {
+      modal.remove();
+      this.showPaymentCheckoutModal(selectedPack.price, selectedPack.coins, `${selectedPack.coins} Hima Coins Pack`);
+    };
   }
 
-  openChatRoom(matchId) {
-    this.activeChatMatchId = matchId;
-    const matches = api.getMatches();
-    const match = matches.find((m) => m.id === matchId);
-    if (!match) return;
+  // ==========================================
+  // WELCOME OFFER POPUP (Exact as 80caa87c)
+  // ==========================================
+  showWelcomeOfferModal() {
+    const modal = document.createElement('div');
+    modal.className = 'offer-modal-overlay';
 
-    let chatScreen = document.getElementById('chatRoomScreen');
-    if (!chatScreen) {
-      chatScreen = document.createElement('div');
-      chatScreen.id = 'chatRoomScreen';
-      chatScreen.className = 'chat-screen';
-      document.body.appendChild(chatScreen);
-    }
+    modal.innerHTML = `
+      <div class="offer-card-sheet">
+        <button id="btnCloseOffer" style="position: absolute; top: 14px; right: 16px; background: rgba(0,0,0,0.2); border: none; width: 30px; height: 30px; border-radius: 50%; color: #ffffff; font-weight: 900; z-index: 10; cursor: pointer;">✕</button>
 
-    chatScreen.innerHTML = `
-      <div class="chat-header">
-        <div style="display: flex; align-items: center; gap: 10px;">
-          <button class="btn-icon-circle" style="width: 36px; height: 36px; font-size: 1rem;" id="btnCloseChat">←</button>
-          <div class="chat-partner-info">
-            <img src="${match.photo}" class="chat-partner-avatar" />
+        <div class="offer-banner-pink">
+          <div class="offer-tag-badge">65% off</div>
+          <div style="display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 0.88rem; font-weight: 700; opacity: 0.95;">
+            <span>🎁</span> Your welcome offer
+          </div>
+
+          <div style="display: flex; justify-content: center; margin: 12px 0;">
+            <div style="font-size: 3.5rem;">🪙🪙🪙</div>
+          </div>
+
+          <div class="offer-coins-large">60</div>
+          <div style="font-size: 1.05rem; font-weight: 800; letter-spacing: 0.5px;">Hima coins</div>
+        </div>
+
+        <div class="offer-body-white">
+          <div class="offer-pricing-row">
             <div>
-              <div style="font-weight: 700; font-size: 1rem;">${match.name}</div>
-              <div style="font-size: 0.72rem; color: #2ee6a6;">Online now</div>
+              <span class="price-main">₹14</span>
+              <span class="price-cut">₹40</span>
+              <div class="price-save">You save ₹26</div>
+            </div>
+            <div class="offer-timer-box">
+              <span>⏱️ Offer ends in</span>
+              <span class="timer-digits" id="offerTimerDigits">04:57</span>
             </div>
           </div>
-        </div>
-        <div class="chat-call-actions">
-          <button class="chat-call-btn audio" id="btnStartAudioCall" title="Audio Call">📞</button>
-          <button class="chat-call-btn video" id="btnStartVideoCall" title="Video Call">📹</button>
-        </div>
-      </div>
 
-      <div class="chat-messages" id="chatMessagesContainer">
-        ${match.messages.map((msg) => `
-          <div class="msg-bubble ${msg.sender === 'me' ? 'msg-me' : 'msg-them'}">
-            <div>${msg.text}</div>
-            <div class="msg-time">${msg.time}</div>
-          </div>
-        `).join('')}
-      </div>
+          <button class="btn-pink-block" id="btnClaimOffer">
+            <span>🪙</span> Get 60 coins &bull; ₹14 &rarr;
+          </button>
 
-      <div class="icebreakers-bar">
-        <span class="icebreaker-chip">☕ Chai or Coffee?</span>
-        <span class="icebreaker-chip">✈️ Dream travel spot?</span>
-        <span class="icebreaker-chip">🍕 Pineapple on pizza: Yes or No?</span>
-      </div>
-
-      <div class="chat-input-bar">
-        <input type="text" class="glass-input" id="chatInputBox" placeholder="Type a message..." />
-        <button class="btn-primary" style="padding: 12px 18px;" id="btnSendMessage">➤</button>
-      </div>
-    `;
-
-    chatScreen.querySelector('#btnCloseChat').onclick = () => {
-      chatScreen.remove();
-      this.activeChatMatchId = null;
-    };
-
-    chatScreen.querySelector('#btnStartAudioCall').onclick = () => {
-      callManager.startCall(match, 'audio');
-    };
-
-    chatScreen.querySelector('#btnStartVideoCall').onclick = () => {
-      callManager.startCall(match, 'video');
-    };
-
-    const input = chatScreen.querySelector('#chatInputBox');
-    const sendBtn = chatScreen.querySelector('#btnSendMessage');
-
-    const doSend = async () => {
-      const text = input.value.trim();
-      if (!text) return;
-      input.value = '';
-      await api.sendMessage(matchId, text);
-      this.refreshMessages(matchId);
-    };
-
-    sendBtn.onclick = doSend;
-    input.onkeydown = (e) => {
-      if (e.key === 'Enter') doSend();
-    };
-
-    chatScreen.querySelectorAll('.icebreaker-chip').forEach((chip) => {
-      chip.onclick = () => {
-        input.value = chip.textContent;
-        doSend();
-      };
-    });
-
-    this.scrollToBottom();
-  }
-
-  refreshMessages(matchId) {
-    const matches = api.getMatches();
-    const match = matches.find((m) => m.id === matchId);
-    const container = document.getElementById('chatMessagesContainer');
-    if (!match || !container) return;
-
-    container.innerHTML = match.messages.map((msg) => `
-      <div class="msg-bubble ${msg.sender === 'me' ? 'msg-me' : 'msg-them'}">
-        <div>${msg.text}</div>
-        <div class="msg-time">${msg.time}</div>
-      </div>
-    `).join('');
-    this.scrollToBottom();
-  }
-
-  handleIncomingMessage(detail) {
-    if (this.activeChatMatchId === detail.matchId) {
-      this.refreshMessages(detail.matchId);
-    }
-    if (this.currentTab === 'chats') {
-      this.renderChats(document.getElementById('mainViewport'));
-    }
-  }
-
-  scrollToBottom() {
-    const container = document.getElementById('chatMessagesContainer');
-    if (container) {
-      container.scrollTop = container.scrollHeight;
-    }
-  }
-
-  // ==========================================
-  // PROFILE & SETTINGS VIEW (With Edit Profile & Logout)
-  // ==========================================
-  renderProfile(container) {
-    const isGold = this.user.isPremium;
-
-    container.innerHTML = `
-      <div class="profile-view">
-        <div class="profile-card-summary glass-card">
-          <div class="profile-avatar-large-wrap">
-            <img src="${this.user.photos[0]}" class="profile-avatar-large" />
-            ${this.user.photoVerified ? '<span class="badge-verified" style="position: absolute; bottom: 0; right: 4px;">✓ Verified</span>' : ''}
-          </div>
-          <h2 style="font-size: 1.45rem; font-weight: 800;">${this.user.name}, ${this.user.age}</h2>
-          <p style="color: var(--text-muted); font-size: 0.88rem; margin-top: 2px;">📍 ${this.user.city}</p>
-          <p style="font-size: 0.85rem; color: rgba(255,255,255,0.85); margin-top: 6px; max-width: 280px;">${this.user.bio || ''}</p>
-          
-          <div style="margin-top: 10px;">
-            ${isGold ? '<span class="badge-gold">👑 HIPA GOLD MEMBER</span>' : '<span class="glass-pill">Free Tier</span>'}
-          </div>
-
-          <div style="width: 100%; margin-top: 16px;">
-            <div style="display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--text-muted);">
-              <span>Profile Strength</span>
-              <span>85%</span>
-            </div>
-            <div class="meter-container">
-              <div class="meter-fill" style="width: 85%;"></div>
-            </div>
-          </div>
-        </div>
-
-        <div class="settings-group">
-          <div class="settings-item glass-card" id="btnEditMyProfile" style="border-color: rgba(56, 189, 248, 0.4);">
-            <div style="display: flex; align-items: center; gap: 12px;">
-              <span style="font-size: 1.4rem;">✏️</span>
-              <div>
-                <div style="font-weight: 700; color: #38bdf8;">Edit Profile & Photos</div>
-                <div style="font-size: 0.78rem; color: var(--text-muted);">Upload new pictures, edit bio & details</div>
-              </div>
-            </div>
-            <span>➔</span>
-          </div>
-
-          <a href="/downloads/hipa-dating.apk" download="hipa-dating.apk" class="settings-item glass-card" style="text-decoration: none; color: inherit; border-color: rgba(16, 185, 129, 0.4);">
-            <div style="display: flex; align-items: center; gap: 12px;">
-              <span style="font-size: 1.4rem;">📲</span>
-              <div>
-                <div style="font-weight: 700; color: #2ee6a6;">Download Android App (APK)</div>
-                <div style="font-size: 0.78rem; color: var(--text-muted);">Direct APK install for Android phones</div>
-              </div>
-            </div>
-            <span style="font-size: 1.2rem; color: #2ee6a6;">⬇</span>
-          </a>
-
-          <div class="settings-item glass-card" id="btnOpenPremium">
-            <div style="display: flex; align-items: center; gap: 12px;">
-              <span style="font-size: 1.4rem;">👑</span>
-              <div>
-                <div style="font-weight: 700;">Hipa Premium Plans</div>
-                <div style="font-size: 0.78rem; color: var(--text-muted);">Unlimited Swipes, Who Liked You & More</div>
-              </div>
-            </div>
-            <span>➔</span>
-          </div>
-
-          <div class="settings-item glass-card" id="btnOpenSafety">
-            <div style="display: flex; align-items: center; gap: 12px;">
-              <span style="font-size: 1.4rem;">🛡️</span>
-              <div>
-                <div style="font-weight: 700;">Safety Center & Helpline</div>
-                <div style="font-size: 0.78rem; color: var(--text-muted);">Emergency 112, Women 1091, Safe Dating Tips</div>
-              </div>
-            </div>
-            <span>➔</span>
-          </div>
-
-          <div class="settings-item glass-card" id="btnRequestVerify">
-            <div style="display: flex; align-items: center; gap: 12px;">
-              <span style="font-size: 1.4rem;">🤳</span>
-              <div>
-                <div style="font-weight: 700;">Photo Verification</div>
-                <div style="font-size: 0.78rem; color: #38bdf8;">Blue tick selfie badge</div>
-              </div>
-            </div>
-            <span>➔</span>
-          </div>
-
-          <div class="settings-item glass-card" id="btnLogout" style="border-color: rgba(239, 68, 68, 0.4);">
-            <div style="display: flex; align-items: center; gap: 12px;">
-              <span style="font-size: 1.4rem;">🚪</span>
-              <div>
-                <div style="font-weight: 700; color: #ef4444;">Log Out</div>
-                <div style="font-size: 0.78rem; color: var(--text-muted);">Switch account or sign in later</div>
-              </div>
-            </div>
-            <span style="color: #ef4444;">➔</span>
-          </div>
-        </div>
-      </div>
-    `;
-
-    container.querySelector('#btnEditMyProfile').onclick = () => this.showEditProfileModal();
-    container.querySelector('#btnOpenPremium').onclick = () => this.showPremiumModal();
-    container.querySelector('#btnOpenSafety').onclick = () => this.showSafetyModal();
-    container.querySelector('#btnRequestVerify').onclick = () => alert("Blue Tick verification request submitted! A moderator will review your selfie pose shortly.");
-    container.querySelector('#btnLogout').onclick = () => {
-      if (confirm("Are you sure you want to log out?")) {
-        api.logout();
-        this.init();
-      }
-    };
-  }
-
-  // Edit Profile & Photo Uploader Modal
-  showEditProfileModal() {
-    const modal = document.createElement('div');
-    modal.className = 'modal-overlay';
-    const photos = [...(this.user.photos || [])];
-
-    modal.innerHTML = `
-      <div class="bottom-sheet" style="max-height: 92vh;">
-        <div class="sheet-handle"></div>
-        <h2 style="font-size: 1.55rem; font-weight: 800; margin-bottom: 6px;">Edit Profile</h2>
-        <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 16px;">Update your photos, bio, and details</p>
-
-        <div style="display: flex; flex-direction: column; gap: 14px;">
-          <div>
-            <label style="font-size: 0.82rem; font-weight: 700;">Profile Photos (up to 6)</label>
-            <div class="photo-upload-grid" id="editPhotoGrid"></div>
-            <input type="file" id="editFileInput" accept="image/*" style="display: none;" />
-            <button type="button" class="btn-secondary" id="btnEditUploadPhoto" style="width: 100%; padding: 10px; font-size: 0.85rem;">
-              📷 Add Photo from Device
-            </button>
-          </div>
-
-          <div>
-            <label style="font-size: 0.82rem; font-weight: 700;">Display Name</label>
-            <input type="text" id="editName" class="glass-input" value="${this.user.name}" />
-          </div>
-
-          <div>
-            <label style="font-size: 0.82rem; font-weight: 700;">Bio</label>
-            <textarea id="editBio" rows="3" class="glass-input">${this.user.bio || ''}</textarea>
-          </div>
-
-          <div>
-            <label style="font-size: 0.82rem; font-weight: 700;">City</label>
-            <input type="text" id="editCity" class="glass-input" value="${this.user.city}" />
-          </div>
-
-          <div>
-            <label style="font-size: 0.82rem; font-weight: 700;">Occupation</label>
-            <input type="text" id="editJob" class="glass-input" value="${this.user.job || ''}" />
-          </div>
-
-          <button class="btn-primary" id="btnSaveProfile" style="padding: 14px; margin-top: 8px;">Save Changes ✓</button>
-          <button class="btn-secondary" id="btnCancelEdit">Cancel</button>
+          <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 14px; font-weight: 600;">
+            ⭐ Used by 23,412 people in the last 30 mins
+          </p>
+          <button id="btnViewAllPlans" style="background: none; border: none; color: #111827; font-size: 0.8rem; font-weight: 800; margin-top: 6px; cursor: pointer;">
+            View all plans &rsaquo;
+          </button>
         </div>
       </div>
     `;
 
     document.body.appendChild(modal);
 
-    const grid = modal.querySelector('#editPhotoGrid');
-    const fileInput = modal.querySelector('#editFileInput');
+    modal.querySelector('#btnCloseOffer').onclick = () => modal.remove();
 
-    const renderGrid = () => {
-      grid.innerHTML = '';
-      for (let i = 0; i < 6; i++) {
-        const photoUrl = photos[i];
-        const slot = document.createElement('div');
-        slot.className = `photo-slot ${photoUrl ? 'has-image' : ''}`;
-        if (photoUrl) {
-          slot.innerHTML = `
-            <img src="${photoUrl}" />
-            ${i === 0 ? '<span class="badge-main">MAIN</span>' : ''}
-            <button class="btn-remove-photo" data-idx="${i}">✕</button>
-          `;
-        } else {
-          slot.innerHTML = `<span style="font-size: 1.3rem; color: rgba(255,255,255,0.4);">+</span>`;
-          slot.onclick = () => fileInput.click();
-        }
-        grid.appendChild(slot);
+    // Start countdown timer
+    const timerEl = modal.querySelector('#offerTimerDigits');
+    if (this.offerTimer) clearInterval(this.offerTimer);
+    this.offerTimer = setInterval(() => {
+      if (this.offerSeconds <= 0) {
+        clearInterval(this.offerTimer);
+        return;
       }
+      this.offerSeconds--;
+      const mins = Math.floor(this.offerSeconds / 60);
+      const secs = this.offerSeconds % 60;
+      if (timerEl) timerEl.textContent = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    }, 1000);
 
-      grid.querySelectorAll('.btn-remove-photo').forEach((btn) => {
-        btn.onclick = (e) => {
-          e.stopPropagation();
-          const idx = Number(btn.getAttribute('data-idx'));
-          photos.splice(idx, 1);
-          renderGrid();
-        };
-      });
-    };
-
-    renderGrid();
-
-    modal.querySelector('#btnEditUploadPhoto').onclick = () => fileInput.click();
-    fileInput.onchange = (e) => {
-      const file = e.target.files[0];
-      if (!file) return;
-      const reader = new FileReader();
-      reader.onload = (re) => {
-        photos.push(re.target.result);
-        renderGrid();
-      };
-      reader.readAsDataURL(file);
-    };
-
-    modal.querySelector('#btnCancelEdit').onclick = () => modal.remove();
-
-    modal.querySelector('#btnSaveProfile').onclick = () => {
-      this.user.name = modal.querySelector('#editName').value.trim() || this.user.name;
-      this.user.bio = modal.querySelector('#editBio').value.trim();
-      this.user.city = modal.querySelector('#editCity').value.trim() || this.user.city;
-      this.user.job = modal.querySelector('#editJob').value.trim();
-      if (photos.length > 0) {
-        this.user.photos = photos;
-      }
-      api.saveUser(this.user);
+    modal.querySelector('#btnClaimOffer').onclick = () => {
       modal.remove();
-      this.renderProfile(document.getElementById('mainViewport'));
+      this.showPaymentCheckoutModal(14, 60, "Welcome Offer (60 Coins)");
+    };
+
+    modal.querySelector('#btnViewAllPlans').onclick = () => {
+      modal.remove();
+      this.showWalletModal();
     };
   }
 
-  showPremiumModal(title = "Upgrade to Hipa Gold") {
-    const cfg = api.getGatewayConfigs();
-    const activeGw = cfg.payments?.activeGateway || "razorpay";
+  // ==========================================
+  // PAYMENT OPTIONS MODAL (Exact as 21d11a43)
+  // ==========================================
+  showPaymentCheckoutModal(amount, coins, title = "Coin Pack") {
+    const modal = document.createElement('div');
+    modal.className = 'offer-modal-overlay';
+    const cfg = himaApi.getGatewayConfigs();
     const upiVpa = cfg.payments?.upiDirect?.vpa || "hipabiz@icici";
-    const upiPayee = cfg.payments?.upiDirect?.payeeName || "Hipa Dating App";
-    const goldPrice = cfg.payments?.upiDirect?.goldPrice || 299;
 
-    let gatewayBadge = "";
-    let gatewayButtonText = "Instant Unlock Gold 🚀";
-    let gatewayDesc = "";
-
-    if (activeGw === "razorpay") {
-      const mode = (cfg.payments?.razorpay?.mode || "test").toUpperCase();
-      gatewayBadge = `<span class="glass-pill" style="background: rgba(14, 116, 233, 0.2); color: #38bdf8; font-size: 0.72rem;">Razorpay PG (${mode})</span>`;
-      gatewayDesc = "Secured via Razorpay: UPI, Google Pay, PhonePe, Cards & NetBanking";
-      gatewayButtonText = `Pay ₹${goldPrice} via Razorpay 💳`;
-    } else if (activeGw === "cashfree") {
-      gatewayBadge = `<span class="glass-pill" style="background: rgba(16, 185, 129, 0.2); color: #10b981; font-size: 0.72rem;">Cashfree Payments</span>`;
-      gatewayDesc = "Secured via Cashfree AutoPay & Instant UPI";
-      gatewayButtonText = `Pay ₹${goldPrice} with Cashfree ⚡`;
-    } else if (activeGw === "phonepe") {
-      gatewayBadge = `<span class="glass-pill" style="background: rgba(147, 51, 234, 0.2); color: #c084fc; font-size: 0.72rem;">PhonePe PG</span>`;
-      gatewayDesc = "Pay directly via PhonePe UPI Gateway";
-      gatewayButtonText = `Pay ₹${goldPrice} via PhonePe 📱`;
-    } else if (activeGw === "stripe") {
-      gatewayBadge = `<span class="glass-pill" style="background: rgba(99, 102, 241, 0.2); color: #818cf8; font-size: 0.72rem;">Stripe Global</span>`;
-      gatewayDesc = "International Credit/Debit Card Checkout";
-      gatewayButtonText = `Pay ₹${goldPrice} via Stripe 🌐`;
-    } else {
-      gatewayBadge = `<span class="glass-pill" style="background: rgba(245, 158, 11, 0.2); color: #f59e0b; font-size: 0.72rem;">Direct UPI QR</span>`;
-      gatewayDesc = `Direct zero-fee bank transfer to VPA: ${upiVpa}`;
-      gatewayButtonText = `Confirm & Unlock Gold 🚀`;
-    }
-
-    const modal = document.createElement('div');
-    modal.className = 'modal-overlay';
     modal.innerHTML = `
-      <div class="bottom-sheet">
-        <div class="sheet-handle"></div>
-        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
-          <h2 style="font-size: 1.5rem; font-weight: 800; color: #ffd166; margin: 0;">👑 ${title}</h2>
-          ${gatewayBadge}
-        </div>
-        <p style="color: var(--text-muted); font-size: 0.88rem; margin-bottom: 16px;">
-          Unlock all dating superpowers with zero boundaries.
-        </p>
-
-        <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; font-size: 0.88rem;">
-          <div style="display: flex; gap: 10px; align-items: center;">
-            <span style="color: #2ee6a6;">✓</span> <span>Unlimited Swipes (no daily limit)</span>
+      <div class="offer-card-sheet" style="height: 92vh; display: flex; flex-direction: column;">
+        <!-- Top App Bar in Blue as in Screenshot 21d11a43 -->
+        <div style="background: #2563eb; color: #ffffff; padding: 14px 18px; display: flex; align-items: center; justify-content: space-between;">
+          <div style="display: flex; align-items: center; gap: 14px;">
+            <button id="btnClosePay" style="background: none; border: none; color: #ffffff; font-size: 1.3rem; cursor: pointer;">←</button>
+            <div style="width: 32px; height: 32px; border-radius: 8px; background: rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; font-weight: 900;">H</div>
+            <span style="font-weight: 800; font-size: 1.15rem;">Hima</span>
           </div>
-          <div style="display: flex; gap: 10px; align-items: center;">
-            <span style="color: #2ee6a6;">✓</span> <span>See everyone who Liked You</span>
-          </div>
-          <div style="display: flex; gap: 10px; align-items: center;">
-            <span style="color: #2ee6a6;">✓</span> <span>Unlimited 1-to-1 Audio & Video Calls</span>
-          </div>
-          <div style="display: flex; gap: 10px; align-items: center;">
-            <span style="color: #2ee6a6;">✓</span> <span>5 Free Super Likes every day</span>
-          </div>
-          <div style="display: flex; gap: 10px; align-items: center;">
-            <span style="color: #2ee6a6;">✓</span> <span>Rewind / Undo accidental passes</span>
-          </div>
+          <div style="width: 32px; height: 32px; border-radius: 50%; background: rgba(255,255,255,0.25); display: flex; align-items: center; justify-content: center;">👤</div>
         </div>
 
-        <div class="glass-card" style="padding: 16px; margin-bottom: 18px; text-align: center;">
-          <div style="font-size: 0.82rem; color: var(--text-muted);">${gatewayDesc}</div>
-          <div style="font-size: 1.25rem; font-weight: 800; color: var(--accent-pink); margin: 6px 0;">
-            ₹${goldPrice} / 1 Month Gold
-          </div>
-          
-          <div style="margin-top: 10px; padding: 10px; background: rgba(0,0,0,0.25); border-radius: var(--radius-sm); font-size: 0.82rem;">
-            <div>Payee VPA: <strong style="color: #38bdf8;">${upiVpa}</strong> (${upiPayee})</div>
-            <a href="upi://pay?pa=${encodeURIComponent(upiVpa)}&pn=${encodeURIComponent(upiPayee)}&am=${goldPrice}&cu=INR" 
-               class="btn-secondary" style="display: inline-block; margin-top: 8px; font-size: 0.78rem; padding: 4px 12px; text-decoration: none;">
-              📲 Launch UPI App (GPay / PhonePe / Paytm)
-            </a>
+        <div style="flex: 1; overflow-y: auto; padding: 18px 20px 80px 20px; background: #ffffff;">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+            <h2 style="font-size: 1.2rem; font-weight: 900; color: #111827; margin: 0;">Payment Options</h2>
+            <span class="glass-pill" style="font-size: 0.72rem; color: #2563eb;">${title}</span>
           </div>
 
-          <input type="text" id="inputUtr" class="glass-input" placeholder="Enter 12-digit UPI UTR / Payment Ref No." style="margin-top: 12px;" />
+          <!-- Dynamic UPI QR Card -->
+          <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: var(--radius-md); padding: 16px; margin-bottom: 20px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+              <span style="font-size: 0.82rem; font-weight: 800; color: #475569;">UPI QR</span>
+              <span style="font-size: 0.76rem; color: #64748b;">⏱️ 09:50</span>
+            </div>
+
+            <div style="display: flex; align-items: center; gap: 16px;">
+              <div style="width: 100px; height: 100px; background: #ffffff; border: 1.5px solid #cbd5e1; border-radius: 12px; display: flex; align-items: center; justify-content: center; padding: 6px;">
+                <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(`upi://pay?pa=${upiVpa}&pn=HimaApp&am=${amount}&cu=INR`)}" style="width: 100%; height: 100%;" />
+              </div>
+              <div style="flex: 1;">
+                <div style="font-size: 0.82rem; font-weight: 700; color: #334155; margin-bottom: 6px;">Scan the QR using any UPI App</div>
+                <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+                  <span class="glass-pill" style="font-size: 0.65rem;">Navi</span>
+                  <span class="glass-pill" style="font-size: 0.65rem;">PhonePe</span>
+                  <span class="glass-pill" style="font-size: 0.65rem;">GPay</span>
+                  <span class="glass-pill" style="font-size: 0.65rem;">Paytm</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Recommended UPI Apps -->
+          <div style="font-size: 0.82rem; font-weight: 700; color: #64748b; margin-bottom: 8px;">Recommended</div>
+          <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px;">
+            <div class="creator-card" style="padding: 12px 14px; cursor: pointer;">
+              <div style="display: flex; align-items: center; gap: 10px; font-size: 0.9rem; font-weight: 700;">
+                <span style="font-size: 1.2rem;">📱</span> UPI - Navi
+              </div>
+              <span>›</span>
+            </div>
+            <div class="creator-card" style="padding: 12px 14px; cursor: pointer;">
+              <div style="display: flex; align-items: center; gap: 10px; font-size: 0.9rem; font-weight: 700;">
+                <span style="font-size: 1.2rem;">🟣</span> UPI - PhonePe
+              </div>
+              <span>›</span>
+            </div>
+          </div>
+
+          <!-- All Payment Options -->
+          <div style="font-size: 0.82rem; font-weight: 700; color: #64748b; margin-bottom: 8px;">All Payment Options</div>
+          <div style="display: flex; flex-direction: column; gap: 8px;">
+            <div class="creator-card" style="padding: 12px 14px;">
+              <span style="font-weight: 700; font-size: 0.88rem;">💳 Cards (Visa, MasterCard, Rupay)</span>
+              <span>›</span>
+            </div>
+            <div class="creator-card" style="padding: 12px 14px;">
+              <span style="font-weight: 700; font-size: 0.88rem;">🏦 Netbanking (SBI, HDFC, ICICI)</span>
+              <span>›</span>
+            </div>
+            <div class="creator-card" style="padding: 12px 14px;">
+              <span style="font-weight: 700; font-size: 0.88rem;">👛 Wallets</span>
+              <span>›</span>
+            </div>
+          </div>
         </div>
 
-        <button class="btn-gold" id="btnSubmitUpiPay" style="width: 100%; padding: 14px;">${gatewayButtonText}</button>
-        <button class="btn-secondary" id="btnCloseModal" style="width: 100%; margin-top: 10px;">Maybe Later</button>
+        <!-- Sticky Bottom Bar as in 21d11a43 -->
+        <div style="padding: 12px 20px; background: #ffffff; border-top: 1px solid #e2e8f0; display: flex; align-items: center; justify-content: space-between; gap: 16px;">
+          <div>
+            <div style="font-size: 1.35rem; font-weight: 900; color: #0f172a;">₹${amount}</div>
+            <div style="font-size: 0.72rem; color: var(--text-muted);">View Details ^</div>
+          </div>
+          <button id="btnConfirmPay" style="flex: 1; background: #0f172a; color: #ffffff; padding: 14px; border-radius: 12px; font-size: 1rem; font-weight: 800; border: none; cursor: pointer;">
+            Continue
+          </button>
+        </div>
       </div>
     `;
 
     document.body.appendChild(modal);
 
-    modal.querySelector('#btnCloseModal').onclick = () => modal.remove();
-    modal.querySelector('#btnSubmitUpiPay').onclick = async () => {
-      const utr = modal.querySelector('#inputUtr').value.trim() || ('PAY-' + Date.now().toString().slice(-8));
-      await api.upgradeToGold('gold', utr);
-      alert(`🎉 Payment of ₹${goldPrice} processed via ${activeGw.toUpperCase()}!\nHipa Gold is now active on your account!`);
+    modal.querySelector('#btnClosePay').onclick = () => modal.remove();
+
+    modal.querySelector('#btnConfirmPay').onclick = () => {
+      himaApi.addCoins(coins, `${coins} Coins Pack`, "UTR-" + Date.now().toString().slice(-8));
+      alert(`🎉 Payment of ₹${amount} Successful!\n${coins} Hima coins have been credited to your wallet.`);
       modal.remove();
-      this.user = api.getUser();
-      this.setupTopBar();
-      this.renderCurrentTab();
+      document.getElementById('userCoinsCount').textContent = himaApi.getCoins();
     };
   }
 
-  showSafetyModal() {
-    const modal = document.createElement('div');
-    modal.className = 'modal-overlay';
-    modal.innerHTML = `
-      <div class="bottom-sheet">
-        <div class="sheet-handle"></div>
-        <h2 style="font-size: 1.5rem; font-weight: 800; color: #2ee6a6; margin-bottom: 8px;">🛡️ Safety Center</h2>
-        <p style="color: var(--text-muted); font-size: 0.88rem; margin-bottom: 18px;">
-          Your safety and privacy are our top priority. We comply with IT Rules 2021 & DPDP Act 2023.
-        </p>
+  // ==========================================
+  // LIVE WEBRTC CALLING SCREEN
+  // ==========================================
+  startCall(creator, type = 'voice') {
+    const costPerMin = type === 'video' ? creator.videoRate : creator.voiceRate;
+    const userCoins = himaApi.getCoins();
 
-        <div class="glass-card" style="padding: 14px; margin-bottom: 14px;">
-          <h4 style="color: #ef4444; font-size: 0.95rem; margin-bottom: 6px;">🚨 India Emergency Helplines</h4>
-          <p style="font-size: 0.85rem; line-height: 1.5;">
-            • National Emergency: <strong>112</strong><br/>
-            • Women Helpline (All India): <strong>1091</strong><br/>
-            • Cyber Crime Reporting: <strong>1930</strong> / cybercrime.gov.in
-          </p>
+    if (userCoins < costPerMin) {
+      alert(`⚠️ Low Coin Balance!\nYou have ${userCoins} coins, but this call requires ${costPerMin} coins/min.\nRecharge your wallet to start calling.`);
+      this.showWelcomeOfferModal();
+      return;
+    }
+
+    const overlay = document.createElement('div');
+    overlay.className = 'offer-modal-overlay';
+    overlay.style.alignItems = 'center';
+    overlay.style.justifyContent = 'center';
+
+    let secondsElapsed = 0;
+
+    overlay.innerHTML = `
+      <div style="width: 100%; height: 100%; background: #0f0a1c; display: flex; flex-direction: column; align-items: center; justify-content: space-between; padding: 40px 20px; position: relative;">
+        <!-- Top Call Header -->
+        <div style="text-align: center; color: #ffffff;">
+          <div class="glass-pill" style="background: rgba(255,255,255,0.15); color: #2ee6a6; margin-bottom: 12px; font-weight: 700;">
+            ● LIVE ${type.toUpperCase()} CALL
+          </div>
+          <h2 style="font-size: 1.8rem; font-weight: 800; margin-bottom: 4px;">${creator.name}</h2>
+          <div style="font-size: 0.88rem; color: var(--text-muted); font-weight: 600;">${creator.language} • Rate: 🪙 ${costPerMin}/min</div>
+          <div id="liveCallTimer" style="font-size: 1.4rem; font-weight: 900; color: #ffffff; margin-top: 10px;">00:00</div>
         </div>
 
-        <div class="glass-card" style="padding: 14px; margin-bottom: 18px;">
-          <h4 style="color: #38bdf8; font-size: 0.95rem; margin-bottom: 6px;">✨ Date Safely Rules</h4>
-          <p style="font-size: 0.82rem; line-height: 1.4; color: var(--text-muted);">
-            1. Never send money or share bank OTPs with anyone.<br/>
-            2. Meet in public places for first dates.<br/>
-            3. Use in-app audio/video calls before meeting in person.
-          </p>
+        <!-- Central Avatar / Simulated Video -->
+        <div style="width: 180px; height: 180px; border-radius: 50%; padding: 4px; border: 3px solid var(--primary-pink); box-shadow: 0 0 40px rgba(255, 0, 127, 0.4); overflow: hidden;">
+          <img src="${creator.avatar}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;" />
         </div>
 
-        <button class="btn-primary" id="btnCloseSafety" style="width: 100%;">Got it, Stay Safe!</button>
+        <!-- Coin Balance live meter -->
+        <div class="glass-pill" style="background: rgba(255, 215, 0, 0.2); color: #ffd700; border: 1px solid rgba(255, 215, 0, 0.4); font-size: 0.85rem; font-weight: 800;">
+          Wallet Balance: <span id="callLiveCoins">${himaApi.getCoins()}</span> coins
+        </div>
+
+        <!-- In-Call Control Buttons -->
+        <div style="display: flex; gap: 24px; align-items: center;">
+          <button class="call-icon-round" id="btnToggleMute" style="width: 54px; height: 54px; background: rgba(255,255,255,0.15); color: #ffffff; border: none;">
+            🎤
+          </button>
+          <button class="call-icon-round" id="btnEndCall" style="width: 68px; height: 68px; background: #ef4444; color: #ffffff; border: none; font-size: 1.8rem; box-shadow: 0 6px 20px rgba(239,68,68,0.4);">
+            📞
+          </button>
+          <button class="call-icon-round" id="btnToggleCam" style="width: 54px; height: 54px; background: rgba(255,255,255,0.15); color: #ffffff; border: none;">
+            📷
+          </button>
+        </div>
       </div>
     `;
 
+    document.body.appendChild(overlay);
+
+    // Live timer & coin deduction every 60s
+    this.callTimer = setInterval(() => {
+      secondsElapsed++;
+      const mins = Math.floor(secondsElapsed / 60);
+      const secs = secondsElapsed % 60;
+      const timerEl = overlay.querySelector('#liveCallTimer');
+      if (timerEl) timerEl.textContent = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+
+      // Deduct coins every full minute
+      if (secondsElapsed > 0 && secondsElapsed % 60 === 0) {
+        const deducted = himaApi.deductCoins(costPerMin, `Call with ${creator.name}`);
+        if (!deducted) {
+          alert('Coins exhausted! Call ended.');
+          endCall();
+        } else {
+          const liveCoinEl = overlay.querySelector('#callLiveCoins');
+          if (liveCoinEl) liveCoinEl.textContent = himaApi.getCoins();
+          document.getElementById('userCoinsCount').textContent = himaApi.getCoins();
+        }
+      }
+    }, 1000);
+
+    const endCall = () => {
+      if (this.callTimer) clearInterval(this.callTimer);
+      const coinsCharged = Math.max(costPerMin, Math.ceil(secondsElapsed / 60) * costPerMin);
+      himaApi.deductCoins(costPerMin, `Call with ${creator.name}`);
+      himaApi.recordCall(creator, type, secondsElapsed, coinsCharged);
+      himaApi.addFriend(creator);
+      document.getElementById('userCoinsCount').textContent = himaApi.getCoins();
+      overlay.remove();
+    };
+
+    overlay.querySelector('#btnEndCall').onclick = endCall;
+    overlay.querySelector('#btnToggleMute').onclick = () => alert('Microphone toggled');
+    overlay.querySelector('#btnToggleCam').onclick = () => alert('Camera switched');
+  }
+
+  // ==========================================
+  // PROFILE SUB-MODALS (Transactions, Warnings, Refer)
+  // ==========================================
+  showTransactionsModal() {
+    const txs = himaApi.getTransactions();
+    const modal = document.createElement('div');
+    modal.className = 'offer-modal-overlay';
+    modal.innerHTML = `
+      <div class="offer-card-sheet" style="height: 75vh; padding: 20px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+          <h2 style="font-size: 1.3rem; font-weight: 800; color: #111827; margin: 0;">Coin Transactions</h2>
+          <button id="btnCloseTxs" style="background: none; border: none; font-size: 1.2rem; cursor: pointer;">✕</button>
+        </div>
+
+        <div style="flex: 1; overflow-y: auto;">
+          ${txs.length > 0 ? txs.map(t => `
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #f1f2f6;">
+              <div>
+                <div style="font-weight: 700; color: #111827;">${t.title}</div>
+                <div style="font-size: 0.72rem; color: var(--text-muted);">${t.date} ${t.utr ? '• ' + t.utr : ''}</div>
+              </div>
+              <div style="font-weight: 900; color: ${t.type === 'credit' ? '#10b981' : '#ef4444'};">
+                ${t.amount}
+              </div>
+            </div>
+          `).join('') : '<p style="text-align: center; color: var(--text-muted); padding: 40px 0;">No transactions yet.</p>'}
+        </div>
+      </div>
+    `;
     document.body.appendChild(modal);
-    modal.querySelector('#btnCloseSafety').onclick = () => modal.remove();
+    modal.querySelector('#btnCloseTxs').onclick = () => modal.remove();
+  }
+
+  showWarningsModal() {
+    const warnings = himaApi.getWarnings();
+    const modal = document.createElement('div');
+    modal.className = 'offer-modal-overlay';
+    modal.innerHTML = `
+      <div class="offer-card-sheet" style="height: 60vh; padding: 20px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+          <h2 style="font-size: 1.3rem; font-weight: 800; color: #111827; margin: 0;">My Warnings</h2>
+          <button id="btnCloseWarn" style="background: none; border: none; font-size: 1.2rem; cursor: pointer;">✕</button>
+        </div>
+
+        <div style="flex: 1; overflow-y: auto;">
+          ${warnings.length > 0 ? warnings.map(w => `
+            <div class="glass-card" style="padding: 14px; margin-bottom: 10px; border-left: 4px solid #ef4444;">
+              <div style="font-weight: 800; color: #ef4444; font-size: 0.95rem;">⚠️ Admin Warning: ${w.reason}</div>
+              <div style="font-size: 0.8rem; color: var(--text-dark); margin-top: 4px;">${w.message}</div>
+              <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 6px;">Issued on: ${w.date}</div>
+            </div>
+          `).join('') : `
+            <div style="text-align: center; padding: 40px 0;">
+              <div style="font-size: 3rem; margin-bottom: 10px;">🛡️</div>
+              <h3 style="font-size: 1.15rem; font-weight: 800; color: #10b981;">Clean Account Status</h3>
+              <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 4px;">You have 0 warnings. Keep adhering to community guidelines!</p>
+            </div>
+          `}
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+    modal.querySelector('#btnCloseWarn').onclick = () => modal.remove();
+  }
+
+  showReferModal() {
+    const user = this.user || { username: 'JgckA625' };
+    const myCode = "HIMA-" + user.username;
+    const modal = document.createElement('div');
+    modal.className = 'offer-modal-overlay';
+    modal.innerHTML = `
+      <div class="offer-card-sheet" style="padding: 24px; text-align: center;">
+        <div style="font-size: 3rem; margin-bottom: 8px;">🎁</div>
+        <h2 style="font-size: 1.4rem; font-weight: 900; color: #111827; margin-bottom: 6px;">Refer & Earn 20 Coins</h2>
+        <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 20px;">
+          Share your referral code with friends. When they register, both of you get 20 bonus coins!
+        </p>
+
+        <div style="background: #f8fafc; border: 1.5px dashed var(--primary-pink); padding: 14px; border-radius: 14px; font-size: 1.3rem; font-weight: 900; color: var(--primary-pink); margin-bottom: 20px;">
+          ${myCode}
+        </div>
+
+        <button class="btn-pink-block" id="btnCopyRefCode" style="margin-bottom: 10px;">
+          📋 Copy Referral Code
+        </button>
+        <button class="btn-secondary" id="btnCloseRefer" style="width: 100%;">
+          Close
+        </button>
+      </div>
+    `;
+    document.body.appendChild(modal);
+    modal.querySelector('#btnCloseRefer').onclick = () => modal.remove();
+    modal.querySelector('#btnCopyRefCode').onclick = () => {
+      navigator.clipboard?.writeText(myCode);
+      alert('Referral code copied to clipboard: ' + myCode);
+    };
   }
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  const app = new HipaApp();
+  const app = new HimaApp();
   app.init();
 });

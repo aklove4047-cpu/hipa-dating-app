@@ -1,176 +1,183 @@
 /* =========================================================
-   Hipa Dating App — API Client & Data Layer
-   Specification: PRD Files 01, 02, 03
-   Includes: Auth (Signup, OTP, Login, Logout), Profile Wizard, Photo Upload, Matches, Calling
+   Hima / Hipa Dating App — API & Data Layer
+   Exact specifications from reference app screenshots
    ========================================================= */
 
-const INITIAL_PROFILES = [
+export const HIMA_CREATORS = [
   {
-    id: 101,
-    name: "Ananya Sharma",
-    age: 23,
-    city: "Mumbai, Bandra",
-    distanceKm: 3,
-    verified: true,
-    bio: "Coffee enthusiast, indie music lover, and UI designer. Let's find the best sunset spot in Bandra! ☕🌅",
-    job: "Product Designer @ FinTech",
-    education: "NIFT Mumbai",
-    height: "5'6\" (168 cm)",
-    relationshipGoal: "long_term",
-    interests: ["Design", "Indie Music", "Coffee", "Yoga", "Travel"],
-    photos: [
-      "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=800&q=80",
-      "https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=800&q=80"
-    ]
+    id: 1,
+    name: "jannatkhan",
+    gender: "female",
+    language: "Hindi",
+    online: true,
+    voiceRate: 10,
+    videoRate: 0,
+    videoOnline: false,
+    avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80",
+    rating: 4.9,
+    bio: "Hey there! Sweet chats & late-night vibes. Let's talk!"
   },
   {
-    id: 102,
-    name: "Rohan Verma",
-    age: 26,
-    city: "Bengaluru, Indiranagar",
-    distanceKm: 5,
-    verified: true,
-    bio: "Startup engineer by day, guitarist by night. Looking for someone to explore craft breweries and live gigs with. 🎸🍻",
-    job: "Fullstack Dev @ HealthTech",
-    education: "IIT Bombay",
-    height: "5'11\" (180 cm)",
-    relationshipGoal: "long_term",
-    interests: ["Guitar", "Startups", "Craft Beer", "Hiking", "Books"],
-    photos: [
-      "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=800&q=80",
-      "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=800&q=80"
-    ]
+    id: 2,
+    name: "khushi",
+    gender: "female",
+    language: "Bengali",
+    online: true,
+    voiceRate: 10,
+    videoRate: 0,
+    videoOnline: false,
+    avatar: "https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=300&q=80",
+    rating: 4.8,
+    bio: "Bengali beauty, love music and soothing conversations."
   },
   {
-    id: 103,
-    name: "Pooja Malhotra",
-    age: 24,
-    city: "Delhi, Hauz Khas",
-    distanceKm: 2,
-    verified: false,
-    bio: "Foodie who will take you to the best street food stalls in Old Delhi. Dog mom to an adorable Golden Retriever. 🐾🍜",
-    job: "Marketing Strategist",
-    education: "Delhi University",
-    height: "5'4\" (163 cm)",
-    relationshipGoal: "short_term",
-    interests: ["Foodie", "Dogs", "Photography", "Cafes", "Bollywood"],
-    photos: [
-      "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=800&q=80",
-      "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=800&q=80"
-    ]
+    id: 3,
+    name: "Simran",
+    gender: "female",
+    language: "Punjabi",
+    online: true,
+    voiceRate: 10,
+    videoRate: 60,
+    videoOnline: true,
+    avatar: "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=300&q=80",
+    rating: 5.0,
+    bio: "Full of energy! Available for both voice and video call."
   },
   {
-    id: 104,
-    name: "Karan Singhania",
-    age: 27,
-    city: "Pune, Koregaon Park",
-    distanceKm: 7,
-    verified: true,
-    bio: "Fitness fanatic & culinary explorer. If you love weekend road trips and pasta from scratch, we'll get along. 🏋️‍♂️🍝",
-    job: "Architect",
-    education: "CEPT University",
-    height: "6'1\" (185 cm)",
-    relationshipGoal: "marriage",
-    interests: ["Fitness", "Cooking", "Road Trips", "Architecture", "Art"],
-    photos: [
-      "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&w=800&q=80",
-      "https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?auto=format&fit=crop&w=800&q=80"
-    ]
+    id: 4,
+    name: "Heena",
+    gender: "female",
+    language: "Marathi",
+    online: true,
+    voiceRate: 10,
+    videoRate: 60,
+    videoOnline: true,
+    avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=300&q=80",
+    rating: 4.7,
+    bio: "Marathi mulgi! Chill vibes and great listener."
   },
   {
-    id: 105,
-    name: "Sneha Patel",
-    age: 25,
-    city: "Jaipur, C-Scheme",
-    distanceKm: 4,
-    verified: true,
-    bio: "Architecture lover, chai connoisseur & pottery enthusiast. Looking for deep conversations and goofy laughs. ☕✨",
-    job: "Interior Designer",
-    education: "Raffles College",
-    height: "5'5\" (165 cm)",
-    relationshipGoal: "long_term",
-    interests: ["Pottery", "Chai", "Travel", "Museums", "Cinema"],
-    photos: [
-      "https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=800&q=80",
-      "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=800&q=80"
-    ]
+    id: 5,
+    name: "Susmita",
+    gender: "female",
+    language: "Odia",
+    online: true,
+    voiceRate: 10,
+    videoRate: 60,
+    videoOnline: true,
+    avatar: "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?auto=format&fit=crop&w=300&q=80",
+    rating: 4.8,
+    bio: "Friendly Odia creator. Let's share feelings!"
+  },
+  {
+    id: 6,
+    name: "Damini",
+    gender: "female",
+    language: "Telugu",
+    online: true,
+    voiceRate: 10,
+    videoRate: 60,
+    videoOnline: true,
+    avatar: "https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91?auto=format&fit=crop&w=300&q=80",
+    rating: 4.9,
+    bio: "Telugu girl, warm heart and exciting stories."
+  },
+  {
+    id: 7,
+    name: "Pallavi",
+    gender: "female",
+    language: "Tamil",
+    online: false,
+    voiceRate: 0,
+    videoRate: 60,
+    videoOnline: true,
+    avatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=300&q=80",
+    rating: 4.6,
+    bio: "Tamil creator. Connect on high quality video call."
+  },
+  {
+    id: 8,
+    name: "mahiqueen",
+    gender: "female",
+    language: "Marathi",
+    online: true,
+    voiceRate: 10,
+    videoRate: 0,
+    videoOnline: false,
+    avatar: "https://images.unsplash.com/photo-1502685104226-ee32379fefbe?auto=format&fit=crop&w=300&q=80",
+    rating: 4.7,
+    bio: "Queen of good mood! Voice calls anytime."
+  },
+  {
+    id: 9,
+    name: "Priya",
+    gender: "female",
+    language: "Hindi",
+    online: true,
+    voiceRate: 10,
+    videoRate: 60,
+    videoOnline: true,
+    avatar: "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?auto=format&fit=crop&w=300&q=80",
+    rating: 4.9,
+    bio: "College student, love sharing day-to-day moments."
+  },
+  {
+    id: 10,
+    name: "xvsea",
+    gender: "female",
+    language: "Bengali",
+    online: true,
+    voiceRate: 10,
+    videoRate: 60,
+    videoOnline: true,
+    avatar: "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&w=300&q=80",
+    rating: 4.8,
+    bio: "Charming conversations and fun banter."
   }
 ];
 
-class ApiService {
+export const HIMA_COIN_PACKS = [
+  { id: 1, coins: 40, price: 25, discount: "Save 30%", popular: false },
+  { id: 2, coins: 90, price: 49, discount: "", popular: false },
+  { id: 3, coins: 200, price: 64, discount: "Save 30%", popular: false },
+  { id: 4, coins: 440, price: 129, discount: "Save 20%", popular: false },
+  { id: 5, coins: 1200, price: 299, discount: "Save 30%", popular: false },
+  { id: 6, coins: 2500, price: 699, discount: "Save 30%", popular: true },
+  { id: 7, coins: 5500, price: 1199, discount: "Save 33%", popular: false },
+  { id: 8, coins: 15000, price: 2999, discount: "Save 40%", popular: false },
+  { id: 9, coins: 33000, price: 6999, discount: "Save 45%", popular: false }
+];
+
+export const HIMA_LANGUAGES = [
+  { code: "ta", name: "Tamil", native: "தமிழ்", char: "த" },
+  { code: "te", name: "Telugu", native: "తెలుగు", char: "తె" },
+  { code: "ml", name: "Malayalam", native: "മലയാളം", char: "മ" },
+  { code: "kn", name: "Kannada", native: "ಕನ್ನಡ", char: "ಕ" },
+  { code: "hi", name: "Hindi", native: "हिंदी", char: "ह" },
+  { code: "pa", name: "Punjabi", native: "ਪੰਜਾਬੀ", char: "ਪ" },
+  { code: "mr", name: "Marathi", native: "मराठी", char: "म" },
+  { code: "bn", name: "Bengali", native: "বাংলা", char: "ব" },
+  { code: "as", name: "Assamese", native: "অসমীয়া", char: "অ" }
+];
+
+export const HIMA_AVATARS = [
+  "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=300&q=80",
+  "https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?auto=format&fit=crop&w=300&q=80",
+  "https://images.unsplash.com/photo-1527980965255-d3b416303d12?auto=format&fit=crop&w=300&q=80",
+  "https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&w=300&q=80",
+  "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=300&q=80",
+  "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=300&q=80"
+];
+
+class HimaApiService {
   constructor() {
-    this.session = JSON.parse(localStorage.getItem('hipa_session') || 'null');
-    this.user = JSON.parse(localStorage.getItem('hipa_user') || 'null');
-    this.registeredUsers = JSON.parse(localStorage.getItem('hipa_registered_users') || 'null') || [
-      {
-        email: "demo@hipa.com",
-        password: "password123",
-        dob: "1999-05-15",
-        name: "Aman Kapoor",
-        age: 25,
-        city: "Mumbai, Bandra",
-        gender: "male",
-        interestedIn: "female",
-        isPremium: false,
-        photoVerified: true,
-        bio: "Tech entrepreneur, badminton player, and sunset lover. Let's grab some chai! ☕",
-        job: "Tech Founder",
-        relationshipGoal: "long_term",
-        interests: ["Tech", "Coffee", "Fitness", "Travel", "Music"],
-        photos: [
-          "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=800&q=80"
-        ],
-        swipesLeft: 25,
-        superLikesLeft: 3
-      }
-    ];
-
-    if (!localStorage.getItem('hipa_registered_users')) {
-      localStorage.setItem('hipa_registered_users', JSON.stringify(this.registeredUsers));
-    }
-    if (!localStorage.getItem('hipa_profiles')) {
-      localStorage.setItem('hipa_profiles', JSON.stringify(INITIAL_PROFILES));
-    }
-    if (!localStorage.getItem('hipa_matches')) {
-      const initialMatches = [
-        {
-          id: 501,
-          userId: 101,
-          name: "Ananya Sharma",
-          photo: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=800&q=80",
-          city: "Mumbai",
-          online: true,
-          unread: 1,
-          lastMessage: "Hey! Loved your bio, do you really play badminton? 🏸",
-          lastMessageTime: "2m ago",
-          messages: [
-            { id: 1, sender: "them", text: "Hey! Loved your bio, do you really play badminton? 🏸", time: "12:40 PM" }
-          ]
-        }
-      ];
-      localStorage.setItem('hipa_matches', JSON.stringify(initialMatches));
-    }
-  }
-
-  isLoggedIn() {
-    return !!this.session && !!this.user;
-  }
-
-  getCurrentSession() {
-    return this.session;
-  }
-
-  getUser() {
-    return this.user;
-  }
-
-  saveUser(user) {
-    this.user = user;
-    localStorage.setItem('hipa_user', JSON.stringify(user));
-    const idx = this.registeredUsers.findIndex((u) => u.email === user.email);
-    if (idx !== -1) {
-      this.registeredUsers[idx] = user;
-      localStorage.setItem('hipa_registered_users', JSON.stringify(this.registeredUsers));
+    this.session = JSON.parse(localStorage.getItem('hima_user_session') || 'null');
+    this.user = JSON.parse(localStorage.getItem('hima_user_profile') || 'null');
+    
+    // Initialize coin balance
+    if (this.user && typeof this.user.coins === 'undefined') {
+      this.user.coins = 60;
+      this.saveUser(this.user);
     }
   }
 
@@ -183,9 +190,7 @@ class ApiService {
       payments: {
         activeGateway: "razorpay",
         razorpay: { keyId: "rzp_test_1DP5mmOlF5G5ag", mode: "test" },
-        cashfree: { appId: "TEST_CF_982341", env: "sandbox" },
-        phonepe: { merchantId: "PGTESTPAYUAT", env: "UAT" },
-        upiDirect: { vpa: "hipabiz@icici", payeeName: "Hipa Dating App", goldPrice: 299, platinumPrice: 699 }
+        upiDirect: { vpa: "hipabiz@icici", payeeName: "Hima App" }
       },
       otp: {
         activeProvider: "mock",
@@ -195,245 +200,178 @@ class ApiService {
     };
   }
 
-  calculateAge(dobString) {
-    const dob = new Date(dobString);
-    const diffMs = Date.now() - dob.getTime();
-    const ageDt = new Date(diffMs);
-    return Math.abs(ageDt.getUTCFullYear() - 1970);
+  isLoggedIn() {
+    return !!this.user && !!this.session;
   }
 
-  async signup(email, password, dob) {
-    const age = this.calculateAge(dob);
-    if (age < 18) {
-      return { ok: false, error: "Under 18 not allowed. Hipa is strictly an 18+ dating community." };
-    }
-
-    const existing = this.registeredUsers.find((u) => u.email.toLowerCase() === email.toLowerCase());
-    if (existing) {
-      return { ok: false, error: "An account with this email already exists. Please log in." };
-    }
-
-    const cfg = this.getGatewayConfigs();
-    const otpProvider = cfg.otp?.activeProvider || "mock";
-    const universalAllowed = cfg.otp?.allowUniversalOtp !== false;
-    const universalCode = cfg.otp?.universalOtpCode || "123456";
-
-    // Generate random 6-digit OTP
-    const generatedOtp = String(Math.floor(100000 + Math.random() * 900000));
-    const activeOtp = universalAllowed ? universalCode : generatedOtp;
-
-    sessionStorage.setItem('hipa_pending_signup', JSON.stringify({
-      email,
-      password,
-      dob,
-      age,
-      otp: activeOtp,
-      universalCode,
-      provider: otpProvider
-    }));
-
-    let providerNotice = "";
-    if (otpProvider === "fast2sms") {
-      providerNotice = " [Dispatched via Fast2SMS Gateway]";
-    } else if (otpProvider === "twilio") {
-      providerNotice = " [Dispatched via Twilio SMS]";
-    } else if (otpProvider === "msg91") {
-      providerNotice = " [Dispatched via MSG91 Gateway]";
-    }
-
-    return {
-      ok: true,
-      message: `OTP sent successfully to ${email}${providerNotice}`,
-      otpHint: universalAllowed ? universalCode : "Check your SMS"
-    };
+  getUser() {
+    return this.user;
   }
 
-  async verifyOtp(code) {
-    const pending = JSON.parse(sessionStorage.getItem('hipa_pending_signup') || 'null');
-    if (!pending) {
-      return { ok: false, error: "No pending registration found. Please sign up again." };
-    }
-    
-    const cfg = this.getGatewayConfigs();
-    const universalAllowed = cfg.otp?.allowUniversalOtp !== false;
-    const universalCode = cfg.otp?.universalOtpCode || "123456";
-
-    if (code !== pending.otp && (!universalAllowed || code !== universalCode)) {
-      return { ok: false, error: `Invalid OTP code. Please enter ${universalAllowed ? universalCode : 'the code sent to you'}.` };
-    }
-    return { ok: true, pending };
-  }
-
-  async completeOnboarding(profileData) {
-    const pending = JSON.parse(sessionStorage.getItem('hipa_pending_signup') || 'null') || {};
-    
-    const newUser = {
-      id: Date.now(),
-      email: pending.email || "user@hipa.com",
-      password: pending.password || "password123",
-      dob: pending.dob || "2000-01-01",
-      age: pending.age || this.calculateAge(pending.dob || "2000-01-01"),
-      name: profileData.name || "New Explorer",
-      gender: profileData.gender || "male",
-      interestedIn: profileData.interestedIn || "female",
-      city: profileData.city || "Mumbai",
-      job: profileData.job || "",
-      bio: profileData.bio || "Excited to meet genuine people nearby!",
-      relationshipGoal: profileData.relationshipGoal || "long_term",
-      interests: profileData.interests || ["Coffee", "Travel"],
-      photos: profileData.photos && profileData.photos.length > 0 ? profileData.photos : [
-        "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=800&q=80"
-      ],
-      isPremium: false,
-      photoVerified: false,
-      swipesLeft: 25,
-      superLikesLeft: 3,
-      createdAt: new Date().toISOString()
-    };
-
-    this.registeredUsers.push(newUser);
-    localStorage.setItem('hipa_registered_users', JSON.stringify(this.registeredUsers));
-
-    const sessionToken = "hipa_jwt_" + Date.now();
-    this.session = { token: sessionToken, email: newUser.email };
-    this.user = newUser;
-    localStorage.setItem('hipa_session', JSON.stringify(this.session));
-    localStorage.setItem('hipa_user', JSON.stringify(this.user));
-    sessionStorage.removeItem('hipa_pending_signup');
-
-    return { ok: true, user: newUser, token: sessionToken };
-  }
-
-  async login(email, password) {
-    const found = this.registeredUsers.find(
-      (u) => u.email.toLowerCase() === email.toLowerCase() && u.password === password
-    );
-
-    if (!found) {
-      return { ok: false, error: "Invalid email or password. Please try again or create an account." };
-    }
-
-    const sessionToken = "hipa_jwt_" + Date.now();
-    this.session = { token: sessionToken, email: found.email };
-    this.user = found;
-    localStorage.setItem('hipa_session', JSON.stringify(this.session));
-    localStorage.setItem('hipa_user', JSON.stringify(this.user));
-    return { ok: true, user: found, token: sessionToken };
+  saveUser(user) {
+    this.user = user;
+    localStorage.setItem('hima_user_profile', JSON.stringify(user));
   }
 
   logout() {
-    this.session = null;
+    localStorage.removeItem('hima_user_session');
+    localStorage.removeItem('hima_user_profile');
     this.user = null;
-    localStorage.removeItem('hipa_session');
-    localStorage.removeItem('hipa_user');
+    this.session = null;
   }
 
-  getProfiles() {
-    return JSON.parse(localStorage.getItem('hipa_profiles') || '[]');
+  getCoins() {
+    return this.user ? (this.user.coins || 0) : 0;
   }
 
-  saveProfiles(profiles) {
-    localStorage.setItem('hipa_profiles', JSON.stringify(profiles));
+  addCoins(amount, planTitle = "Recharge", utr = "") {
+    if (!this.user) return false;
+    this.user.coins = (this.user.coins || 0) + Number(amount);
+    this.saveUser(this.user);
+
+    // Save transaction
+    const txs = this.getTransactions();
+    txs.unshift({
+      id: "TX-" + Date.now().toString().slice(-6),
+      type: "credit",
+      title: planTitle,
+      amount: "+" + amount + " coins",
+      utr: utr || ("UTR-" + Date.now().toString().slice(-8)),
+      date: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', day: 'numeric', month: 'short' })
+    });
+    localStorage.setItem('hima_user_transactions', JSON.stringify(txs));
+    return this.user.coins;
   }
 
-  getMatches() {
-    return JSON.parse(localStorage.getItem('hipa_matches') || '[]');
+  deductCoins(amount, reason = "Call") {
+    if (!this.user || (this.user.coins || 0) < amount) return false;
+    this.user.coins -= amount;
+    this.saveUser(this.user);
+
+    const txs = this.getTransactions();
+    txs.unshift({
+      id: "TX-" + Date.now().toString().slice(-6),
+      type: "debit",
+      title: reason,
+      amount: "-" + amount + " coins",
+      date: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    });
+    localStorage.setItem('hima_user_transactions', JSON.stringify(txs));
+    return true;
   }
 
-  saveMatches(matches) {
-    localStorage.setItem('hipa_matches', JSON.stringify(matches));
+  getTransactions() {
+    return JSON.parse(localStorage.getItem('hima_user_transactions') || '[]');
   }
 
-  async recordSwipe(profileId, action) {
-    if (!this.user) return { ok: false, error: "Not logged in" };
-    const profiles = this.getProfiles();
-    const target = profiles.find((p) => p.id === profileId);
+  getCallLogs() {
+    return JSON.parse(localStorage.getItem('hima_call_logs') || '[]');
+  }
 
-    if (!this.user.isPremium && this.user.swipesLeft > 0) {
-      this.user.swipesLeft -= 1;
-      this.saveUser(this.user);
+  recordCall(creator, type, durationSec, coinsSpent) {
+    const logs = this.getCallLogs();
+    const mins = Math.floor(durationSec / 60);
+    const secs = durationSec % 60;
+    const durStr = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+
+    logs.unshift({
+      id: "CL-" + Date.now().toString().slice(-6),
+      creatorName: creator.name,
+      avatar: creator.avatar,
+      type: type, // 'voice' | 'video'
+      duration: durStr,
+      coinsSpent: coinsSpent,
+      time: "Today " + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      status: "Completed"
+    });
+    localStorage.setItem('hima_call_logs', JSON.stringify(logs));
+  }
+
+  getFriends() {
+    return JSON.parse(localStorage.getItem('hima_friends_list') || '[]');
+  }
+
+  addFriend(creator) {
+    const friends = this.getFriends();
+    if (!friends.find(f => f.name === creator.name)) {
+      friends.unshift({
+        id: creator.id || Date.now(),
+        name: creator.name,
+        avatar: creator.avatar,
+        language: creator.language,
+        addedAt: "Just now"
+      });
+      localStorage.setItem('hima_friends_list', JSON.stringify(friends));
+    }
+  }
+
+  getWarnings() {
+    return JSON.parse(localStorage.getItem('hima_user_warnings') || '[]');
+  }
+
+  getBlocklist() {
+    return JSON.parse(localStorage.getItem('hima_user_blocklist') || '[]');
+  }
+
+  // OTP & Auth
+  async sendPhoneOtp(phone, referralCode = "") {
+    if (!phone || phone.length < 10) {
+      return { ok: false, error: "Please enter a valid 10-digit mobile number." };
     }
 
-    let isMatch = false;
-    let matchObj = null;
+    const cfg = this.getGatewayConfigs();
+    const universalAllowed = cfg.otp?.allowUniversalOtp !== false;
+    const universalCode = cfg.otp?.universalOtpCode || "123456";
 
-    if (action === 'like' || action === 'superlike') {
-      isMatch = Math.random() < 0.75;
-      if (isMatch && target) {
-        const matches = this.getMatches();
-        matchObj = {
-          id: Date.now(),
-          userId: target.id,
-          name: target.name,
-          photo: target.photos[0],
-          city: target.city,
-          online: true,
-          unread: 1,
-          lastMessage: "It's a Match! Say hi! ✨",
-          lastMessageTime: "Just now",
-          messages: [
-            { id: Date.now(), sender: "them", text: `Hey ${this.user.name.split(' ')[0]}! Glad we matched! 👋`, time: "Just now" }
-          ]
-        };
-        matches.unshift(matchObj);
-        this.saveMatches(matches);
-      }
-    }
+    sessionStorage.setItem('hima_pending_phone', JSON.stringify({
+      phone: "+91" + phone.replace(/^\+91/, '').trim(),
+      referralCode,
+      otp: universalCode
+    }));
 
-    return { ok: true, matched: isMatch, match: matchObj };
+    return { ok: true, otp: universalCode };
   }
 
-  async sendMessage(matchId, text) {
-    const matches = this.getMatches();
-    const match = matches.find((m) => m.id === matchId);
-    if (!match) return { ok: false, error: "Match not found" };
+  async verifyPhoneOtp(code) {
+    const pending = JSON.parse(sessionStorage.getItem('hima_pending_phone') || 'null');
+    if (!pending) {
+      return { ok: false, error: "No pending registration found. Please enter your mobile number again." };
+    }
 
-    const newMsg = {
+    const cfg = this.getGatewayConfigs();
+    const universalCode = cfg.otp?.universalOtpCode || "123456";
+
+    if (code !== pending.otp && code !== universalCode && code !== '123456') {
+      return { ok: false, error: "Invalid OTP code. Please enter " + universalCode };
+    }
+
+    return { ok: true, pending };
+  }
+
+  finishOnboarding(language, gender, avatar) {
+    const pending = JSON.parse(sessionStorage.getItem('hima_pending_phone') || 'null') || {};
+    const randomId = "Jgck" + Math.random().toString(36).substring(2, 5).toUpperCase() + Math.floor(100 + Math.random() * 900);
+
+    const newUser = {
       id: Date.now(),
-      sender: "me",
-      text,
-      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      phone: pending.phone || "+919876543210",
+      username: randomId,
+      language: language || "Hindi",
+      gender: gender || "male",
+      avatar: avatar || HIMA_AVATARS[0],
+      coins: 60, // Welcome bonus!
+      referralCode: pending.referralCode || "",
+      isDnd: false,
+      notifications: true,
+      registeredAt: new Date().toISOString()
     };
 
-    match.messages.push(newMsg);
-    match.lastMessage = text;
-    match.lastMessageTime = "Just now";
-    this.saveMatches(matches);
-
-    setTimeout(() => {
-      const replies = [
-        "That's awesome! Tell me more :)",
-        "Haha totally agree! ☕",
-        "Are you free for an audio or video call later?",
-        "Sounds like a plan! Let's do it.",
-        "You have such a good vibe ✨"
-      ];
-      const replyText = replies[Math.floor(Math.random() * replies.length)];
-      const replyMsg = {
-        id: Date.now() + 1,
-        sender: "them",
-        text: replyText,
-        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-      };
-      match.messages.push(replyMsg);
-      match.lastMessage = replyText;
-      match.lastMessageTime = "Just now";
-      this.saveMatches(matches);
-      window.dispatchEvent(new CustomEvent('hipa_new_message', { detail: { matchId, message: replyMsg } }));
-    }, 1500);
-
-    return { ok: true, message: newMsg };
-  }
-
-  async upgradeToGold(planType = "gold", utr = "") {
-    if (!this.user) return { ok: false };
-    this.user.isPremium = true;
-    this.user.premiumType = planType;
-    this.user.swipesLeft = 9999;
-    this.user.superLikesLeft = 20;
-    this.saveUser(this.user);
-    return { ok: true, plan: planType, utr };
+    this.saveUser(newUser);
+    this.session = { token: "hima_tok_" + Date.now(), userId: newUser.id };
+    localStorage.setItem('hima_user_session', JSON.stringify(this.session));
+    return newUser;
   }
 }
 
-export const api = new ApiService();
+export const himaApi = new HimaApiService();
+export const api = himaApi;
