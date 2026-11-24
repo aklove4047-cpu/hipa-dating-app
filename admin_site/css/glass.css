@@ -1,44 +1,50 @@
 /* =========================================================
    Hipa Dating App — Glassmorphism Design Tokens & Foundations
-   Specification: PRD File 04
+   Brand: Hipa — Modern Dark Luxury Aesthetic matching Website
    ========================================================= */
 
 :root {
-  --bg-gradient: linear-gradient(135deg, #1b1033 0%, #3a1c71 35%, #d76d77 70%, #ffaf7b 100%);
-  --bg-overlay: radial-gradient(circle at 20% 20%, rgba(255, 77, 126, 0.25) 0%, transparent 40%),
-                radial-gradient(circle at 80% 80%, rgba(124, 92, 255, 0.3) 0%, transparent 45%),
-                radial-gradient(circle at 50% 50%, rgba(46, 230, 166, 0.15) 0%, transparent 50%);
+  --bg-gradient: radial-gradient(circle at 10% 15%, rgba(255, 0, 127, 0.16) 0%, transparent 45%),
+                 radial-gradient(circle at 90% 85%, rgba(121, 40, 202, 0.2) 0%, transparent 50%),
+                 radial-gradient(circle at 50% 40%, rgba(255, 42, 133, 0.08) 0%, transparent 60%),
+                 linear-gradient(135deg, #090514 0%, #120726 50%, #05020c 100%);
+  --bg-overlay: radial-gradient(circle at 20% 20%, rgba(255, 0, 127, 0.14) 0%, transparent 40%),
+                radial-gradient(circle at 80% 80%, rgba(121, 40, 202, 0.18) 0%, transparent 45%),
+                radial-gradient(circle at 50% 50%, rgba(46, 230, 166, 0.08) 0%, transparent 50%);
 
-  --glass-bg: rgba(255, 255, 255, 0.12);
-  --glass-bg-subtle: rgba(255, 255, 255, 0.07);
-  --glass-bg-strong: rgba(255, 255, 255, 0.22);
-  --glass-border: rgba(255, 255, 255, 0.25);
-  --glass-border-subtle: rgba(255, 255, 255, 0.14);
-  --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
-  --glass-shadow-lg: 0 16px 48px 0 rgba(0, 0, 0, 0.5);
-  --glass-blur: blur(18px);
-  --glass-blur-heavy: blur(28px);
+  --glass-bg: rgba(20, 10, 36, 0.72);
+  --glass-bg-subtle: rgba(255, 255, 255, 0.04);
+  --glass-bg-strong: rgba(255, 255, 255, 0.08);
+  --glass-border: rgba(255, 0, 127, 0.22);
+  --glass-border-subtle: rgba(255, 255, 255, 0.09);
+  --glass-shadow: 0 10px 35px 0 rgba(0, 0, 0, 0.5);
+  --glass-shadow-lg: 0 20px 60px 0 rgba(0, 0, 0, 0.7);
+  --glass-blur: blur(24px);
+  --glass-blur-heavy: blur(32px);
 
-  --accent-pink: #ff4d7e;
-  --accent-pink-glow: rgba(255, 77, 126, 0.45);
-  --accent-purple: #7c5cff;
-  --accent-purple-glow: rgba(124, 92, 255, 0.4);
+  --accent-pink: #ff007f;
+  --accent-pink-hover: #e60073;
+  --accent-pink-glow: rgba(255, 0, 127, 0.45);
+  --primary-gradient: linear-gradient(135deg, #ff007f 0%, #ff2a85 45%, #7928ca 100%);
+  --secondary-gradient: linear-gradient(135deg, #a855f7 0%, #ec4899 100%);
+  --accent-purple: #7928ca;
+  --accent-purple-glow: rgba(121, 40, 202, 0.4);
   --accent-green: #2ee6a6;
   --accent-green-glow: rgba(46, 230, 166, 0.4);
-  --accent-gold: #ffd166;
-  --accent-gold-glow: rgba(255, 209, 102, 0.45);
+  --accent-gold: #ffd700;
+  --accent-gold-glow: rgba(255, 215, 0, 0.45);
   --accent-blue: #38bdf8;
   --danger-red: #ef4444;
 
   --text-main: #ffffff;
   --text-muted: rgba(255, 255, 255, 0.72);
-  --text-faint: rgba(255, 255, 255, 0.45);
+  --text-faint: rgba(255, 255, 255, 0.42);
 
   --radius-xs: 8px;
   --radius-sm: 12px;
-  --radius-md: 16px;
-  --radius-lg: 20px;
-  --radius-xl: 28px;
+  --radius-md: 18px;
+  --radius-lg: 22px;
+  --radius-xl: 30px;
   --radius-full: 9999px;
 
   --transition-smooth: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);

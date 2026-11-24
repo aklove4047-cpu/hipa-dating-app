@@ -163,71 +163,19 @@ export const DEFAULT_GATEWAY_CONFIG = {
 
 const ADMIN_DATA = {
   kpis: {
-    totalUsers: "1,248",
-    activeToday: "342",
-    matchesToday: "89",
-    callsToday: "41",
-    monthlyRevenue: "₹84,500",
-    openReports: 2,
-    pendingVerifications: 3
+    totalUsers: "0",
+    activeToday: "0",
+    matchesToday: "0",
+    callsToday: "0",
+    monthlyRevenue: "₹0",
+    openReports: 0,
+    pendingVerifications: 0
   },
-  users: [
-    { id: 101, name: "Ananya Sharma", email: "ananya@example.com", city: "Mumbai", status: "active", verified: true, isPremium: true, reports: 0 },
-    { id: 102, name: "Rohan Verma", email: "rohan@example.com", city: "Bengaluru", status: "active", verified: true, isPremium: false, reports: 0 },
-    { id: 103, name: "Pooja Malhotra", email: "pooja@example.com", city: "Delhi", status: "active", verified: false, isPremium: false, reports: 0 },
-    { id: 104, name: "Karan Singhania", email: "karan@example.com", city: "Pune", status: "active", verified: true, isPremium: true, reports: 0 },
-    { id: 105, name: "Sneha Patel", email: "sneha@example.com", city: "Jaipur", status: "active", verified: true, isPremium: false, reports: 0 },
-    { id: 106, name: "Vikram Malhotra", email: "vikram@spam.io", city: "Kolkata", status: "suspended", verified: false, isPremium: false, reports: 4 }
-  ],
-  verifications: [
-    {
-      id: 1,
-      userId: 103,
-      name: "Pooja Malhotra",
-      profilePhoto: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=400&q=80",
-      selfiePhoto: "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=400&q=80",
-      submittedAt: "10 mins ago",
-      poseReq: "Peace Sign ✌️"
-    },
-    {
-      id: 2,
-      userId: 107,
-      name: "Rahul Mehta",
-      profilePhoto: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=400&q=80",
-      selfiePhoto: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=400&q=80",
-      submittedAt: "25 mins ago",
-      poseReq: "Thumbs Up 👍"
-    }
-  ],
-  reports: [
-    {
-      id: 201,
-      reporterName: "Sneha Patel",
-      reportedUser: "Vikram Malhotra",
-      reason: "Harassment & inappropriate messages",
-      severity: "High",
-      time: "1 hour ago",
-      status: "open"
-    },
-    {
-      id: 202,
-      reporterName: "Ananya Sharma",
-      reportedUser: "FakeProfile404",
-      reason: "Suspected fake bot account",
-      severity: "Medium",
-      time: "3 hours ago",
-      status: "open"
-    }
-  ],
-  calls: [
-    { id: "C-9821", caller: "Ananya Sharma", callee: "Aman Kapoor", type: "Video", duration: "12m 45s", status: "Completed", time: "Today 12:15 PM" },
-    { id: "C-9820", caller: "Rohan Verma", callee: "Pooja Malhotra", type: "Audio", duration: "05m 12s", status: "Completed", time: "Today 11:30 AM" },
-    { id: "C-9819", caller: "Karan Singhania", callee: "Sneha Patel", type: "Video", duration: "00m 45s", status: "Missed", time: "Today 10:10 AM" }
-  ],
-  payments: [
-    { id: "P-401", user: "Aman Kapoor", plan: "Hipa Gold (1 Mo)", amount: "₹299", utr: "982348234291", date: "Today 11:00 AM", status: "Approved" },
-    { id: "P-402", user: "Karan Singhania", plan: "Hipa Platinum (3 Mo)", amount: "₹699", utr: "772198421045", date: "Today 10:20 AM", status: "Pending" }
-  ]
+  users: [],
+  verifications: [],
+  reports: [],
+  calls: [],
+  payments: []
 };
 
 class AdminController {
@@ -253,16 +201,16 @@ class AdminController {
 
     layout.innerHTML = `
       <div style="flex: 1; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px;">
-        <div class="glass-panel" style="width: 100%; max-width: 440px; padding: 36px 30px; text-align: center; border-color: rgba(255, 77, 126, 0.4);">
-          <div style="width: 60px; height: 60px; background: var(--accent-pink); border-radius: 18px; margin: 0 auto 16px auto; display: flex; align-items: center; justify-content: center; font-size: 2rem; box-shadow: 0 8px 24px var(--accent-pink-glow);">
-            🛡️
+        <div class="glass-panel" style="width: 100%; max-width: 440px; padding: 40px 32px; text-align: center; border-color: rgba(255, 0, 127, 0.4); box-shadow: 0 16px 50px rgba(0, 0, 0, 0.65);">
+          <div style="width: 64px; height: 64px; background: linear-gradient(135deg, #ff007f 0%, #ff2a85 50%, #7928ca 100%); border-radius: 20px; margin: 0 auto 16px auto; display: flex; align-items: center; justify-content: center; font-size: 2rem; box-shadow: 0 8px 25px rgba(255, 0, 127, 0.5);">
+            ♥
           </div>
-          <h1 style="font-size: 1.8rem; font-weight: 800; margin-bottom: 6px;">Hipa Admin Portal</h1>
+          <h1 class="admin-brand-title" style="font-size: 2.1rem; font-weight: 900; margin-bottom: 6px;">Hipa Admin</h1>
           <p style="color: var(--text-muted); font-size: 0.88rem; margin-bottom: 24px;">
-            Authorized Moderation & Staff Login Only
+            Where Feelings Connect • Control & Moderation
           </p>
 
-          <div class="glass-card" style="padding: 12px; margin-bottom: 20px; text-align: left; font-size: 0.78rem; border-color: rgba(56, 189, 248, 0.4); color: #bae6fd;">
+          <div class="glass-card" style="padding: 12px; margin-bottom: 20px; text-align: left; font-size: 0.78rem; border-color: rgba(255, 0, 127, 0.25); color: #ffd1e3;">
             🔒 Protected under IT Rules 2021 & DPDP Act 2023. All admin audit events are cryptographically logged.
           </div>
 
@@ -317,10 +265,10 @@ class AdminController {
       <!-- Sidebar -->
       <aside class="admin-sidebar">
         <div class="admin-brand">
-          <div class="btn-icon-circle" style="width: 38px; height: 38px; background: var(--accent-pink);">♥</div>
+          <div class="admin-brand-logo">♥</div>
           <div>
-            <h2 style="font-size: 1.2rem; font-weight: 800;">Hipa Admin</h2>
-            <span style="font-size: 0.72rem; color: #2ee6a6;">Super Admin Role</span>
+            <h2 class="admin-brand-title">Hipa</h2>
+            <span style="font-size: 0.72rem; color: #2ee6a6; font-weight: 700;">Admin Control Center</span>
           </div>
         </div>
 
@@ -330,26 +278,26 @@ class AdminController {
           </a>
           <a class="admin-nav-item" data-view="users">
             <span>👥</span> Users
-            <span class="admin-nav-badge">1,248</span>
+            <span class="admin-nav-badge">0</span>
           </a>
           <a class="admin-nav-item" data-view="verifications">
             <span>🤳</span> Verifications
-            <span class="admin-nav-badge" style="background: #38bdf8;">3</span>
+            <span class="admin-nav-badge" style="background: rgba(255,255,255,0.15);">0</span>
           </a>
           <a class="admin-nav-item" data-view="reports">
             <span>🚨</span> Reports
-            <span class="admin-nav-badge" style="background: #ef4444;">2</span>
+            <span class="admin-nav-badge" style="background: rgba(255,255,255,0.15);">0</span>
           </a>
           <a class="admin-nav-item" data-view="calls">
             <span>📞</span> Calls Log
           </a>
           <a class="admin-nav-item" data-view="payments">
             <span>💳</span> UPI Payments
-            <span class="admin-nav-badge" style="background: #10b981;">1</span>
+            <span class="admin-nav-badge" style="background: rgba(255,255,255,0.15);">0</span>
           </a>
           <a class="admin-nav-item" data-view="creators">
             <span>🎭</span> Creators & Call Rates
-            <span class="admin-nav-badge" style="background: #ec4899;">10</span>
+            <span class="admin-nav-badge" style="background: linear-gradient(135deg, #ff007f, #a855f7);">10</span>
           </a>
           <a class="admin-nav-item" data-view="coins">
             <span>🪙</span> Coin Packs & Offers
@@ -370,6 +318,9 @@ class AdminController {
         </nav>
 
         <div style="margin-top: auto; padding-top: 14px; border-top: 1px solid rgba(255,255,255,0.1); display: flex; flex-direction: column; gap: 8px;">
+          <a href="https://hipa-admin.pages.dev" target="_blank" class="btn-secondary"
+            style="width: 100%; font-size: 0.85rem; padding: 10px; text-decoration: none; display: block; text-align: center;">←
+            Go to Dating App</a>
           <button id="btnAdminLogout" class="btn-secondary" style="width: 100%; font-size: 0.85rem; padding: 10px; color: #ef4444; border-color: rgba(239, 68, 68, 0.4);">
             🚪 Log Out Admin
           </button>
@@ -439,32 +390,32 @@ class AdminController {
     container.innerHTML = `
       <div class="admin-topbar">
         <div>
-          <h1 style="font-size: 1.8rem; font-weight: 800;">Real-Time Operations Dashboard</h1>
+          <h1 style="font-size: 1.8rem; font-weight: 900; background: linear-gradient(135deg, #ffffff 50%, #ff8bb8 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Real-Time Operations Dashboard</h1>
           <p style="color: var(--text-muted); font-size: 0.9rem;">Live system metrics, calls and safety overview</p>
         </div>
-        <button class="btn-primary" onclick="alert('System healthy. Sockets active: 342. CPU: 12%')">System Status 🟢</button>
+        <button class="btn-primary" onclick="alert('System healthy. Sockets active: 0. CPU: 3%')">System Status 🟢</button>
       </div>
 
       <div class="kpi-grid">
         <div class="kpi-card glass-panel">
           <span class="kpi-label">Total Users</span>
           <span class="kpi-val">${ADMIN_DATA.kpis.totalUsers}</span>
-          <span class="kpi-sub">↑ +14% this week</span>
+          <span class="kpi-sub">0 this week</span>
         </div>
         <div class="kpi-card glass-panel">
           <span class="kpi-label">Active Today</span>
           <span class="kpi-val">${ADMIN_DATA.kpis.activeToday}</span>
-          <span class="kpi-sub">🟢 38 calls in progress</span>
+          <span class="kpi-sub">🟢 0 calls in progress</span>
         </div>
         <div class="kpi-card glass-panel">
           <span class="kpi-label">Matches Formed</span>
           <span class="kpi-val">${ADMIN_DATA.kpis.matchesToday}</span>
-          <span class="kpi-sub">♥ 74% sent a message</span>
+          <span class="kpi-sub">♥ 0% sent a message</span>
         </div>
         <div class="kpi-card glass-panel">
           <span class="kpi-label">Monthly Revenue</span>
           <span class="kpi-val">${ADMIN_DATA.kpis.monthlyRevenue}</span>
-          <span class="kpi-sub">👑 28 new Gold users</span>
+          <span class="kpi-sub">👑 0 new Gold users</span>
         </div>
       </div>
 
@@ -482,14 +433,22 @@ class AdminController {
                 </tr>
               </thead>
               <tbody>
-                ${ADMIN_DATA.users.slice(0, 4).map((u) => `
+                ${ADMIN_DATA.users.length > 0 ? ADMIN_DATA.users.slice(0, 4).map((u) => `
                   <tr>
                     <td><strong>${u.name}</strong></td>
                     <td>${u.city}</td>
                     <td><span class="badge-status badge-${u.status}">${u.status}</span></td>
                     <td>${u.isPremium ? '👑 Gold' : 'Free'}</td>
                   </tr>
-                `).join('')}
+                `).join('') : `
+                  <tr>
+                    <td colspan="4" style="text-align: center; padding: 32px 20px; color: var(--text-muted);">
+                      <div style="font-size: 1.8rem; margin-bottom: 6px;">👥</div>
+                      <div style="font-weight: 700; color: #fff;">No users registered yet</div>
+                      <div style="font-size: 0.8rem; margin-top: 4px;">New registrations from the app or website will appear here in real-time.</div>
+                    </td>
+                  </tr>
+                `}
               </tbody>
             </table>
           </div>
@@ -500,15 +459,15 @@ class AdminController {
           <div style="display: flex; flex-direction: column; gap: 12px;">
             <div class="glass-card" style="padding: 12px; display: flex; justify-content: space-between; align-items: center;">
               <span>🚨 Open Safety Reports</span>
-              <span class="badge-status badge-banned">2 Open</span>
+              <span class="badge-status badge-active">0 Open</span>
             </div>
             <div class="glass-card" style="padding: 12px; display: flex; justify-content: space-between; align-items: center;">
               <span>🤳 Blue Tick Selfie Verifications</span>
-              <span class="badge-status badge-pending">3 Pending</span>
+              <span class="badge-status badge-active">0 Pending</span>
             </div>
             <div class="glass-card" style="padding: 12px; display: flex; justify-content: space-between; align-items: center;">
               <span>💳 Manual UPI Payment Approvals</span>
-              <span class="badge-status badge-pending">1 Pending</span>
+              <span class="badge-status badge-active">0 Pending</span>
             </div>
           </div>
         </div>
@@ -521,7 +480,7 @@ class AdminController {
       <div class="admin-topbar">
         <div>
           <h1 style="font-size: 1.8rem; font-weight: 800;">User Management</h1>
-          <p style="color: var(--text-muted); font-size: 0.9rem;">View, verify, suspend or grant VIP access</p>
+          <p style="color: var(--text-muted); font-size: 0.9rem;">View, verify, suspend or grant VIP access (Total: ${ADMIN_DATA.users.length})</p>
         </div>
       </div>
 
@@ -539,7 +498,7 @@ class AdminController {
             </tr>
           </thead>
           <tbody>
-            ${ADMIN_DATA.users.map((u) => `
+            ${ADMIN_DATA.users.length > 0 ? ADMIN_DATA.users.map((u) => `
               <tr>
                 <td>#${u.id}</td>
                 <td>
@@ -557,7 +516,15 @@ class AdminController {
                   </div>
                 </td>
               </tr>
-            `).join('')}
+            `).join('') : `
+              <tr>
+                <td colspan="7" style="text-align: center; padding: 48px; color: var(--text-muted);">
+                  <div style="font-size: 2.2rem; margin-bottom: 8px;">👥</div>
+                  <div style="font-size: 1.15rem; font-weight: 800; color: #fff;">No Registered Users</div>
+                  <div style="font-size: 0.85rem; margin-top: 6px; color: var(--text-muted);">New users registered via app or website will appear here automatically.</div>
+                </td>
+              </tr>
+            `}
           </tbody>
         </table>
       </div>
@@ -573,32 +540,40 @@ class AdminController {
         </div>
       </div>
 
-      <div class="verify-grid">
-        ${ADMIN_DATA.verifications.map((v) => `
-          <div class="verify-card glass-panel">
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-              <h3 style="font-size: 1.1rem; font-weight: 800;">${v.name}</h3>
-              <span class="glass-pill" style="font-size: 0.75rem;">${v.poseReq}</span>
-            </div>
-
-            <div class="verify-comparison">
-              <div class="verify-photo-box">
-                <img src="${v.profilePhoto}" />
-                <span class="verify-photo-label">Profile Photo</span>
+      ${ADMIN_DATA.verifications.length > 0 ? `
+        <div class="verify-grid">
+          ${ADMIN_DATA.verifications.map((v) => `
+            <div class="verify-card glass-panel">
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <h3 style="font-size: 1.1rem; font-weight: 800;">${v.name}</h3>
+                <span class="glass-pill" style="font-size: 0.75rem;">${v.poseReq}</span>
               </div>
-              <div class="verify-photo-box">
-                <img src="${v.selfiePhoto}" />
-                <span class="verify-photo-label">Selfie Pose</span>
+
+              <div class="verify-comparison">
+                <div class="verify-photo-box">
+                  <img src="${v.profilePhoto}" />
+                  <span class="verify-photo-label">Profile Photo</span>
+                </div>
+                <div class="verify-photo-box">
+                  <img src="${v.selfiePhoto}" />
+                  <span class="verify-photo-label">Selfie Pose</span>
+                </div>
+              </div>
+
+              <div style="display: flex; gap: 10px; margin-top: 6px;">
+                <button class="btn-primary" style="flex: 1; padding: 10px; font-size: 0.85rem;" onclick="alert('Blue Tick Verified & Approved!')">Approve ✓</button>
+                <button class="btn-secondary" style="flex: 1; padding: 10px; font-size: 0.85rem; color: #ef4444;" onclick="alert('Verification rejected.')">Reject ✕</button>
               </div>
             </div>
-
-            <div style="display: flex; gap: 10px; margin-top: 6px;">
-              <button class="btn-primary" style="flex: 1; padding: 10px; font-size: 0.85rem;" onclick="alert('Blue Tick Verified & Approved!')">Approve ✓</button>
-              <button class="btn-secondary" style="flex: 1; padding: 10px; font-size: 0.85rem; color: #ef4444;" onclick="alert('Verification rejected.')">Reject ✕</button>
-            </div>
-          </div>
-        `).join('')}
-      </div>
+          `).join('')}
+        </div>
+      ` : `
+        <div class="glass-panel" style="padding: 48px; text-align: center; color: var(--text-muted);">
+          <div style="font-size: 2.2rem; margin-bottom: 8px;">🤳</div>
+          <div style="font-size: 1.15rem; font-weight: 800; color: #fff;">No Pending Selfie Verifications</div>
+          <div style="font-size: 0.85rem; margin-top: 6px;">When users submit Blue Tick selfie requests, they will show up here for moderation.</div>
+        </div>
+      `}
     `;
   }
 
@@ -611,34 +586,42 @@ class AdminController {
         </div>
       </div>
 
-      <div class="table-container">
-        <table class="glass-table">
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Reported User</th>
-              <th>Reporter</th>
-              <th>Reason</th>
-              <th>Severity</th>
-              <th>Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${ADMIN_DATA.reports.map((r) => `
+      ${ADMIN_DATA.reports.length > 0 ? `
+        <div class="table-container">
+          <table class="glass-table">
+            <thead>
               <tr>
-                <td>#${r.id}</td>
-                <td><strong style="color: #ef4444;">${r.reportedUser}</strong></td>
-                <td>${r.reporterName}</td>
-                <td>${r.reason}</td>
-                <td><span class="badge-status badge-banned">${r.severity}</span></td>
-                <td>
-                  <button class="btn-primary" style="padding: 6px 12px; font-size: 0.78rem; background: #ef4444;" onclick="alert('Action taken: User suspended for 7 days.')">Resolve & Warn</button>
-                </td>
+                <th>ID</th>
+                <th>Reported User</th>
+                <th>Reporter</th>
+                <th>Reason</th>
+                <th>Severity</th>
+                <th>Action</th>
               </tr>
-            `).join('')}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody>
+              ${ADMIN_DATA.reports.map((r) => `
+                <tr>
+                  <td>#${r.id}</td>
+                  <td><strong style="color: #ef4444;">${r.reportedUser}</strong></td>
+                  <td>${r.reporterName}</td>
+                  <td>${r.reason}</td>
+                  <td><span class="badge-status badge-banned">${r.severity}</span></td>
+                  <td>
+                    <button class="btn-primary" style="padding: 6px 12px; font-size: 0.78rem; background: #ef4444;" onclick="alert('Action taken: User suspended for 7 days.')">Resolve & Warn</button>
+                  </td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      ` : `
+        <div class="glass-panel" style="padding: 48px; text-align: center; color: var(--text-muted);">
+          <div style="font-size: 2.2rem; margin-bottom: 8px;">🛡️</div>
+          <div style="font-size: 1.15rem; font-weight: 800; color: #fff;">No Open Safety Reports</div>
+          <div style="font-size: 0.85rem; margin-top: 6px;">The community is safe and clean. Any user reports will appear here instantly.</div>
+        </div>
+      `}
     `;
   }
 
@@ -651,34 +634,42 @@ class AdminController {
         </div>
       </div>
 
-      <div class="table-container">
-        <table class="glass-table">
-          <thead>
-            <tr>
-              <th>Call ID</th>
-              <th>Caller</th>
-              <th>Callee</th>
-              <th>Type</th>
-              <th>Duration</th>
-              <th>Status</th>
-              <th>Time</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${ADMIN_DATA.calls.map((c) => `
+      ${ADMIN_DATA.calls.length > 0 ? `
+        <div class="table-container">
+          <table class="glass-table">
+            <thead>
               <tr>
-                <td>${c.id}</td>
-                <td><strong>${c.caller}</strong></td>
-                <td><strong>${c.callee}</strong></td>
-                <td>${c.type === 'Video' ? '📹 Video' : '📞 Audio'}</td>
-                <td>${c.duration}</td>
-                <td><span class="badge-status badge-active">${c.status}</span></td>
-                <td>${c.time}</td>
+                <th>Call ID</th>
+                <th>Caller</th>
+                <th>Callee</th>
+                <th>Type</th>
+                <th>Duration</th>
+                <th>Status</th>
+                <th>Time</th>
               </tr>
-            `).join('')}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody>
+              ${ADMIN_DATA.calls.map((c) => `
+                <tr>
+                  <td>${c.id}</td>
+                  <td><strong>${c.caller}</strong></td>
+                  <td><strong>${c.callee}</strong></td>
+                  <td>${c.type === 'Video' ? '📹 Video' : '📞 Audio'}</td>
+                  <td>${c.duration}</td>
+                  <td><span class="badge-status badge-active">${c.status}</span></td>
+                  <td>${c.time}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      ` : `
+        <div class="glass-panel" style="padding: 48px; text-align: center; color: var(--text-muted);">
+          <div style="font-size: 2.2rem; margin-bottom: 8px;">📞</div>
+          <div style="font-size: 1.15rem; font-weight: 800; color: #fff;">No Call Logs Yet</div>
+          <div style="font-size: 0.85rem; margin-top: 6px;">Live WebRTC voice and video calls between users will be logged here.</div>
+        </div>
+      `}
     `;
   }
 
@@ -691,38 +682,46 @@ class AdminController {
         </div>
       </div>
 
-      <div class="table-container">
-        <table class="glass-table">
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>User</th>
-              <th>Plan</th>
-              <th>Amount</th>
-              <th>UTR / Ref</th>
-              <th>Status</th>
-              <th>Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${ADMIN_DATA.payments.map((p) => `
+      ${ADMIN_DATA.payments.length > 0 ? `
+        <div class="table-container">
+          <table class="glass-table">
+            <thead>
               <tr>
-                <td>${p.id}</td>
-                <td><strong>${p.user}</strong></td>
-                <td>${p.plan}</td>
-                <td style="color: #2ee6a6; font-weight: 700;">${p.amount}</td>
-                <td><code>${p.utr}</code></td>
-                <td><span class="badge-status ${p.status === 'Approved' ? 'badge-active' : 'badge-pending'}">${p.status}</span></td>
-                <td>
-                  ${p.status === 'Pending' ? `
-                    <button class="btn-primary" style="padding: 6px 12px; font-size: 0.78rem;" onclick="alert('UTR ${p.utr} verified! VIP activated.')">Approve</button>
-                  ` : '<span>✓ Approved</span>'}
-                </td>
+                <th>ID</th>
+                <th>User</th>
+                <th>Plan</th>
+                <th>Amount</th>
+                <th>UTR / Ref</th>
+                <th>Status</th>
+                <th>Action</th>
               </tr>
-            `).join('')}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody>
+              ${ADMIN_DATA.payments.map((p) => `
+                <tr>
+                  <td>${p.id}</td>
+                  <td><strong>${p.user}</strong></td>
+                  <td>${p.plan}</td>
+                  <td style="color: #2ee6a6; font-weight: 700;">${p.amount}</td>
+                  <td><code>${p.utr}</code></td>
+                  <td><span class="badge-status ${p.status === 'Approved' ? 'badge-active' : 'badge-pending'}">${p.status}</span></td>
+                  <td>
+                    ${p.status === 'Pending' ? `
+                      <button class="btn-primary" style="padding: 6px 12px; font-size: 0.78rem;" onclick="alert('UTR ${p.utr} verified! VIP activated.')">Approve</button>
+                    ` : '<span>✓ Approved</span>'}
+                  </td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      ` : `
+        <div class="glass-panel" style="padding: 48px; text-align: center; color: var(--text-muted);">
+          <div style="font-size: 2.2rem; margin-bottom: 8px;">💳</div>
+          <div style="font-size: 1.15rem; font-weight: 800; color: #fff;">No Pending UPI Payments</div>
+          <div style="font-size: 0.85rem; margin-top: 6px;">Manual UPI and payment gateway subscription transactions will appear here.</div>
+        </div>
+      `}
     `;
   }
 
@@ -744,7 +743,7 @@ class AdminController {
           <label style="display: block; font-size: 0.85rem; margin-bottom: 6px; font-weight: 700;">Message Body</label>
           <textarea class="glass-input" id="bcBody" rows="4">Over 500 people are active near you right now. Open Hipa and find your match!</textarea>
         </div>
-        <button class="btn-primary" onclick="alert('Broadcast successfully dispatched to 1,248 active users!')">Send Broadcast 🚀</button>
+        <button class="btn-primary" onclick="alert('Broadcast successfully dispatched to 0 active users!')">Send Broadcast 🚀</button>
       </div>
     `;
   }

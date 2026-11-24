@@ -5,8 +5,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Hipa — Admin Moderation Control Center</title>
-  <link rel="stylesheet" href="/css/glass.css">
-  <link rel="stylesheet" href="/css/admin.css">
+  <link rel="stylesheet" href="/css/glass.css?v=6.0">
+  <link rel="stylesheet" href="/css/admin.css?v=6.0">
 </head>
 
 <body>
@@ -14,10 +14,10 @@
     <!-- Sidebar -->
     <aside class="admin-sidebar">
       <div class="admin-brand">
-        <div class="btn-icon-circle" style="width: 38px; height: 38px; background: var(--accent-pink);">♥</div>
+        <div class="admin-brand-logo">♥</div>
         <div>
-          <h2 style="font-size: 1.2rem; font-weight: 800;">Hipa Admin</h2>
-          <span style="font-size: 0.72rem; color: #2ee6a6;">Super Admin Role</span>
+          <h2 class="admin-brand-title">Hipa</h2>
+          <span style="font-size: 0.72rem; color: #2ee6a6; font-weight: 700;">Admin Control Center</span>
         </div>
       </div>
 
@@ -27,30 +27,30 @@
         </a>
         <a class="admin-nav-item" data-view="users">
           <span>👥</span> Users
-          <span class="admin-nav-badge">1,248</span>
+          <span class="admin-nav-badge">0</span>
         </a>
         <a class="admin-nav-item" data-view="verifications">
           <span>🤳</span> Verifications
-          <span class="admin-nav-badge" style="background: #38bdf8;">3</span>
+          <span class="admin-nav-badge" style="background: rgba(255,255,255,0.15);">0</span>
         </a>
         <a class="admin-nav-item" data-view="photos">
           <span>🖼️</span> Photo Moderation
-          <span class="admin-nav-badge" style="background: #f59e0b;">5</span>
+          <span class="admin-nav-badge" style="background: rgba(255,255,255,0.15);">0</span>
         </a>
         <a class="admin-nav-item" data-view="reports">
           <span>🚨</span> Reports
-          <span class="admin-nav-badge" style="background: #ef4444;">2</span>
+          <span class="admin-nav-badge" style="background: rgba(255,255,255,0.15);">0</span>
         </a>
         <a class="admin-nav-item" data-view="calls">
           <span>📞</span> Calls Log
         </a>
         <a class="admin-nav-item" data-view="payments">
           <span>💳</span> UPI Payments
-          <span class="admin-nav-badge" style="background: #10b981;">1</span>
+          <span class="admin-nav-badge" style="background: rgba(255,255,255,0.15);">0</span>
         </a>
         <a class="admin-nav-item" data-view="creators">
           <span>🎭</span> Creators & Call Rates
-          <span class="admin-nav-badge" style="background: #ec4899;">10</span>
+          <span class="admin-nav-badge" style="background: linear-gradient(135deg, #ff007f, #a855f7);">10</span>
         </a>
         <a class="admin-nav-item" data-view="coins">
           <span>🪙</span> Coin Packs & Offers
@@ -83,7 +83,7 @@
     </main>
   </div>
 
-  <script type="module" src="/js/admin.js"></script>
+  <script type="module" src="/js/admin.js?v=6.0"></script>
 </body>
 
 </html>
