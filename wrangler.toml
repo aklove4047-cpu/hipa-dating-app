@@ -1,0 +1,6 @@
+name = "hipa-admin"
+compatibility_date = "2026-11-01"
+
+[[kv_namespaces]]
+binding = "HIPA_DATA"
+id = "ae8ec5871f954e10a7881e746b1e8611"

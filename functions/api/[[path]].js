@@ -17,6 +17,113 @@ export async function onRequest(context) {
     return new Response(null, { headers: corsHeaders });
   }
 
+  // Registered Users Management Endpoint (Cloud Sync for Admin Panel)
+  if (path.includes('/api/v1/users')) {
+    const kv = context.env?.HIPA_DATA;
+
+    if (request.method === 'POST') {
+      try {
+        const newUser = await request.json();
+        if (!newUser || !newUser.phone) {
+          return new Response(JSON.stringify({ ok: false, error: "Invalid user data" }), { status: 400, headers: corsHeaders });
+        }
+
+        let users = [];
+        if (kv) {
+          try {
+            const raw = await kv.get('hipa_all_users');
+            if (raw) users = JSON.parse(raw);
+          } catch (e) {}
+        } else {
+          if (!globalThis.__HIPA_USERS__) globalThis.__HIPA_USERS__ = [];
+          users = globalThis.__HIPA_USERS__;
+        }
+
+        const existingIdx = users.findIndex(u => u.phone === newUser.phone);
+        if (existingIdx >= 0) {
+          users[existingIdx] = { ...users[existingIdx], ...newUser, updatedAt: new Date().toISOString() };
+        } else {
+          users.unshift({
+            ...newUser,
+            id: newUser.id || Date.now(),
+            registeredAt: newUser.registeredAt || new Date().toISOString()
+          });
+        }
+
+        if (users.length > 2000) users = users.slice(0, 2000);
+
+        if (kv) {
+          await kv.put('hipa_all_users', JSON.stringify(users));
+        } else {
+          globalThis.__HIPA_USERS__ = users;
+        }
+
+        return new Response(JSON.stringify({ ok: true, message: "User registered successfully", user: newUser, totalUsers: users.length }), { headers: corsHeaders });
+      } catch (err) {
+        return new Response(JSON.stringify({ ok: false, error: err.message }), { status: 500, headers: corsHeaders });
+      }
+    }
+
+    if (request.method === 'PUT') {
+      try {
+        const updateData = await request.json();
+        let users = [];
+        if (kv) {
+          try {
+            const raw = await kv.get('hipa_all_users');
+            if (raw) users = JSON.parse(raw);
+          } catch (e) {}
+        } else {
+          users = globalThis.__HIPA_USERS__ || [];
+        }
+
+        const idx = users.findIndex(u => u.id == updateData.id || u.phone == updateData.phone);
+        if (idx >= 0) {
+          users[idx] = { ...users[idx], ...updateData, updatedAt: new Date().toISOString() };
+          if (kv) {
+            await kv.put('hipa_all_users', JSON.stringify(users));
+          } else {
+            globalThis.__HIPA_USERS__ = users;
+          }
+          return new Response(JSON.stringify({ ok: true, user: users[idx] }), { headers: corsHeaders });
+        }
+        return new Response(JSON.stringify({ ok: false, error: "User not found" }), { status: 404, headers: corsHeaders });
+      } catch (err) {
+        return new Response(JSON.stringify({ ok: false, error: err.message }), { status: 500, headers: corsHeaders });
+      }
+    }
+
+    if (request.method === 'DELETE') {
+      try {
+        if (kv) {
+          await kv.put('hipa_all_users', JSON.stringify([]));
+        } else {
+          globalThis.__HIPA_USERS__ = [];
+        }
+        return new Response(JSON.stringify({ ok: true, message: "All users reset", totalUsers: 0 }), { headers: corsHeaders });
+      } catch (err) {
+        return new Response(JSON.stringify({ ok: false, error: err.message }), { status: 500, headers: corsHeaders });
+      }
+    }
+
+    // GET /api/v1/users
+    let users = [];
+    if (kv) {
+      try {
+        const raw = await kv.get('hipa_all_users');
+        if (raw) users = JSON.parse(raw);
+      } catch (e) {}
+    } else {
+      users = globalThis.__HIPA_USERS__ || [];
+    }
+
+    return new Response(JSON.stringify({
+      ok: true,
+      totalUsers: users.length,
+      users: users
+    }), { headers: corsHeaders });
+  }
+
   // Gateway & API Config Endpoint
   if (path.includes('/api/v1/gateways/config')) {
     if (request.method === 'POST') {

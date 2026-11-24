@@ -185,6 +185,9 @@ class AdminController {
     this.activeGatewaySubTab = 'payments';
     const saved = localStorage.getItem('hipa_system_api_configs');
     this.gatewayConfigs = saved ? JSON.parse(saved) : JSON.parse(JSON.stringify(DEFAULT_GATEWAY_CONFIG));
+    this.usersPollTimer = null;
+    this.syncChannel = null;
+    this.activeDetailUser = null;
   }
 
   init() {
@@ -192,7 +195,104 @@ class AdminController {
       this.renderLoginScreen();
     } else {
       this.renderApp();
+      this.initRealtimeUserSync();
     }
+  }
+
+  initRealtimeUserSync() {
+    this.fetchRegisteredUsers();
+
+    if (!this.usersPollTimer) {
+      this.usersPollTimer = setInterval(() => {
+        this.fetchRegisteredUsers();
+      }, 3500);
+    }
+
+    try {
+      if (!this.syncChannel) {
+        this.syncChannel = new BroadcastChannel('hipa_users_sync');
+        this.syncChannel.onmessage = (ev) => {
+          if (ev.data && ev.data.type === 'USER_REGISTERED') {
+            const u = ev.data.user;
+            if (u) {
+              const existingIdx = ADMIN_DATA.users.findIndex(item => item.phone === u.phone || item.id === u.id);
+              if (existingIdx >= 0) {
+                ADMIN_DATA.users[existingIdx] = u;
+              } else {
+                ADMIN_DATA.users.unshift(u);
+              }
+              this.updateUserStatsAndUI();
+              this.showToast(`🎉 New user registered: ${u.username || u.phone}`);
+            }
+          }
+        };
+      }
+    } catch (e) {}
+  }
+
+  showToast(msg) {
+    let toast = document.getElementById('adminToastNotice');
+    if (!toast) {
+      toast = document.createElement('div');
+      toast.id = 'adminToastNotice';
+      toast.style.cssText = 'position: fixed; top: 24px; right: 24px; background: linear-gradient(135deg, #ff007f, #7928ca); color: #fff; padding: 14px 22px; border-radius: 14px; font-weight: 700; z-index: 999999; box-shadow: 0 10px 35px rgba(255, 0, 127, 0.45); display: none; font-size: 0.92rem; border: 1px solid rgba(255,255,255,0.2);';
+      document.body.appendChild(toast);
+    }
+    toast.textContent = msg;
+    toast.style.display = 'block';
+    setTimeout(() => { toast.style.display = 'none'; }, 4000);
+  }
+
+  async fetchRegisteredUsers() {
+    let cloudUsers = null;
+    try {
+      const res = await fetch('/api/v1/users');
+      if (res.ok) {
+        const d = await res.json();
+        if (d && Array.isArray(d.users)) cloudUsers = d.users;
+      }
+    } catch (e) {}
+
+    if (!cloudUsers) {
+      try {
+        const res2 = await fetch('https://hipa-admin.pages.dev/api/v1/users');
+        if (res2.ok) {
+          const d2 = await res2.json();
+          if (d2 && Array.isArray(d2.users)) cloudUsers = d2.users;
+        }
+      } catch (e) {}
+    }
+
+    let localUsers = [];
+    try {
+      localUsers = JSON.parse(localStorage.getItem('hipa_all_users') || '[]');
+    } catch (e) {}
+
+    const map = new Map();
+    (cloudUsers || []).forEach(u => map.set(u.phone || u.id, u));
+    localUsers.forEach(u => {
+      const key = u.phone || u.id;
+      if (!map.has(key)) map.set(key, u);
+    });
+
+    const merged = Array.from(map.values());
+    ADMIN_DATA.users = merged;
+    this.updateUserStatsAndUI();
+  }
+
+  updateUserStatsAndUI() {
+    ADMIN_DATA.kpis.totalUsers = ADMIN_DATA.users.length.toString();
+    ADMIN_DATA.kpis.activeToday = ADMIN_DATA.users.filter(u => u.status !== 'suspended').length.toString();
+
+    document.querySelectorAll('.admin-nav-item[data-view="users"] .admin-nav-badge').forEach(el => {
+      el.textContent = ADMIN_DATA.users.length;
+    });
+
+    const totalEl = document.getElementById('kpiTotalUsersVal');
+    if (totalEl) totalEl.textContent = ADMIN_DATA.users.length;
+
+    const activeEl = document.getElementById('kpiActiveTodayVal');
+    if (activeEl) activeEl.textContent = ADMIN_DATA.kpis.activeToday;
   }
 
   renderLoginScreen() {
@@ -426,19 +526,31 @@ class AdminController {
             <table class="glass-table">
               <thead>
                 <tr>
-                  <th>Name</th>
-                  <th>City</th>
+                  <th>User & Mobile</th>
+                  <th>Gender & Lang</th>
+                  <th>Coins</th>
                   <th>Status</th>
-                  <th>Tier</th>
                 </tr>
               </thead>
               <tbody>
-                ${ADMIN_DATA.users.length > 0 ? ADMIN_DATA.users.slice(0, 4).map((u) => `
+                ${ADMIN_DATA.users.length > 0 ? ADMIN_DATA.users.slice(0, 5).map((u) => `
                   <tr>
-                    <td><strong>${u.name}</strong></td>
-                    <td>${u.city}</td>
-                    <td><span class="badge-status badge-${u.status}">${u.status}</span></td>
-                    <td>${u.isPremium ? '👑 Gold' : 'Free'}</td>
+                    <td>
+                      <div style="display: flex; align-items: center; gap: 10px;">
+                        <img src="${u.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100'}" 
+                          style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover; border: 1.5px solid #ff007f;" />
+                        <div>
+                          <div style="font-weight: 800; font-size: 0.85rem; color: #fff;">${u.name || u.username}</div>
+                          <div style="font-size: 0.72rem; color: #ff94c2; font-family: monospace;">${u.phone || '-'}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td>
+                      <div style="font-size: 0.82rem;">${u.gender === 'female' ? '♀ Female' : (u.gender === 'male' ? '♂ Male' : 'Other')}</div>
+                      <div style="font-size: 0.72rem; color: var(--text-muted);">${u.language || 'Hindi'}</div>
+                    </td>
+                    <td><span style="color: #ffd700; font-weight: 800;">🪙 ${u.coins ?? 60}</span></td>
+                    <td><span class="badge-status ${u.status === 'suspended' ? 'badge-banned' : 'badge-active'}">${u.status === 'suspended' ? 'Suspended' : 'Active'}</span></td>
                   </tr>
                 `).join('') : `
                   <tr>
@@ -480,7 +592,14 @@ class AdminController {
       <div class="admin-topbar">
         <div>
           <h1 style="font-size: 1.8rem; font-weight: 800;">User Management</h1>
-          <p style="color: var(--text-muted); font-size: 0.9rem;">View, verify, suspend or grant VIP access (Total: ${ADMIN_DATA.users.length})</p>
+          <p style="color: var(--text-muted); font-size: 0.9rem;">
+            Real-time registered users, phone verification, coin wallets & VIP status (Total: ${ADMIN_DATA.users.length})
+          </p>
+        </div>
+        <div style="display: flex; gap: 10px;">
+          <button class="btn-primary" id="btnRefreshUsersList" style="padding: 10px 18px; font-size: 0.88rem;">
+            🔄 Refresh Real-Time
+          </button>
         </div>
       </div>
 
@@ -488,47 +607,307 @@ class AdminController {
         <table class="glass-table">
           <thead>
             <tr>
-              <th>ID</th>
-              <th>Name & Email</th>
-              <th>City</th>
-              <th>Verified</th>
+              <th>User</th>
+              <th>Name & Phone</th>
+              <th>Gender & Lang</th>
+              <th>Coins</th>
+              <th>Referral</th>
+              <th>Registered At</th>
+              <th>Blue Tick</th>
               <th>Status</th>
-              <th>Plan</th>
               <th>Actions</th>
             </tr>
           </thead>
           <tbody>
             ${ADMIN_DATA.users.length > 0 ? ADMIN_DATA.users.map((u) => `
-              <tr>
-                <td>#${u.id}</td>
+              <tr data-user-id="${u.id}">
                 <td>
-                  <div style="font-weight: 700;">${u.name}</div>
-                  <div style="font-size: 0.78rem; color: var(--text-muted);">${u.email}</div>
+                  <div style="display: flex; align-items: center; gap: 10px;">
+                    <img src="${u.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100'}" 
+                      style="width: 38px; height: 38px; border-radius: 50%; object-fit: cover; border: 2px solid #ff007f; box-shadow: 0 2px 8px rgba(255, 0, 127, 0.4);" />
+                    <div>
+                      <div style="font-weight: 800; font-size: 0.85rem;">#${String(u.id).slice(-6)}</div>
+                      <div style="font-size: 0.72rem; color: var(--text-muted);">${u.city || 'India'}</div>
+                    </div>
+                  </div>
                 </td>
-                <td>${u.city}</td>
-                <td>${u.verified ? '<span class="badge-verified">✓ Blue Tick</span>' : '<span style="color: var(--text-faint);">No</span>'}</td>
-                <td><span class="badge-status badge-${u.status}">${u.status}</span></td>
-                <td>${u.isPremium ? '👑 Gold' : 'Free'}</td>
                 <td>
-                  <div style="display: flex; gap: 6px;">
-                    <button class="btn-secondary" style="padding: 6px 12px; font-size: 0.78rem;" onclick="alert('User #${u.id} Blue Tick Granted!')">Verify</button>
-                    <button class="btn-secondary" style="padding: 6px 12px; font-size: 0.78rem; color: #ef4444;" onclick="alert('User #${u.id} Suspended!')">Suspend</button>
+                  <div style="font-weight: 800; color: #ffffff;">${u.name || u.username || 'User'}</div>
+                  <div style="font-size: 0.8rem; color: #ff94c2; font-family: monospace; font-weight: 700;">${u.phone || '-'}</div>
+                </td>
+                <td>
+                  <div>${u.gender === 'female' ? '♀ Female' : (u.gender === 'male' ? '♂ Male' : 'Other')}</div>
+                  <div style="font-size: 0.75rem; color: var(--text-muted);">${u.language || 'Hindi'}</div>
+                </td>
+                <td>
+                  <span style="color: #ffd700; font-weight: 800; font-size: 0.95rem;">🪙 ${u.coins ?? 60}</span>
+                </td>
+                <td>
+                  ${u.referralCode ? `<span class="glass-pill" style="font-size: 0.75rem; border-color: rgba(255, 0, 127, 0.4);">${u.referralCode}</span>` : '<span style="color: var(--text-faint); font-size: 0.8rem;">None</span>'}
+                </td>
+                <td>
+                  <div style="font-size: 0.82rem; font-weight: 600;">
+                    ${u.registeredAt ? new Date(u.registeredAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Today'}
+                  </div>
+                  <div style="font-size: 0.72rem; color: var(--text-muted);">
+                    ${u.registeredAt ? new Date(u.registeredAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : 'Recent'}
+                  </div>
+                </td>
+                <td>
+                  ${u.verified ? '<span class="badge-status badge-active">✓ Blue Tick</span>' : '<span style="color: var(--text-faint); font-size: 0.78rem;">No</span>'}
+                </td>
+                <td>
+                  <span class="badge-status ${u.status === 'suspended' ? 'badge-banned' : 'badge-active'}">
+                    ${u.status === 'suspended' ? 'Suspended' : 'Active'}
+                  </span>
+                </td>
+                <td>
+                  <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+                    <button class="btn-primary btn-view-user-details" data-id="${u.id}" style="padding: 6px 10px; font-size: 0.76rem;">
+                      👁️ Details
+                    </button>
+                    <button class="btn-secondary btn-toggle-verify-user" data-id="${u.id}" style="padding: 6px 10px; font-size: 0.76rem;">
+                      ${u.verified ? 'Revoke Tick' : '✓ Blue Tick'}
+                    </button>
+                    <button class="btn-secondary btn-add-coins-user" data-id="${u.id}" style="padding: 6px 10px; font-size: 0.76rem; color: #ffd700;">
+                      🪙 +100
+                    </button>
+                    <button class="btn-secondary btn-toggle-status-user" data-id="${u.id}" style="padding: 6px 10px; font-size: 0.76rem; color: ${u.status === 'suspended' ? '#2ee6a6' : '#ef4444'};">
+                      ${u.status === 'suspended' ? 'Activate' : 'Suspend'}
+                    </button>
                   </div>
                 </td>
               </tr>
             `).join('') : `
               <tr>
-                <td colspan="7" style="text-align: center; padding: 48px; color: var(--text-muted);">
-                  <div style="font-size: 2.2rem; margin-bottom: 8px;">👥</div>
-                  <div style="font-size: 1.15rem; font-weight: 800; color: #fff;">No Registered Users</div>
-                  <div style="font-size: 0.85rem; margin-top: 6px; color: var(--text-muted);">New users registered via app or website will appear here automatically.</div>
+                <td colspan="9" style="text-align: center; padding: 50px 20px; color: var(--text-muted);">
+                  <div style="font-size: 2.4rem; margin-bottom: 8px;">👥</div>
+                  <div style="font-size: 1.2rem; font-weight: 800; color: #fff;">No Registered Users Yet</div>
+                  <div style="font-size: 0.88rem; margin-top: 6px; color: var(--text-muted);">
+                    When a user registers on the website or mobile app, their full details (Phone, Name, Language, Coins, etc.) will show here automatically.
+                  </div>
+                  <button class="btn-primary" id="btnEmptyRefresh" style="margin-top: 18px; padding: 10px 20px;">
+                    🔄 Check Again
+                  </button>
                 </td>
               </tr>
             `}
           </tbody>
         </table>
       </div>
+
+      <!-- User Details Full Profile Modal -->
+      <div id="modalUserDetails" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 99999; backdrop-filter: blur(8px); align-items: center; justify-content: center; padding: 20px;">
+        <div class="glass-panel" style="width: 100%; max-width: 520px; padding: 28px; border-color: rgba(255, 0, 127, 0.4); box-shadow: 0 20px 60px rgba(0,0,0,0.85); position: relative;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h3 style="font-size: 1.25rem; font-weight: 900; background: linear-gradient(135deg, #ffffff, #ff8bb8); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
+              👤 Full User Profile & Details
+            </h3>
+            <button class="btn-secondary" id="btnCloseUserDetailsModal" style="padding: 4px 10px; border-radius: 50%;">✕</button>
+          </div>
+
+          <div id="modalUserDetailsBody"></div>
+        </div>
+      </div>
     `;
+
+    // Event Bindings
+    const btnRefresh = container.querySelector('#btnRefreshUsersList');
+    if (btnRefresh) {
+      btnRefresh.onclick = async () => {
+        btnRefresh.textContent = '⏳ Refreshing...';
+        await this.fetchRegisteredUsers();
+        this.renderUsers(container);
+        this.showToast('✅ User list updated successfully');
+      };
+    }
+
+    const btnEmptyRefresh = container.querySelector('#btnEmptyRefresh');
+    if (btnEmptyRefresh) {
+      btnEmptyRefresh.onclick = async () => {
+        await this.fetchRegisteredUsers();
+        this.renderUsers(container);
+      };
+    }
+
+    // Modal Close
+    const modal = container.querySelector('#modalUserDetails');
+    const btnCloseModal = container.querySelector('#btnCloseUserDetailsModal');
+    if (btnCloseModal && modal) {
+      btnCloseModal.onclick = () => { modal.style.display = 'none'; };
+      modal.onclick = (e) => { if (e.target === modal) modal.style.display = 'none'; };
+    }
+
+    // View Details Buttons
+    container.querySelectorAll('.btn-view-user-details').forEach((btn) => {
+      btn.onclick = () => {
+        const id = btn.getAttribute('data-id');
+        const user = ADMIN_DATA.users.find(u => String(u.id) === String(id));
+        if (user && modal) {
+          const body = container.querySelector('#modalUserDetailsBody');
+          body.innerHTML = `
+            <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 20px; padding-bottom: 16px; border-bottom: 1px solid rgba(255,255,255,0.08);">
+              <img src="${user.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100'}" 
+                style="width: 72px; height: 72px; border-radius: 50%; object-fit: cover; border: 3px solid #ff007f; box-shadow: 0 4px 20px rgba(255,0,127,0.5);" />
+              <div>
+                <h4 style="font-size: 1.3rem; font-weight: 900; color: #fff;">${user.name || user.username}</h4>
+                <div style="color: #ff94c2; font-family: monospace; font-size: 1rem; font-weight: 700; margin-top: 2px;">
+                  📱 ${user.phone || 'No phone'}
+                </div>
+                <div style="font-size: 0.78rem; color: var(--text-muted); margin-top: 4px;">
+                  System User ID: #${user.id}
+                </div>
+              </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 20px;">
+              <div class="glass-card" style="padding: 12px;">
+                <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase;">Gender</div>
+                <div style="font-weight: 700; font-size: 0.95rem; margin-top: 2px;">${user.gender === 'female' ? '♀ Female' : (user.gender === 'male' ? '♂ Male' : 'Other')}</div>
+              </div>
+              <div class="glass-card" style="padding: 12px;">
+                <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase;">Language</div>
+                <div style="font-weight: 700; font-size: 0.95rem; margin-top: 2px;">${user.language || 'Hindi'}</div>
+              </div>
+              <div class="glass-card" style="padding: 12px;">
+                <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase;">Coins Balance</div>
+                <div style="font-weight: 800; font-size: 1.1rem; color: #ffd700; margin-top: 2px;">🪙 ${user.coins ?? 60} Coins</div>
+              </div>
+              <div class="glass-card" style="padding: 12px;">
+                <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase;">Referral Code</div>
+                <div style="font-weight: 700; font-size: 0.95rem; margin-top: 2px;">${user.referralCode || 'None'}</div>
+              </div>
+              <div class="glass-card" style="padding: 12px;">
+                <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase;">Blue Tick Verified</div>
+                <div style="font-weight: 700; font-size: 0.95rem; margin-top: 2px; color: ${user.verified ? '#2ee6a6' : '#ffd166'};">
+                  ${user.verified ? '✓ Verified (Blue Tick)' : 'Unverified'}
+                </div>
+              </div>
+              <div class="glass-card" style="padding: 12px;">
+                <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase;">Account Status</div>
+                <div style="font-weight: 700; font-size: 0.95rem; margin-top: 2px; color: ${user.status === 'suspended' ? '#ef4444' : '#2ee6a6'};">
+                  ${user.status === 'suspended' ? 'Suspended' : 'Active'}
+                </div>
+              </div>
+            </div>
+
+            <div class="glass-card" style="padding: 12px; margin-bottom: 20px;">
+              <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase;">Registration Date & Time</div>
+              <div style="font-weight: 600; font-size: 0.9rem; margin-top: 2px;">
+                📅 ${user.registeredAt ? new Date(user.registeredAt).toLocaleString('en-IN') : 'Recent'}
+              </div>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+              <div style="font-size: 0.8rem; font-weight: 700; color: var(--text-muted);">Quick Admin Controls</div>
+              <div style="display: flex; gap: 8px;">
+                <button class="btn-primary" id="modalBtnToggleVerify" style="flex: 1; padding: 9px; font-size: 0.82rem;">
+                  ${user.verified ? 'Revoke Blue Tick' : 'Grant Blue Tick ✓'}
+                </button>
+                <button class="btn-secondary" id="modalBtnAddCoins" style="flex: 1; padding: 9px; font-size: 0.82rem; color: #ffd700;">
+                  🪙 +100 Coins
+                </button>
+                <button class="btn-secondary" id="modalBtnToggleStatus" style="flex: 1; padding: 9px; font-size: 0.82rem; color: ${user.status === 'suspended' ? '#2ee6a6' : '#ef4444'};">
+                  ${user.status === 'suspended' ? 'Activate User' : 'Suspend User'}
+                </button>
+              </div>
+            </div>
+          `;
+
+          // Modal Actions
+          body.querySelector('#modalBtnToggleVerify').onclick = async () => {
+            user.verified = !user.verified;
+            await this.updateUserOnServer(user);
+            modal.style.display = 'none';
+            this.renderUsers(container);
+            this.showToast(`Updated verification for ${user.username}`);
+          };
+
+          body.querySelector('#modalBtnAddCoins').onclick = async () => {
+            user.coins = (user.coins || 0) + 100;
+            await this.updateUserOnServer(user);
+            modal.style.display = 'none';
+            this.renderUsers(container);
+            this.showToast(`🪙 100 bonus coins added to ${user.username}`);
+          };
+
+          body.querySelector('#modalBtnToggleStatus').onclick = async () => {
+            user.status = user.status === 'suspended' ? 'active' : 'suspended';
+            await this.updateUserOnServer(user);
+            modal.style.display = 'none';
+            this.renderUsers(container);
+            this.showToast(`Status changed to ${user.status} for ${user.username}`);
+          };
+
+          modal.style.display = 'flex';
+        }
+      };
+    });
+
+    // Quick Action: Toggle Verification
+    container.querySelectorAll('.btn-toggle-verify-user').forEach((btn) => {
+      btn.onclick = async () => {
+        const id = btn.getAttribute('data-id');
+        const user = ADMIN_DATA.users.find(u => String(u.id) === String(id));
+        if (user) {
+          user.verified = !user.verified;
+          await this.updateUserOnServer(user);
+          this.renderUsers(container);
+          this.showToast(`✓ Blue Tick ${user.verified ? 'Granted' : 'Revoked'}`);
+        }
+      };
+    });
+
+    // Quick Action: Add Coins
+    container.querySelectorAll('.btn-add-coins-user').forEach((btn) => {
+      btn.onclick = async () => {
+        const id = btn.getAttribute('data-id');
+        const user = ADMIN_DATA.users.find(u => String(u.id) === String(id));
+        if (user) {
+          user.coins = (user.coins || 0) + 100;
+          await this.updateUserOnServer(user);
+          this.renderUsers(container);
+          this.showToast(`🪙 +100 Coins credited to ${user.username || user.phone}`);
+        }
+      };
+    });
+
+    // Quick Action: Suspend / Activate
+    container.querySelectorAll('.btn-toggle-status-user').forEach((btn) => {
+      btn.onclick = async () => {
+        const id = btn.getAttribute('data-id');
+        const user = ADMIN_DATA.users.find(u => String(u.id) === String(id));
+        if (user) {
+          user.status = user.status === 'suspended' ? 'active' : 'suspended';
+          await this.updateUserOnServer(user);
+          this.renderUsers(container);
+          this.showToast(`User ${user.status === 'suspended' ? 'Suspended' : 'Activated'}`);
+        }
+      };
+    });
+  }
+
+  async updateUserOnServer(user) {
+    // Save to local storage
+    try {
+      let local = JSON.parse(localStorage.getItem('hipa_all_users') || '[]');
+      const idx = local.findIndex(u => u.phone === user.phone || u.id === user.id);
+      if (idx >= 0) local[idx] = user;
+      else local.unshift(user);
+      localStorage.setItem('hipa_all_users', JSON.stringify(local));
+    } catch (e) {}
+
+    // Dispatch to Cloudflare backend
+    const endpoints = ['/api/v1/users', 'https://hipa-admin.pages.dev/api/v1/users'];
+    for (const ep of endpoints) {
+      try {
+        await fetch(ep, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(user)
+        });
+      } catch (e) {}
+    }
   }
 
   renderVerifications(container) {

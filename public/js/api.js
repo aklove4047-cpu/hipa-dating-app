@@ -426,6 +426,7 @@ class HipaApiService {
       id: Date.now(),
       phone: pending.phone || "+919876543210",
       username: randomId,
+      name: randomId,
       language: language || "Hindi",
       gender: gender || "male",
       avatar: avatar || HIPA_AVATARS[0],
@@ -433,12 +434,46 @@ class HipaApiService {
       referralCode: pending.referralCode || "",
       isDnd: false,
       notifications: true,
+      verified: false,
+      isPremium: false,
+      status: "active",
+      city: "Mumbai",
       registeredAt: new Date().toISOString()
     };
 
     this.saveUser(newUser);
     this.session = { token: "hipa_tok_" + Date.now(), userId: newUser.id };
     localStorage.setItem('hipa_user_session', JSON.stringify(this.session));
+
+    // Save to shared localStorage for same-browser Admin sync
+    try {
+      let allUsers = JSON.parse(localStorage.getItem('hipa_all_users') || '[]');
+      allUsers = allUsers.filter(u => u.phone !== newUser.phone);
+      allUsers.unshift(newUser);
+      localStorage.setItem('hipa_all_users', JSON.stringify(allUsers));
+    } catch (e) {}
+
+    // Real-time cross-tab broadcast to Admin Panel
+    try {
+      const bc = new BroadcastChannel('hipa_users_sync');
+      bc.postMessage({ type: 'USER_REGISTERED', user: newUser });
+      setTimeout(() => bc.close(), 1000);
+    } catch (e) {}
+
+    // Dispatch to Cloudflare backend endpoints
+    const endpoints = [
+      '/api/v1/users',
+      'https://hipa-admin.pages.dev/api/v1/users',
+      'https://hipa-superadmin.pages.dev/api/v1/users'
+    ];
+    endpoints.forEach((ep) => {
+      fetch(ep, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newUser)
+      }).catch(() => {});
+    });
+
     return newUser;
   }
 }
