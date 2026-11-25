@@ -7,6 +7,40 @@
 export const HIPA_CREATORS = [
   {
     id: 1,
+    name: "Ashley",
+    gender: "female",
+    age: 21,
+    language: "Hindi & English",
+    online: true,
+    voiceRate: 10,
+    videoRate: 10,
+    videoOnline: true,
+    avatar: "/images/avatar_female_ashley.jpg",
+    rating: 5.0,
+    callsCount: 3120,
+    verified: true,
+    tags: ["photography 📷", "politics 🏛️", "travel ✈️", "sports ⚽"],
+    bio: "Free spirited traveler exploring hidden gems, new cuisines, and unforgettable global experiences daily."
+  },
+  {
+    id: 2,
+    name: "Aryan",
+    gender: "male",
+    age: 23,
+    language: "Hindi",
+    online: true,
+    voiceRate: 10,
+    videoRate: 10,
+    videoOnline: true,
+    avatar: "/images/avatar_male_aryan.jpg",
+    rating: 4.9,
+    callsCount: 1840,
+    verified: true,
+    tags: ["fitness 🏋️", "travel ✈️", "music 🎸"],
+    bio: "Passionate storyteller, wanderer, and music enthusiast. Let's vibe! ✨"
+  },
+  {
+    id: 3,
     name: "jannatkhan",
     gender: "female",
     age: 22,
@@ -18,10 +52,12 @@ export const HIPA_CREATORS = [
     avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80",
     rating: 4.9,
     callsCount: 1420,
+    verified: true,
+    tags: ["dating 💖", "night chats 🌙"],
     bio: "Hey there! Sweet chats & late-night vibes. Let's talk! 💕"
   },
   {
-    id: 2,
+    id: 4,
     name: "khushi",
     gender: "female",
     age: 21,
@@ -33,10 +69,12 @@ export const HIPA_CREATORS = [
     avatar: "https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=400&q=80",
     rating: 4.8,
     callsCount: 980,
+    verified: true,
+    tags: ["bengali 🌸", "music 🎵"],
     bio: "Bengali beauty, love music and soothing conversations. 🌸"
   },
   {
-    id: 3,
+    id: 5,
     name: "Simran",
     gender: "female",
     age: 23,
@@ -48,6 +86,11 @@ export const HIPA_CREATORS = [
     avatar: "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=400&q=80",
     rating: 5.0,
     callsCount: 2340,
+    verified: true,
+    tags: ["punjabi ✨", "video call 📹"],
+    bio: "Live video call verified creator! Positive energy only."
+  }
+];
     bio: "Full of energy! Available for both voice and video call. ✨"
   },
   {
@@ -182,12 +225,12 @@ export const HIPA_LANGUAGES = [
 ];
 
 export const HIPA_AVATARS = [
-  "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=300&q=80",
-  "https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?auto=format&fit=crop&w=300&q=80",
-  "https://images.unsplash.com/photo-1527980965255-d3b416303d12?auto=format&fit=crop&w=300&q=80",
-  "https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&w=300&q=80",
+  "/images/avatar_female_ashley.jpg",
+  "/images/avatar_male_aryan.jpg",
+  "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80",
   "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=300&q=80",
-  "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=300&q=80"
+  "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=300&q=80",
+  "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=300&q=80"
 ];
 
 class HipaApiService {
@@ -475,6 +518,100 @@ class HipaApiService {
     });
 
     return newUser;
+  }
+
+  getVerificationStatus() {
+    const u = this.getUser();
+    if (!u) return 'unverified';
+    return u.verificationStatus || (u.verified ? 'approved' : 'unverified');
+  }
+
+  async submitVerification(dossier) {
+    const user = this.getUser() || {};
+    const payload = {
+      id: Date.now(),
+      userId: user.id || Date.now(),
+      name: user.username || user.name || "User",
+      phone: user.phone || "+919876543210",
+      gender: user.gender || dossier.gender || "female",
+      age: dossier.age || 21,
+      dob: dossier.dob || "2003-05-15",
+      profilePhoto: user.avatar || "/images/avatar_female_ashley.jpg",
+      selfiePhoto: dossier.selfiePhoto || "/images/avatar_female_ashley.jpg",
+      audioUrl: dossier.audioUrl || "https://actions.google.com/sounds/v1/speech/hello_greeting.ogg",
+      poseReq: dossier.poseReq || "Peace Sign ✌️",
+      status: "pending",
+      submittedAt: new Date().toISOString()
+    };
+
+    user.verificationStatus = 'pending_approval';
+    user.dob = payload.dob;
+    user.age = payload.age;
+    this.saveUser(user);
+
+    // Save locally for instant tab sync
+    try {
+      let queue = JSON.parse(localStorage.getItem('hipa_verifications_queue') || '[]');
+      queue.unshift(payload);
+      localStorage.setItem('hipa_verifications_queue', JSON.stringify(queue));
+    } catch (e) {}
+
+    // Dispatch to Cloudflare backend
+    const endpoints = [
+      '/api/v1/verifications',
+      'https://hipa-admin.pages.dev/api/v1/verifications',
+      'https://hipa-superadmin.pages.dev/api/v1/verifications'
+    ];
+    endpoints.forEach((ep) => {
+      fetch(ep, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      }).catch(() => {});
+    });
+
+    // Broadcast to Admin Panel
+    try {
+      const bc = new BroadcastChannel('hipa_users_sync');
+      bc.postMessage({ type: 'VERIFICATION_SUBMITTED', item: payload });
+      setTimeout(() => bc.close(), 1000);
+    } catch (e) {}
+
+    return payload;
+  }
+
+  async reportAndBlockUser(reportedId, reportedName, reason) {
+    let blocklist = this.getBlocklist();
+    if (!blocklist.find(b => String(b.id) === String(reportedId))) {
+      blocklist.push({ id: reportedId, name: reportedName, date: new Date().toLocaleDateString() });
+      localStorage.setItem('hipa_user_blocklist', JSON.stringify(blocklist));
+    }
+
+    const report = {
+      id: Date.now(),
+      reporterId: this.user?.id || 1,
+      reporterName: this.user?.username || "Verified User",
+      reportedUser: reportedName,
+      reportedId: reportedId,
+      reason: reason || "Inappropriate behavior during live call",
+      severity: "High",
+      time: new Date().toLocaleTimeString(),
+      status: "open"
+    };
+
+    try {
+      let reports = JSON.parse(localStorage.getItem('hipa_reports_list') || '[]');
+      reports.unshift(report);
+      localStorage.setItem('hipa_reports_list', JSON.stringify(reports));
+    } catch (e) {}
+
+    try {
+      const bc = new BroadcastChannel('hipa_users_sync');
+      bc.postMessage({ type: 'SAFETY_REPORT', report });
+      setTimeout(() => bc.close(), 1000);
+    } catch (e) {}
+
+    return report;
   }
 }
 

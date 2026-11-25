@@ -35,10 +35,15 @@
     <!-- Top Bar (Shown when user is authenticated) -->
     <header class="hipa-topbar hima-topbar" id="hipaTopBar">
       <div class="hipa-brand">
-        <div class="hipa-logo-icon">💬</div>
+        <div class="hipa-logo-icon" style="background: transparent; overflow: hidden; border: none; width: 38px; height: 38px; border-radius: 10px; box-shadow: 0 0 15px rgba(255, 0, 127, 0.4);">
+          <img src="/images/hipa_brand_logo.jpg" style="width: 100%; height: 100%; object-fit: cover;" />
+        </div>
         <div class="hipa-brand-info">
-          <h1>Hipa</h1>
-          <p>Where Feelings Connect</p>
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <h1 style="background: linear-gradient(135deg, #ff007f 0%, #ff2a85 50%, #7928ca 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-weight: 900;">Hipa</h1>
+            <span class="badge-18-plus">18+</span>
+          </div>
+          <p style="color: #6b7280; font-weight: 700;">Meet Live • Feel Real</p>
         </div>
       </div>
       <div style="display: flex; align-items: center; gap: 8px;">

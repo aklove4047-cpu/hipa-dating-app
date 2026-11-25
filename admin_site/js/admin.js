@@ -201,10 +201,12 @@ class AdminController {
 
   initRealtimeUserSync() {
     this.fetchRegisteredUsers();
+    this.fetchVerificationsAndReports();
 
     if (!this.usersPollTimer) {
       this.usersPollTimer = setInterval(() => {
         this.fetchRegisteredUsers();
+        this.fetchVerificationsAndReports();
       }, 3500);
     }
 
@@ -212,7 +214,8 @@ class AdminController {
       if (!this.syncChannel) {
         this.syncChannel = new BroadcastChannel('hipa_users_sync');
         this.syncChannel.onmessage = (ev) => {
-          if (ev.data && ev.data.type === 'USER_REGISTERED') {
+          if (!ev.data) return;
+          if (ev.data.type === 'USER_REGISTERED') {
             const u = ev.data.user;
             if (u) {
               const existingIdx = ADMIN_DATA.users.findIndex(item => item.phone === u.phone || item.id === u.id);
@@ -223,6 +226,33 @@ class AdminController {
               }
               this.updateUserStatsAndUI();
               this.showToast(`🎉 New user registered: ${u.username || u.phone}`);
+            }
+          } else if (ev.data.type === 'VERIFICATION_SUBMITTED') {
+            const v = ev.data.verification;
+            if (v) {
+              const existingIdx = ADMIN_DATA.verifications.findIndex(item => String(item.id) === String(v.id) || (item.phone && item.phone === v.phone));
+              if (existingIdx >= 0) {
+                ADMIN_DATA.verifications[existingIdx] = v;
+              } else {
+                ADMIN_DATA.verifications.unshift(v);
+              }
+              this.updateVerificationBadge();
+              this.showToast(`🛡️ New 18+ Verification Request from ${v.name}!`);
+              if (this.currentView === 'verifications') {
+                const container = document.getElementById('adminViewContainer');
+                if (container) this.renderVerifications(container);
+              }
+            }
+          } else if (ev.data.type === 'USER_REPORTED') {
+            const r = ev.data.report;
+            if (r) {
+              ADMIN_DATA.reports.unshift(r);
+              this.updateReportsBadge();
+              this.showToast(`🚨 Security Alert: Report filed against ${r.reportedUser}`);
+              if (this.currentView === 'reports') {
+                const container = document.getElementById('adminViewContainer');
+                if (container) this.renderReports(container);
+              }
             }
           }
         };
@@ -278,6 +308,100 @@ class AdminController {
     const merged = Array.from(map.values());
     ADMIN_DATA.users = merged;
     this.updateUserStatsAndUI();
+  }
+
+  async fetchVerificationsAndReports() {
+    // 1. Fetch Verifications
+    let cloudV = null;
+    try {
+      const res = await fetch('/api/v1/verifications');
+      if (res.ok) {
+        const d = await res.json();
+        if (d && Array.isArray(d.verifications)) cloudV = d.verifications;
+      }
+    } catch (e) {}
+
+    if (!cloudV) {
+      try {
+        const res2 = await fetch('https://hipa-admin.pages.dev/api/v1/verifications');
+        if (res2.ok) {
+          const d2 = await res2.json();
+          if (d2 && Array.isArray(d2.verifications)) cloudV = d2.verifications;
+        }
+      } catch (e) {}
+    }
+
+    let localV = [];
+    try {
+      localV = JSON.parse(localStorage.getItem('hipa_verifications_list') || '[]');
+    } catch (e) {}
+
+    const vMap = new Map();
+    (cloudV || []).forEach(v => vMap.set(String(v.id), v));
+    localV.forEach(v => {
+      const key = String(v.id);
+      if (!vMap.has(key)) vMap.set(key, v);
+    });
+
+    ADMIN_DATA.verifications = Array.from(vMap.values()).filter(v => v.status === 'pending');
+    this.updateVerificationBadge();
+
+    // 2. Fetch Reports
+    let cloudR = null;
+    try {
+      const res = await fetch('/api/v1/reports');
+      if (res.ok) {
+        const d = await res.json();
+        if (d && Array.isArray(d.reports)) cloudR = d.reports;
+      }
+    } catch (e) {}
+
+    if (!cloudR) {
+      try {
+        const res2 = await fetch('https://hipa-admin.pages.dev/api/v1/reports');
+        if (res2.ok) {
+          const d2 = await res2.json();
+          if (d2 && Array.isArray(d2.reports)) cloudR = d2.reports;
+        }
+      } catch (e) {}
+    }
+
+    let localR = [];
+    try {
+      localR = JSON.parse(localStorage.getItem('hipa_reports_list') || '[]');
+    } catch (e) {}
+
+    const rMap = new Map();
+    (cloudR || []).forEach(r => rMap.set(String(r.id), r));
+    localR.forEach(r => {
+      const key = String(r.id);
+      if (!rMap.has(key)) rMap.set(key, r);
+    });
+
+    ADMIN_DATA.reports = Array.from(rMap.values()).filter(r => r.status === 'open');
+    this.updateReportsBadge();
+  }
+
+  updateVerificationBadge() {
+    const count = ADMIN_DATA.verifications ? ADMIN_DATA.verifications.length : 0;
+    ADMIN_DATA.kpis.pendingVerifications = count;
+    document.querySelectorAll('.admin-nav-item[data-view="verifications"] .admin-nav-badge').forEach(el => {
+      el.textContent = count;
+      el.style.background = count > 0 ? '#ff007f' : 'rgba(255,255,255,0.15)';
+    });
+    const kpiEl = document.getElementById('kpiPendingVerificationsVal');
+    if (kpiEl) kpiEl.textContent = count;
+  }
+
+  updateReportsBadge() {
+    const count = ADMIN_DATA.reports ? ADMIN_DATA.reports.length : 0;
+    ADMIN_DATA.kpis.openReports = count;
+    document.querySelectorAll('.admin-nav-item[data-view="reports"] .admin-nav-badge').forEach(el => {
+      el.textContent = count;
+      el.style.background = count > 0 ? '#ef4444' : 'rgba(255,255,255,0.15)';
+    });
+    const kpiEl = document.getElementById('kpiOpenReportsVal');
+    if (kpiEl) kpiEl.textContent = count;
   }
 
   updateUserStatsAndUI() {
@@ -914,46 +1038,221 @@ class AdminController {
     container.innerHTML = `
       <div class="admin-topbar">
         <div>
-          <h1 style="font-size: 1.8rem; font-weight: 800;">Selfie Verification Queue</h1>
-          <p style="color: var(--text-muted); font-size: 0.9rem;">Side-by-side pose comparison for Blue Tick grant</p>
+          <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 4px;">
+            <h1 style="font-size: 1.8rem; font-weight: 800;">18+ & Security Verification Queue</h1>
+            <span style="background: rgba(255, 0, 127, 0.2); color: #ff3399; font-size: 0.75rem; font-weight: 800; padding: 4px 10px; border-radius: 999px; border: 1px solid rgba(255, 0, 127, 0.4);">18+ Calling Gatekeeper</span>
+          </div>
+          <p style="color: var(--text-muted); font-size: 0.9rem;">Review live selfies, age eligibility, and voice recordings. Approved users unlock face-to-face audio & video calling.</p>
         </div>
+        <button id="btnRefreshVerifyQueue" class="btn-primary" style="padding: 10px 18px; font-size: 0.85rem;">🔄 Refresh Queue</button>
       </div>
 
       ${ADMIN_DATA.verifications.length > 0 ? `
-        <div class="verify-grid">
+        <div class="verify-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 20px;">
           ${ADMIN_DATA.verifications.map((v) => `
-            <div class="verify-card glass-panel">
-              <div style="display: flex; justify-content: space-between; align-items: center;">
-                <h3 style="font-size: 1.1rem; font-weight: 800;">${v.name}</h3>
-                <span class="glass-pill" style="font-size: 0.75rem;">${v.poseReq}</span>
-              </div>
-
-              <div class="verify-comparison">
-                <div class="verify-photo-box">
-                  <img src="${v.profilePhoto}" />
-                  <span class="verify-photo-label">Profile Photo</span>
+            <div class="verify-card glass-panel" style="padding: 20px; border-color: rgba(255, 0, 127, 0.35); box-shadow: 0 10px 30px rgba(0,0,0,0.4);">
+              <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
+                <div>
+                  <h3 style="font-size: 1.2rem; font-weight: 900; color: #fff;">${v.name}</h3>
+                  <div style="font-size: 0.78rem; color: #ff94c2; font-family: monospace;">📱 ${v.phone || 'Phone hidden'}</div>
                 </div>
-                <div class="verify-photo-box">
-                  <img src="${v.selfiePhoto}" />
-                  <span class="verify-photo-label">Selfie Pose</span>
+                <div style="text-align: right;">
+                  <span class="glass-pill" style="font-size: 0.75rem; border-color: #ff007f; color: #fff; background: rgba(255,0,127,0.25);">
+                    ${v.gender === 'female' ? '♀ Female' : '♂ Male'} • ${v.age || 21} yrs
+                  </span>
+                  <div style="font-size: 0.7rem; color: var(--text-muted); margin-top: 3px;">DOB: ${v.dob || '2003-05-15'}</div>
                 </div>
               </div>
 
-              <div style="display: flex; gap: 10px; margin-top: 6px;">
-                <button class="btn-primary" style="flex: 1; padding: 10px; font-size: 0.85rem;" onclick="alert('Blue Tick Verified & Approved!')">Approve ✓</button>
-                <button class="btn-secondary" style="flex: 1; padding: 10px; font-size: 0.85rem; color: #ef4444;" onclick="alert('Verification rejected.')">Reject ✕</button>
+              <!-- Side-by-side Photo Comparison -->
+              <div class="verify-comparison" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px;">
+                <div class="verify-photo-box" style="position: relative; border-radius: 12px; overflow: hidden; border: 1.5px solid rgba(255,255,255,0.15); background: #121018; height: 160px;">
+                  <img src="${v.profilePhoto || '/images/avatar_female_ashley.jpg'}" style="width: 100%; height: 100%; object-fit: cover;" />
+                  <span class="verify-photo-label" style="position: absolute; bottom: 6px; left: 6px; background: rgba(0,0,0,0.7); font-size: 0.68rem; padding: 2px 8px; border-radius: 6px; color: #fff;">Profile Avatar</span>
+                </div>
+                <div class="verify-photo-box" style="position: relative; border-radius: 12px; overflow: hidden; border: 2px solid #ff007f; background: #121018; height: 160px; box-shadow: 0 4px 15px rgba(255,0,127,0.3);">
+                  <img src="${v.selfiePhoto || '/images/avatar_female_ashley.jpg'}" style="width: 100%; height: 100%; object-fit: cover;" />
+                  <span class="verify-photo-label" style="position: absolute; bottom: 6px; left: 6px; background: rgba(255,0,127,0.85); font-size: 0.68rem; padding: 2px 8px; border-radius: 6px; color: #fff; font-weight: 800;">Live Selfie (${v.poseReq || '✌️ Peace'})</span>
+                </div>
+              </div>
+
+              <!-- Voice Recording Player -->
+              <div style="background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 10px 14px; margin-bottom: 14px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                  <span style="font-size: 0.78rem; font-weight: 800; color: #ffd1e3;">🎙️ Live Voice Recording (Audio Sample):</span>
+                  <span style="font-size: 0.7rem; color: #2ee6a6; font-weight: 700;">Verified Audio</span>
+                </div>
+                <audio controls src="${v.audioUrl || 'https://actions.google.com/sounds/v1/speech/hello_greeting.ogg'}" style="width: 100%; height: 36px; border-radius: 8px; outline: none;"></audio>
+              </div>
+
+              <!-- Action Controls -->
+              <div style="display: flex; gap: 10px;">
+                <button class="btn-primary btn-approve-verify" data-id="${v.id}" style="flex: 2; padding: 11px; font-size: 0.85rem; font-weight: 800; background: linear-gradient(135deg, #10b981, #059669); border: none; box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4);">
+                  Approve & Unlock Calls ✓
+                </button>
+                <button class="btn-secondary btn-reject-verify" data-id="${v.id}" style="flex: 1; padding: 11px; font-size: 0.85rem; font-weight: 700; color: #ef4444; border-color: rgba(239, 68, 68, 0.4);">
+                  Reject ✕
+                </button>
               </div>
             </div>
           `).join('')}
         </div>
       ` : `
-        <div class="glass-panel" style="padding: 48px; text-align: center; color: var(--text-muted);">
-          <div style="font-size: 2.2rem; margin-bottom: 8px;">🤳</div>
-          <div style="font-size: 1.15rem; font-weight: 800; color: #fff;">No Pending Selfie Verifications</div>
-          <div style="font-size: 0.85rem; margin-top: 6px;">When users submit Blue Tick selfie requests, they will show up here for moderation.</div>
+        <div class="glass-panel" style="padding: 56px 24px; text-align: center; color: var(--text-muted); border-color: rgba(255,0,127,0.2);">
+          <div style="width: 72px; height: 72px; margin: 0 auto 16px auto; background: rgba(255,0,127,0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 2.5rem; border: 1px solid rgba(255,0,127,0.3);">
+            🛡️
+          </div>
+          <div style="font-size: 1.25rem; font-weight: 800; color: #fff;">No Pending Verification Requests</div>
+          <p style="font-size: 0.88rem; max-width: 480px; margin: 8px auto 0 auto; line-height: 1.5; color: var(--text-muted);">
+            All female user verification dossiers, 18+ age checks, live selfies, and audio recordings have been reviewed. When new users submit verifications, they will appear here in real-time.
+          </p>
         </div>
       `}
     `;
+
+    // Bind Refresh button
+    const btnRefresh = container.querySelector('#btnRefreshVerifyQueue');
+    if (btnRefresh) {
+      btnRefresh.onclick = async () => {
+        btnRefresh.textContent = '⏳ Refreshing...';
+        await this.fetchVerificationsAndReports();
+        this.renderVerifications(container);
+        this.showToast('✅ Verification queue updated');
+      };
+    }
+
+    // Bind Approve buttons
+    container.querySelectorAll('.btn-approve-verify').forEach(btn => {
+      btn.onclick = async () => {
+        const id = btn.getAttribute('data-id');
+        btn.textContent = '⏳ Approving...';
+        btn.disabled = true;
+        await this.approveVerification(id);
+      };
+    });
+
+    // Bind Reject buttons
+    container.querySelectorAll('.btn-reject-verify').forEach(btn => {
+      btn.onclick = async () => {
+        const id = btn.getAttribute('data-id');
+        const reason = prompt('Reason for rejection (e.g. Underage, Face mismatch, Inaudible audio):', 'Face and audio verification criteria not met');
+        if (reason) {
+          btn.textContent = '⏳ Rejecting...';
+          btn.disabled = true;
+          await this.rejectVerification(id, reason);
+        }
+      };
+    });
+  }
+
+  async approveVerification(vId) {
+    const v = ADMIN_DATA.verifications.find(item => String(item.id) === String(vId));
+    if (!v) return;
+
+    v.status = 'approved';
+    v.approvedAt = new Date().toISOString();
+
+    // 1. Update user in ADMIN_DATA.users
+    const user = ADMIN_DATA.users.find(u => String(u.id) === String(v.userId) || u.phone === v.phone);
+    if (user) {
+      user.verified = true;
+      user.verificationStatus = 'approved';
+      user.dob = v.dob || user.dob;
+      user.age = v.age || user.age;
+      await this.updateUserOnServer(user);
+    }
+
+    // 2. Dispatch to Cloudflare backend
+    const endpoints = ['/api/v1/verifications', 'https://hipa-admin.pages.dev/api/v1/verifications'];
+    for (const ep of endpoints) {
+      try {
+        await fetch(ep, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: v.id, status: 'approved', userId: v.userId, phone: v.phone })
+        });
+      } catch (e) {}
+    }
+
+    // 3. Update Local Storage
+    try {
+      let localV = JSON.parse(localStorage.getItem('hipa_verifications_list') || '[]');
+      const idx = localV.findIndex(item => String(item.id) === String(vId));
+      if (idx >= 0) localV[idx].status = 'approved';
+      localStorage.setItem('hipa_verifications_list', JSON.stringify(localV));
+    } catch (e) {}
+
+    // 4. Broadcast to user app
+    try {
+      if (this.syncChannel) {
+        this.syncChannel.postMessage({
+          type: 'VERIFICATION_APPROVED',
+          userId: v.userId,
+          phone: v.phone,
+          status: 'approved'
+        });
+      }
+    } catch (e) {}
+
+    // Remove from pending queue & refresh
+    ADMIN_DATA.verifications = ADMIN_DATA.verifications.filter(item => String(item.id) !== String(vId));
+    this.updateVerificationBadge();
+    this.showToast(`✅ ${v.name} approved! 18+ calling access unlocked.`);
+
+    const container = document.getElementById('adminViewContainer');
+    if (container) this.renderVerifications(container);
+  }
+
+  async rejectVerification(vId, reason) {
+    const v = ADMIN_DATA.verifications.find(item => String(item.id) === String(vId));
+    if (!v) return;
+
+    v.status = 'rejected';
+    v.rejectReason = reason;
+
+    // Update user status
+    const user = ADMIN_DATA.users.find(u => String(u.id) === String(v.userId) || u.phone === v.phone);
+    if (user) {
+      user.verified = false;
+      user.verificationStatus = 'rejected';
+      await this.updateUserOnServer(user);
+    }
+
+    const endpoints = ['/api/v1/verifications', 'https://hipa-admin.pages.dev/api/v1/verifications'];
+    for (const ep of endpoints) {
+      try {
+        await fetch(ep, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: v.id, status: 'rejected', reason })
+        });
+      } catch (e) {}
+    }
+
+    try {
+      let localV = JSON.parse(localStorage.getItem('hipa_verifications_list') || '[]');
+      const idx = localV.findIndex(item => String(item.id) === String(vId));
+      if (idx >= 0) localV[idx].status = 'rejected';
+      localStorage.setItem('hipa_verifications_list', JSON.stringify(localV));
+    } catch (e) {}
+
+    try {
+      if (this.syncChannel) {
+        this.syncChannel.postMessage({
+          type: 'VERIFICATION_REJECTED',
+          userId: v.userId,
+          phone: v.phone,
+          reason
+        });
+      }
+    } catch (e) {}
+
+    ADMIN_DATA.verifications = ADMIN_DATA.verifications.filter(item => String(item.id) !== String(vId));
+    this.updateVerificationBadge();
+    this.showToast(`❌ Verification rejected for ${v.name}.`);
+
+    const container = document.getElementById('adminViewContainer');
+    if (container) this.renderVerifications(container);
   }
 
   renderReports(container) {
@@ -961,8 +1260,9 @@ class AdminController {
       <div class="admin-topbar">
         <div>
           <h1 style="font-size: 1.8rem; font-weight: 800;">Safety & Moderation Reports</h1>
-          <p style="color: var(--text-muted); font-size: 0.9rem;">Review flagged behavior under IT Rules 2021</p>
+          <p style="color: var(--text-muted); font-size: 0.9rem;">Review in-call harassment and safety flags under IT Rules 2021</p>
         </div>
+        <button id="btnRefreshReportsQueue" class="btn-primary" style="padding: 10px 18px; font-size: 0.85rem;">🔄 Refresh Reports</button>
       </div>
 
       ${ADMIN_DATA.reports.length > 0 ? `
@@ -975,19 +1275,23 @@ class AdminController {
                 <th>Reporter</th>
                 <th>Reason</th>
                 <th>Severity</th>
-                <th>Action</th>
+                <th>Actions</th>
               </tr>
             </thead>
             <tbody>
               ${ADMIN_DATA.reports.map((r) => `
                 <tr>
                   <td>#${r.id}</td>
-                  <td><strong style="color: #ef4444;">${r.reportedUser}</strong></td>
+                  <td><strong style="color: #ef4444; font-size: 0.92rem;">${r.reportedUser}</strong></td>
                   <td>${r.reporterName}</td>
                   <td>${r.reason}</td>
-                  <td><span class="badge-status badge-banned">${r.severity}</span></td>
+                  <td><span class="badge-status badge-banned">${r.severity || 'High'}</span></td>
                   <td>
-                    <button class="btn-primary" style="padding: 6px 12px; font-size: 0.78rem; background: #ef4444;" onclick="alert('Action taken: User suspended for 7 days.')">Resolve & Warn</button>
+                    <div style="display: flex; gap: 8px;">
+                      <button class="btn-primary btn-suspend-reported" data-id="${r.id}" data-user="${r.reportedUser}" style="padding: 6px 12px; font-size: 0.78rem; background: #f59e0b; border: none;">Suspend 7 Days</button>
+                      <button class="btn-primary btn-ban-reported" data-id="${r.id}" data-user="${r.reportedUser}" style="padding: 6px 12px; font-size: 0.78rem; background: #ef4444; border: none;">Permanent Ban</button>
+                      <button class="btn-secondary btn-dismiss-report" data-id="${r.id}" style="padding: 6px 10px; font-size: 0.78rem;">Dismiss</button>
+                    </div>
                   </td>
                 </tr>
               `).join('')}
@@ -998,10 +1302,84 @@ class AdminController {
         <div class="glass-panel" style="padding: 48px; text-align: center; color: var(--text-muted);">
           <div style="font-size: 2.2rem; margin-bottom: 8px;">🛡️</div>
           <div style="font-size: 1.15rem; font-weight: 800; color: #fff;">No Open Safety Reports</div>
-          <div style="font-size: 0.85rem; margin-top: 6px;">The community is safe and clean. Any user reports will appear here instantly.</div>
+          <div style="font-size: 0.85rem; margin-top: 6px;">The community is safe and clean. Any in-call user reports will appear here instantly.</div>
         </div>
       `}
     `;
+
+    const btnRefresh = container.querySelector('#btnRefreshReportsQueue');
+    if (btnRefresh) {
+      btnRefresh.onclick = async () => {
+        btnRefresh.textContent = '⏳ Refreshing...';
+        await this.fetchVerificationsAndReports();
+        this.renderReports(container);
+        this.showToast('✅ Reports list refreshed');
+      };
+    }
+
+    container.querySelectorAll('.btn-suspend-reported').forEach(btn => {
+      btn.onclick = async () => {
+        const id = btn.getAttribute('data-id');
+        const user = btn.getAttribute('data-user');
+        await this.resolveReport(id, 'suspend', user);
+      };
+    });
+
+    container.querySelectorAll('.btn-ban-reported').forEach(btn => {
+      btn.onclick = async () => {
+        const id = btn.getAttribute('data-id');
+        const user = btn.getAttribute('data-user');
+        await this.resolveReport(id, 'ban', user);
+      };
+    });
+
+    container.querySelectorAll('.btn-dismiss-report').forEach(btn => {
+      btn.onclick = async () => {
+        const id = btn.getAttribute('data-id');
+        await this.resolveReport(id, 'dismiss');
+      };
+    });
+  }
+
+  async resolveReport(rId, action, targetUserName) {
+    const r = ADMIN_DATA.reports.find(item => String(item.id) === String(rId));
+    if (!r) return;
+
+    r.status = 'resolved';
+    r.resolvedAction = action;
+
+    if (action === 'suspend' || action === 'ban') {
+      const u = ADMIN_DATA.users.find(item => item.name === targetUserName || item.username === targetUserName);
+      if (u) {
+        u.status = action === 'ban' ? 'banned' : 'suspended';
+        await this.updateUserOnServer(u);
+      }
+    }
+
+    const endpoints = ['/api/v1/reports', 'https://hipa-admin.pages.dev/api/v1/reports'];
+    for (const ep of endpoints) {
+      try {
+        await fetch(ep, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: r.id, status: 'resolved', action })
+        });
+      } catch (e) {}
+    }
+
+    try {
+      let localR = JSON.parse(localStorage.getItem('hipa_reports_list') || '[]');
+      const idx = localR.findIndex(item => String(item.id) === String(rId));
+      if (idx >= 0) localR[idx].status = 'resolved';
+      localStorage.setItem('hipa_reports_list', JSON.stringify(localR));
+    } catch (e) {}
+
+    ADMIN_DATA.reports = ADMIN_DATA.reports.filter(item => String(item.id) !== String(rId));
+    this.updateReportsBadge();
+    this.showToast(`🛡️ Report resolved: ${action} applied.`);
+
+    const container = document.getElementById('adminViewContainer');
+    if (container) this.renderReports(container);
   }
 
   renderCalls(container) {

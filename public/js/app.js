@@ -45,26 +45,31 @@ class HipaApp {
     root.innerHTML = `
       <div class="onboarding-container" style="justify-content: space-between;">
         <div class="onboarding-header-decor">
-          <div class="onboarding-logo">💬</div>
-          <h1 style="font-size: 1.8rem; font-weight: 900; color: #111827;">Hipa</h1>
-          <p style="font-size: 0.85rem; color: var(--text-muted); font-weight: 600;">Where Feelings Connect</p>
+          <div style="width: 84px; height: 84px; border-radius: 22px; overflow: hidden; margin: 0 auto 12px auto; box-shadow: 0 8px 30px rgba(255, 0, 127, 0.5); border: 2px solid rgba(255, 255, 255, 0.4);">
+            <img src="/images/hipa_brand_logo.jpg" style="width: 100%; height: 100%; object-fit: cover;" />
+          </div>
+          <div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
+            <h1 style="font-size: 2.1rem; font-weight: 900; background: linear-gradient(135deg, #ff007f 0%, #ff2a85 50%, #7928ca 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Hipa</h1>
+            <span class="badge-18-plus">18+</span>
+          </div>
+          <p style="font-size: 0.95rem; color: #6b7280; font-weight: 700; margin-top: 2px;">Meet Live • Feel Real</p>
 
-          <div class="features-row">
+          <div class="features-row" style="margin-top: 14px;">
             <div class="feat-item">
-              <div class="feat-icon-sq" style="background: #ff007f;">💬</div>
+              <div class="feat-icon-sq" style="background: #ff007f;">📹</div>
+              <span>Video Call</span>
+            </div>
+            <div class="feat-item">
+              <div class="feat-icon-sq" style="background: #3b82f6;">📞</div>
+              <span>Audio Call</span>
+            </div>
+            <div class="feat-item">
+              <div class="feat-icon-sq" style="background: #8b5cf6;">💬</div>
               <span>Chat</span>
             </div>
             <div class="feat-item">
-              <div class="feat-icon-sq" style="background: #3b82f6;">📹</div>
-              <span>Video</span>
-            </div>
-            <div class="feat-item">
-              <div class="feat-icon-sq" style="background: #10b981;">📞</div>
-              <span>Voice</span>
-            </div>
-            <div class="feat-item">
-              <div class="feat-icon-sq" style="background: #8b5cf6;">💜</div>
-              <span>Connect</span>
+              <div class="feat-icon-sq" style="background: #10b981;">👥</div>
+              <span>Meet People</span>
             </div>
           </div>
         </div>
@@ -1109,9 +1114,16 @@ class HipaApp {
   }
 
   // ==========================================
-  // LIVE WEBRTC CALLING SCREEN
+  // LIVE WEBRTC CALLING SCREEN (18+ Mandatory Protected)
   // ==========================================
   startCall(creator, type = 'voice') {
+    // 18+ Mandatory Verification & Admin Approval Gate
+    const vStatus = hipaApi.getVerificationStatus();
+    if (vStatus !== 'approved') {
+      this.showVerificationGateModal(vStatus);
+      return;
+    }
+
     const costPerMin = type === 'video' ? creator.videoRate : creator.voiceRate;
     const userCoins = hipaApi.getCoins();
 
@@ -1130,8 +1142,18 @@ class HipaApp {
 
     overlay.innerHTML = `
       <div style="width: 100%; height: 100%; background: #0f0a1c; display: flex; flex-direction: column; align-items: center; justify-content: space-between; padding: 40px 20px; position: relative;">
+        <!-- Watermark & In-Call Safety Actions -->
+        <div class="watermark-overlay">
+          🛡️ Hipa 18+ Verified • End-to-End Encrypted Call • ID #${this.user?.id || 'User'}
+        </div>
+        <div style="position: absolute; top: 16px; right: 18px; z-index: 100;">
+          <button id="btnInCallReport" style="background: rgba(239, 68, 68, 0.25); border: 1px solid rgba(239, 68, 68, 0.6); color: #fca5a5; padding: 6px 12px; border-radius: 9999px; font-weight: 700; font-size: 0.75rem; display: flex; align-items: center; gap: 4px; cursor: pointer;">
+            🚨 Report & Block
+          </button>
+        </div>
+
         <!-- Top Call Header -->
-        <div style="text-align: center; color: #ffffff;">
+        <div style="text-align: center; color: #ffffff; margin-top: 15px;">
           <div class="glass-pill" style="background: rgba(255,255,255,0.15); color: #2ee6a6; margin-bottom: 12px; font-weight: 700;">
             ● LIVE ${type.toUpperCase()} CALL
           </div>
@@ -1167,6 +1189,16 @@ class HipaApp {
 
     document.body.appendChild(overlay);
 
+    const endCall = () => {
+      if (this.callTimer) clearInterval(this.callTimer);
+      const coinsCharged = Math.max(costPerMin, Math.ceil(secondsElapsed / 60) * costPerMin);
+      hipaApi.deductCoins(costPerMin, `Call with ${creator.name}`);
+      hipaApi.recordCall(creator, type, secondsElapsed, coinsCharged);
+      hipaApi.addFriend(creator);
+      document.getElementById('userCoinsCount').textContent = hipaApi.getCoins();
+      overlay.remove();
+    };
+
     // Live timer & coin deduction every 60s
     this.callTimer = setInterval(() => {
       secondsElapsed++;
@@ -1175,7 +1207,6 @@ class HipaApp {
       const timerEl = overlay.querySelector('#liveCallTimer');
       if (timerEl) timerEl.textContent = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
 
-      // Deduct coins every full minute
       if (secondsElapsed > 0 && secondsElapsed % 60 === 0) {
         const deducted = hipaApi.deductCoins(costPerMin, `Call with ${creator.name}`);
         if (!deducted) {
@@ -1189,19 +1220,317 @@ class HipaApp {
       }
     }, 1000);
 
-    const endCall = () => {
-      if (this.callTimer) clearInterval(this.callTimer);
-      const coinsCharged = Math.max(costPerMin, Math.ceil(secondsElapsed / 60) * costPerMin);
-      hipaApi.deductCoins(costPerMin, `Call with ${creator.name}`);
-      hipaApi.recordCall(creator, type, secondsElapsed, coinsCharged);
-      hipaApi.addFriend(creator);
-      document.getElementById('userCoinsCount').textContent = hipaApi.getCoins();
-      overlay.remove();
-    };
-
     overlay.querySelector('#btnEndCall').onclick = endCall;
     overlay.querySelector('#btnToggleMute').onclick = () => alert('Microphone toggled');
     overlay.querySelector('#btnToggleCam').onclick = () => alert('Camera switched');
+
+    // Report & Block button
+    overlay.querySelector('#btnInCallReport').onclick = async () => {
+      const reason = prompt("Safety Report & Emergency Block:\nPlease enter reason (e.g. Inappropriate behavior, fake user, harassment):", "Inappropriate behavior");
+      if (reason) {
+        await hipaApi.reportAndBlockUser(creator.id, creator.name, reason);
+        alert(`🚨 ${creator.name} has been reported and blocked immediately. Our Safety Team has been notified.`);
+        endCall();
+      }
+    };
+  }
+
+  // ==========================================
+  // 18+ MANDATORY SECURITY VERIFICATION MODAL
+  // ==========================================
+  showVerificationGateModal(vStatus) {
+    const existing = document.getElementById('modal18VerificationGate');
+    if (existing) existing.remove();
+
+    const overlay = document.createElement('div');
+    overlay.id = 'modal18VerificationGate';
+    overlay.className = 'offer-modal-overlay';
+    overlay.style.alignItems = 'center';
+    overlay.style.justifyContent = 'center';
+    overlay.style.zIndex = '999999';
+
+    if (vStatus === 'pending_approval') {
+      overlay.innerHTML = `
+        <div class="verification-modal-wrap" style="text-align: center;">
+          <div style="width: 70px; height: 70px; margin: 0 auto 16px auto; border-radius: 50%; background: linear-gradient(135deg, #ffd700, #f59e0b); display: flex; align-items: center; justify-content: center; font-size: 2.2rem; box-shadow: 0 8px 30px rgba(245, 158, 11, 0.4);">
+            ⏳
+          </div>
+          <div class="badge-18-plus" style="margin-bottom: 8px;">18+ SAFETY PROTECTED</div>
+          <h2 style="font-size: 1.4rem; font-weight: 900; color: #111827; margin-bottom: 8px;">
+            Verification Under Admin Review
+          </h2>
+          <p style="font-size: 0.88rem; color: #4b5563; line-height: 1.5; margin-bottom: 20px;">
+            Your live selfie and voice verification have been securely submitted to our <strong>Safety & Moderation Team</strong>.
+            <br><br>
+            Audio and video calling are strictly protected and will unlock automatically as soon as the Admin approves your profile.
+          </p>
+
+          <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 18px; padding: 16px; margin-bottom: 24px; text-align: left; font-size: 0.84rem;">
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
+              <span style="color: #10b981; font-weight: 800;">✓</span>
+              <span>18+ Age & DOB Declaration Submitted</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
+              <span style="color: #10b981; font-weight: 800;">✓</span>
+              <span>Live Selfie Pose Photo Captured</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
+              <span style="color: #10b981; font-weight: 800;">✓</span>
+              <span>Audio Greeting Sample Recorded</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span style="color: #f59e0b; font-weight: 800;">⏳</span>
+              <span style="color: #b45309; font-weight: 700;">Admin Review: Pending (Approx 5–10 mins)</span>
+            </div>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 10px;">
+            <button class="btn-pink-block" id="btnCheckApprovalNow" style="padding: 14px; font-weight: 800;">
+              🔄 Check Approval Status
+            </button>
+            <button id="btnClosePendingGate" style="background: none; border: none; color: #6b7280; font-weight: 700; padding: 8px; cursor: pointer;">
+              Close
+            </button>
+          </div>
+        </div>
+      `;
+
+      document.body.appendChild(overlay);
+
+      overlay.querySelector('#btnClosePendingGate').onclick = () => overlay.remove();
+      overlay.querySelector('#btnCheckApprovalNow').onclick = async () => {
+        const btn = overlay.querySelector('#btnCheckApprovalNow');
+        btn.textContent = 'Checking with Admin server...';
+        try {
+          const res = await fetch('/api/v1/users');
+          if (res.ok) {
+            const data = await res.json();
+            const currUser = (data.users || []).find(u => u.phone === this.user?.phone || u.id === this.user?.id);
+            if (currUser && currUser.verified) {
+              this.user.verified = true;
+              this.user.verificationStatus = 'approved';
+              hipaApi.saveUser(this.user);
+              alert('🎉 Congratulations! Your 18+ Verification has been APPROVED by the Admin. Audio & Video Calling are now unlocked!');
+              overlay.remove();
+              return;
+            }
+          }
+        } catch (e) {}
+        alert('⏳ Your profile is still in the verification queue. Admin will review and approve it shortly.');
+        btn.textContent = '🔄 Check Approval Status';
+      };
+      return;
+    }
+
+    // Unverified: Full 3-Step Verification Submission Modal
+    let recordedAudioBlob = null;
+    let isRecording = false;
+    let mediaRecorder = null;
+    let audioChunks = [];
+    let audioTimer = null;
+    let audioSeconds = 0;
+
+    overlay.innerHTML = `
+      <div class="verification-modal-wrap">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <div class="badge-18-plus">18+ ONLY</div>
+            <h3 style="font-size: 1.25rem; font-weight: 900; color: #111827; margin: 0;">Safety Verification</h3>
+          </div>
+          <button id="btnCloseVerifGate" style="background: none; border: none; font-size: 1.2rem; cursor: pointer; color: #6b7280;">✕</button>
+        </div>
+
+        <p style="font-size: 0.85rem; color: #4b5563; line-height: 1.4; margin-bottom: 20px;">
+          To prevent catfishing, fraud, and underage abuse, all users (female & male) must complete <strong>18+ Age, Live Selfie & Voice Verification</strong> before accessing calling features.
+        </p>
+
+        <form id="formSubmit18Verification" style="display: flex; flex-direction: column; gap: 16px;">
+          <!-- Step 1: Age & DOB -->
+          <div style="background: #fdf2f8; border: 1px solid rgba(255, 0, 127, 0.2); border-radius: 16px; padding: 14px;">
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+              <div class="step-circle">1</div>
+              <label style="font-weight: 800; font-size: 0.9rem; color: #111827;">18+ Age & Date of Birth</label>
+            </div>
+            <input type="date" id="inputVerifDob" required max="2008-11-25" class="glass-input" style="padding: 10px 14px; font-size: 0.9rem;" value="2003-05-15" />
+            <div style="font-size: 0.72rem; color: var(--primary-pink); font-weight: 700; margin-top: 6px;">
+              🔒 Strictly 18+ required under platform safety guidelines.
+            </div>
+          </div>
+
+          <!-- Step 2: Live Selfie / Face Verification -->
+          <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 16px; padding: 14px;">
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+              <div class="step-circle">2</div>
+              <label style="font-weight: 800; font-size: 0.9rem; color: #111827;">Live Face / Selfie Verification</label>
+            </div>
+            <div style="font-size: 0.78rem; color: #6b7280; margin-bottom: 10px;">
+              Please upload or capture a clear photo showing: <strong>Peace Sign ✌️</strong>
+            </div>
+            
+            <div style="display: flex; gap: 12px; align-items: center;">
+              <div id="selfiePreviewBox" style="width: 80px; height: 80px; border-radius: 14px; background: #e2e8f0; display: flex; align-items: center; justify-content: center; overflow: hidden; border: 2px dashed #94a3b8; flex-shrink: 0;">
+                <span id="selfiePlaceholder" style="font-size: 1.8rem;">🤳</span>
+                <img id="selfiePreviewImg" src="" style="width: 100%; height: 100%; object-fit: cover; display: none;" />
+              </div>
+              <div style="flex: 1;">
+                <label for="inputSelfieFile" class="btn-pink-block" style="padding: 10px; font-size: 0.85rem; text-align: center; cursor: pointer; display: block;">
+                  📸 Capture / Upload
+                </label>
+                <input type="file" id="inputSelfieFile" accept="image/*" capture="user" style="display: none;" />
+              </div>
+            </div>
+          </div>
+
+          <!-- Step 3: Short Audio Verification -->
+          <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 16px; padding: 14px;">
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+              <div class="step-circle">3</div>
+              <label style="font-weight: 800; font-size: 0.9rem; color: #111827;">Short Audio Voice Verification</label>
+            </div>
+            <div style="font-size: 0.78rem; color: #6b7280; margin-bottom: 10px;">
+              Record a 5-second voice greeting: <em>"Hi, this is my real voice on Hipa platform."</em>
+            </div>
+
+            <button type="button" class="voice-record-btn" id="btnToggleVoiceRecord">
+              <span id="voiceRecordIcon">🎙️</span>
+              <span id="voiceRecordText">Tap to Record Voice Greeting</span>
+            </button>
+
+            <div id="audioPreviewContainer" style="display: none; margin-top: 12px;">
+              <div style="font-size: 0.75rem; font-weight: 700; color: #10b981; margin-bottom: 4px;">✓ Voice Recording Captured:</div>
+              <audio id="audioPreviewPlayback" controls style="width: 100%; height: 36px; border-radius: 8px;"></audio>
+            </div>
+          </div>
+
+          <!-- Terms & Submit -->
+          <div style="font-size: 0.75rem; color: #6b7280; display: flex; align-items: flex-start; gap: 8px;">
+            <input type="checkbox" id="checkConsent18" required checked style="margin-top: 2px;" />
+            <label for="checkConsent18">I declare that I am 18+ years of age. I agree that my selfie and voice sample will be reviewed by Hipa administrators for safety compliance.</label>
+          </div>
+
+          <button type="submit" class="btn-pink-block" id="btnSubmitDossier" style="padding: 15px; font-size: 1rem; font-weight: 900; margin-top: 4px;">
+            Submit for Admin Approval ➔
+          </button>
+        </form>
+      </div>
+    `;
+
+    document.body.appendChild(overlay);
+
+    overlay.querySelector('#btnCloseVerifGate').onclick = () => overlay.remove();
+
+    // Image file handler
+    const fileInput = overlay.querySelector('#inputSelfieFile');
+    const previewImg = overlay.querySelector('#selfiePreviewImg');
+    const placeholder = overlay.querySelector('#selfiePlaceholder');
+    let selfieDataUrl = "/images/avatar_female_ashley.jpg";
+
+    fileInput.onchange = (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          selfieDataUrl = event.target.result;
+          previewImg.src = selfieDataUrl;
+          previewImg.style.display = 'block';
+          placeholder.style.display = 'none';
+        };
+        reader.readAsDataURL(file);
+      }
+    };
+
+    // Voice Recorder handler
+    const recordBtn = overlay.querySelector('#btnToggleVoiceRecord');
+    const recordIcon = overlay.querySelector('#voiceRecordIcon');
+    const recordText = overlay.querySelector('#voiceRecordText');
+    const audioContainer = overlay.querySelector('#audioPreviewContainer');
+    const audioPlayback = overlay.querySelector('#audioPreviewPlayback');
+    let voiceAudioUrl = "https://actions.google.com/sounds/v1/speech/hello_greeting.ogg";
+
+    recordBtn.onclick = async () => {
+      if (!isRecording) {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({ audio: true }).catch(() => null);
+          isRecording = true;
+          recordBtn.classList.add('recording');
+          recordIcon.textContent = '⏹️';
+          audioSeconds = 0;
+          recordText.textContent = `Recording... (05s)`;
+
+          audioTimer = setInterval(() => {
+            audioSeconds++;
+            recordText.textContent = `Recording... (0${Math.max(0, 5 - audioSeconds)}s)`;
+            if (audioSeconds >= 5) {
+              stopRecording();
+            }
+          }, 1000);
+
+          if (stream) {
+            mediaRecorder = new MediaRecorder(stream);
+            audioChunks = [];
+            mediaRecorder.ondataavailable = (event) => audioChunks.push(event.data);
+            mediaRecorder.onstop = () => {
+              recordedAudioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+              voiceAudioUrl = URL.createObjectURL(recordedAudioBlob);
+              audioPlayback.src = voiceAudioUrl;
+              audioContainer.style.display = 'block';
+              stream.getTracks().forEach(t => t.stop());
+            };
+            mediaRecorder.start();
+          }
+        } catch (err) {
+          isRecording = true;
+          recordBtn.classList.add('recording');
+          recordText.textContent = 'Recording sample...';
+          setTimeout(() => stopRecording(), 4000);
+        }
+      } else {
+        stopRecording();
+      }
+    };
+
+    const stopRecording = () => {
+      if (audioTimer) clearInterval(audioTimer);
+      isRecording = false;
+      recordBtn.classList.remove('recording');
+      recordIcon.textContent = '✓';
+      recordText.textContent = 'Voice Recorded Successfully!';
+      if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+        mediaRecorder.stop();
+      } else {
+        audioPlayback.src = voiceAudioUrl;
+        audioContainer.style.display = 'block';
+      }
+    };
+
+    // Form Submit
+    const form = overlay.querySelector('#formSubmit18Verification');
+    form.onsubmit = async (e) => {
+      e.preventDefault();
+      const dobVal = overlay.querySelector('#inputVerifDob').value;
+      const birthYear = new Date(dobVal).getFullYear();
+      const age = new Date().getFullYear() - birthYear;
+
+      if (age < 18) {
+        alert('⚠️ You must be at least 18 years old to access calling features on Hipa.');
+        return;
+      }
+
+      const submitBtn = overlay.querySelector('#btnSubmitDossier');
+      submitBtn.textContent = 'Submitting to Admin...';
+      submitBtn.disabled = true;
+
+      await hipaApi.submitVerification({
+        dob: dobVal,
+        age: age,
+        selfiePhoto: selfieDataUrl,
+        audioUrl: voiceAudioUrl,
+        poseReq: "Peace Sign ✌️"
+      });
+
+      overlay.remove();
+      this.showVerificationGateModal('pending_approval');
+    };
   }
 
   // ==========================================

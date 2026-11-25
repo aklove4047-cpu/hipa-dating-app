@@ -124,6 +124,192 @@ export async function onRequest(context) {
     }), { headers: corsHeaders });
   }
 
+  // 18+ Verification & Audio/Selfie Review Queue
+  if (path.includes('/api/v1/verifications')) {
+    const kv = context.env?.HIPA_DATA;
+
+    if (request.method === 'POST') {
+      try {
+        const item = await request.json();
+        let queue = [];
+        if (kv) {
+          try {
+            const raw = await kv.get('hipa_verifications_queue');
+            if (raw) queue = JSON.parse(raw);
+          } catch (e) {}
+        } else {
+          if (!globalThis.__HIPA_VERIFICATIONS__) globalThis.__HIPA_VERIFICATIONS__ = [];
+          queue = globalThis.__HIPA_VERIFICATIONS__;
+        }
+
+        const newEntry = {
+          id: item.id || Date.now(),
+          userId: item.userId || Date.now(),
+          name: item.name || "User",
+          phone: item.phone || "",
+          gender: item.gender || "female",
+          age: item.age || 21,
+          dob: item.dob || "2003-05-15",
+          profilePhoto: item.profilePhoto || "/images/avatar_female_ashley.jpg",
+          selfiePhoto: item.selfiePhoto || "/images/avatar_female_ashley.jpg",
+          audioUrl: item.audioUrl || "https://actions.google.com/sounds/v1/speech/hello_greeting.ogg",
+          poseReq: item.poseReq || "Peace Sign ✌️",
+          status: "pending",
+          submittedAt: new Date().toISOString()
+        };
+
+        queue.unshift(newEntry);
+        if (queue.length > 500) queue = queue.slice(0, 500);
+
+        if (kv) {
+          await kv.put('hipa_verifications_queue', JSON.stringify(queue));
+        } else {
+          globalThis.__HIPA_VERIFICATIONS__ = queue;
+        }
+
+        return new Response(JSON.stringify({ ok: true, message: "Verification submitted for admin approval", item: newEntry }), { headers: corsHeaders });
+      } catch (err) {
+        return new Response(JSON.stringify({ ok: false, error: err.message }), { status: 500, headers: corsHeaders });
+      }
+    }
+
+    if (request.method === 'PUT') {
+      try {
+        const updateData = await request.json();
+        let queue = [];
+        if (kv) {
+          try {
+            const raw = await kv.get('hipa_verifications_queue');
+            if (raw) queue = JSON.parse(raw);
+          } catch (e) {}
+        } else {
+          queue = globalThis.__HIPA_VERIFICATIONS__ || [];
+        }
+
+        const idx = queue.findIndex(v => v.id == updateData.id || v.userId == updateData.userId);
+        if (idx >= 0) {
+          queue[idx] = { ...queue[idx], ...updateData };
+          if (kv) {
+            await kv.put('hipa_verifications_queue', JSON.stringify(queue));
+          } else {
+            globalThis.__HIPA_VERIFICATIONS__ = queue;
+          }
+          return new Response(JSON.stringify({ ok: true, item: queue[idx] }), { headers: corsHeaders });
+        }
+        return new Response(JSON.stringify({ ok: false, error: "Entry not found" }), { status: 404, headers: corsHeaders });
+      } catch (err) {
+        return new Response(JSON.stringify({ ok: false, error: err.message }), { status: 500, headers: corsHeaders });
+      }
+    }
+
+    // GET /api/v1/verifications
+    let queue = [];
+    if (kv) {
+      try {
+        const raw = await kv.get('hipa_verifications_queue');
+        if (raw) queue = JSON.parse(raw);
+      } catch (e) {}
+    } else {
+      queue = globalThis.__HIPA_VERIFICATIONS__ || [];
+    }
+
+    return new Response(JSON.stringify({
+      ok: true,
+      total: queue.length,
+      verifications: queue
+    }), { headers: corsHeaders });
+  }
+
+  // Safety & Moderation Reports Endpoint
+  if (path.includes('/api/v1/reports')) {
+    if (request.method === 'POST') {
+      try {
+        const report = await request.json();
+        let reports = [];
+        if (kv) {
+          try {
+            const raw = await kv.get('hipa_safety_reports');
+            if (raw) reports = JSON.parse(raw);
+          } catch (e) {}
+        } else {
+          if (!globalThis.__HIPA_REPORTS__) globalThis.__HIPA_REPORTS__ = [];
+          reports = globalThis.__HIPA_REPORTS__;
+        }
+
+        const newReport = {
+          id: report.id || Date.now(),
+          reporterId: report.reporterId || "anonymous",
+          reporterName: report.reporterName || "User",
+          reportedUser: report.reportedUser || "Target User",
+          reportedId: report.reportedId || "",
+          reason: report.reason || "Safety guideline violation",
+          severity: report.severity || "High",
+          status: "open",
+          createdAt: new Date().toISOString()
+        };
+
+        reports.unshift(newReport);
+        if (reports.length > 500) reports = reports.slice(0, 500);
+
+        if (kv) {
+          await kv.put('hipa_safety_reports', JSON.stringify(reports));
+        } else {
+          globalThis.__HIPA_REPORTS__ = reports;
+        }
+
+        return new Response(JSON.stringify({ ok: true, message: "Report logged successfully", report: newReport }), { headers: corsHeaders });
+      } catch (err) {
+        return new Response(JSON.stringify({ ok: false, error: err.message }), { status: 500, headers: corsHeaders });
+      }
+    }
+
+    if (request.method === 'PUT') {
+      try {
+        const updateData = await request.json();
+        let reports = [];
+        if (kv) {
+          try {
+            const raw = await kv.get('hipa_safety_reports');
+            if (raw) reports = JSON.parse(raw);
+          } catch (e) {}
+        } else {
+          reports = globalThis.__HIPA_REPORTS__ || [];
+        }
+
+        const idx = reports.findIndex(r => String(r.id) === String(updateData.id));
+        if (idx >= 0) {
+          reports[idx] = { ...reports[idx], ...updateData };
+          if (kv) {
+            await kv.put('hipa_safety_reports', JSON.stringify(reports));
+          } else {
+            globalThis.__HIPA_REPORTS__ = reports;
+          }
+          return new Response(JSON.stringify({ ok: true, report: reports[idx] }), { headers: corsHeaders });
+        }
+        return new Response(JSON.stringify({ ok: false, error: "Report not found" }), { status: 404, headers: corsHeaders });
+      } catch (err) {
+        return new Response(JSON.stringify({ ok: false, error: err.message }), { status: 500, headers: corsHeaders });
+      }
+    }
+
+    // GET /api/v1/reports
+    let reports = [];
+    if (kv) {
+      try {
+        const raw = await kv.get('hipa_safety_reports');
+        if (raw) reports = JSON.parse(raw);
+      } catch (e) {}
+    } else {
+      reports = globalThis.__HIPA_REPORTS__ || [];
+    }
+
+    return new Response(JSON.stringify({
+      ok: true,
+      total: reports.length,
+      reports: reports
+    }), { headers: corsHeaders });
+  }
+
   // Gateway & API Config Endpoint
   if (path.includes('/api/v1/gateways/config')) {
     if (request.method === 'POST') {
