@@ -1,4 +1,4 @@
-﻿/* =========================================================
+/* =========================================================
    Hipa Dating App — Main Application Controller
    Exact Replica of Hipa Mobile UI & Feature Set
    Includes: Mobile OTP Login, 9-Language Selector, Gender/Avatar Wizard,
@@ -7,7 +7,7 @@
              Recent Calls Log, Friends Deck, User Profile & Settings.
    ========================================================= */
 
-import { hipaApi, HIPA_CREATORS, HIPA_COIN_PACKS, HIPA_LANGUAGES, HIPA_AVATARS } from './api.js';
+import { hipaApi, HIPA_CREATORS, HIPA_COIN_PACKS, HIPA_LANGUAGES, HIPA_AVATARS } from './api.js?v=9.0';
 
 class HipaApp {
   constructor() {
@@ -38,9 +38,12 @@ class HipaApp {
   // Step 1: Get Started / Mobile Number
   renderOnboardingStep1() {
     const root = document.getElementById('mainViewport');
-    (document.getElementById('hipaTopBar') || document.getElementById('himaTopBar')).style.display = 'none';
-    (document.getElementById('hipaBottomNav') || document.getElementById('himaBottomNav')).style.display = 'none';
-    document.getElementById('btnFloatingRandom').style.display = 'none';
+    const topBar = document.getElementById('hipaTopBar') || document.getElementById('himaTopBar');
+    if (topBar) topBar.style.display = 'none';
+    const bNav = document.getElementById('hipaBottomNav') || document.getElementById('himaBottomNav');
+    if (bNav) bNav.style.display = 'none';
+    const btnR = document.getElementById('btnFloatingRandom');
+    if (btnR) btnR.style.display = 'none';
 
     root.innerHTML = `
       <div class="onboarding-container" style="justify-content: space-between;">
@@ -374,10 +377,14 @@ class HipaApp {
 
   renderMainApp() {
     this.user = hipaApi.getUser();
-    (document.getElementById('hipaTopBar') || document.getElementById('himaTopBar')).style.display = 'flex';
-    (document.getElementById('hipaBottomNav') || document.getElementById('himaBottomNav')).style.display = 'flex';
-    document.getElementById('btnFloatingRandom').style.display = 'flex';
-    document.getElementById('userCoinsCount').textContent = hipaApi.getCoins();
+    const topBar = document.getElementById('hipaTopBar') || document.getElementById('himaTopBar');
+    if (topBar) topBar.style.display = 'flex';
+    const bNav = document.getElementById('hipaBottomNav') || document.getElementById('himaBottomNav');
+    if (bNav) bNav.style.display = 'flex';
+    const btnR = document.getElementById('btnFloatingRandom');
+    if (btnR) btnR.style.display = 'flex';
+    const coinsEl = document.getElementById('userCoinsCount');
+    if (coinsEl) coinsEl.textContent = hipaApi.getCoins();
 
     this.bindGlobalEvents();
     this.renderCurrentTab();

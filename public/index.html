@@ -28,7 +28,7 @@
     })();
   </script>
 
-  <link rel="stylesheet" href="/css/hipa.css?v=5.0">
+  <link rel="stylesheet" href="/css/hipa.css?v=9.0">
 </head>
 <body>
   <div class="hipa-viewport hima-viewport" id="hipaAppRoot">
@@ -59,7 +59,16 @@
 
     <!-- Main Dynamic Viewport -->
     <main class="hipa-scroll-area hima-scroll-area" id="mainViewport">
-      <!-- Injected dynamically via app.js -->
+      <!-- Loading Spinner Fallback -->
+      <div id="hipaLoaderState" style="height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 40px 20px;">
+        <div style="width: 72px; height: 72px; border-radius: 20px; overflow: hidden; margin-bottom: 16px; box-shadow: 0 8px 30px rgba(255,0,127,0.5);">
+          <img src="/images/hipa_brand_logo.jpg" style="width: 100%; height: 100%; object-fit: cover;" />
+        </div>
+        <h2 style="font-size: 1.6rem; font-weight: 900; background: linear-gradient(135deg, #ff007f, #7928ca); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 4px;">Hipa</h2>
+        <p style="font-size: 0.85rem; color: #6b7280; font-weight: 700; margin-bottom: 24px;">Meet Live • Feel Real</p>
+        <div style="width: 32px; height: 32px; border: 3px solid rgba(255,0,127,0.2); border-top-color: #ff007f; border-radius: 50%; animation: spinLoader 0.8s linear infinite;"></div>
+        <style>@keyframes spinLoader { to { transform: rotate(360deg); } }</style>
+      </div>
     </main>
 
     <!-- Floating Random Match Button (Shown on Home Tab) -->
@@ -88,6 +97,6 @@
     </nav>
   </div>
 
-  <script type="module" src="/js/app.js?v=7.0"></script>
+  <script type="module" src="/js/app.js?v=9.0"></script>
 </body>
 </html>

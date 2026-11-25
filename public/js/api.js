@@ -89,12 +89,9 @@ export const HIPA_CREATORS = [
     verified: true,
     tags: ["punjabi ✨", "video call 📹"],
     bio: "Live video call verified creator! Positive energy only."
-  }
-];
-    bio: "Full of energy! Available for both voice and video call. ✨"
   },
   {
-    id: 4,
+    id: 6,
     name: "Heena",
     gender: "female",
     age: 24,
