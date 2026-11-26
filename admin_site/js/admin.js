@@ -1,5 +1,5 @@
 /* =========================================================
-   Hipa Dating App — Admin Panel Controller
+   Peelin's Dating App — Admin Panel Controller
    Specification: PRD File 06
    Includes: Admin Authentication Guard, Role Checks, Dashboard KPIs,
              User Ban/Suspend/Verify, Side-by-Side Selfie Queue,
@@ -31,7 +31,7 @@ export const DEFAULT_GATEWAY_CONFIG = {
     },
     upiDirect: {
       vpa: "hipabiz@icici",
-      payeeName: "Hipa Dating App",
+      payeeName: "Peelin's Dating App",
       enableDynamicQR: true,
       goldPrice: 299,
       platinumPrice: 699
@@ -61,7 +61,7 @@ export const DEFAULT_GATEWAY_CONFIG = {
     fast2sms: {
       apiKey: "f2s_test_api_key_mock_982340124",
       route: "otp",
-      senderId: "HIPAAP"
+      senderId: "PEELIN"
     },
     twilio: {
       accountSid: "ACmocktwilioaccountsid1234567890",
@@ -461,7 +461,7 @@ class AdminController {
           <form id="formAdminLogin" style="display: flex; flex-direction: column; gap: 14px; text-align: left;">
             <div>
               <label style="font-size: 0.82rem; font-weight: 700; color: var(--text-muted);">Admin Email</label>
-              <input type="text" id="adminEmail" required class="glass-input" value="admin@hipa.com" style="margin-top: 4px;" />
+              <input type="text" id="adminEmail" required class="glass-input" value="admin@peelins.com" style="margin-top: 4px;" />
             </div>
 
             <div>
@@ -477,7 +477,7 @@ class AdminController {
           </form>
 
           <div style="margin-top: 20px; font-size: 0.82rem; color: var(--text-faint);">
-            Demo Credentials: <code>admin@hipa.com</code> / <code>admin123</code>
+            Demo Credentials: <code>admin@peelins.com</code> / <code>admin123</code>
           </div>
         </div>
       </div>
@@ -490,12 +490,12 @@ class AdminController {
       const pass = layout.querySelector('#adminPassword').value;
       const errEl = layout.querySelector('#adminLoginError');
 
-      if ((email === 'admin@hipa.com' || email === 'admin') && pass === 'admin123') {
+      if ((email === 'admin@peelins.com' || email === 'admin') && pass === 'admin123') {
         this.adminSession = { email, role: 'Super Admin', token: 'adm_' + Date.now() };
         localStorage.setItem('hipa_admin_session', JSON.stringify(this.adminSession));
         this.renderApp();
       } else {
-        errEl.textContent = 'Invalid admin credentials. Use admin@hipa.com / admin123';
+        errEl.textContent = 'Invalid admin credentials. Use admin@peelins.com / admin123';
         errEl.style.display = 'block';
       }
     };
@@ -511,7 +511,7 @@ class AdminController {
         <div class="admin-brand">
           <div class="admin-brand-logo">♥</div>
           <div>
-            <h2 class="admin-brand-title">Hipa</h2>
+            <h2 class="admin-brand-title">Peelin's</h2>
             <span style="font-size: 0.72rem; color: #2ee6a6; font-weight: 700;">Admin Control Center</span>
           </div>
         </div>
@@ -1514,7 +1514,7 @@ class AdminController {
       <div class="glass-panel" style="max-width: 600px; padding: 24px;">
         <div style="margin-bottom: 16px;">
           <label style="display: block; font-size: 0.85rem; margin-bottom: 6px; font-weight: 700;">Notification Title</label>
-          <input type="text" class="glass-input" id="bcTitle" value="✨ Special Weekend Boost on Hipa!" />
+          <input type="text" class="glass-input" id="bcTitle" value="✨ Special Weekend Boost on Peelin\'s!" />
         </div>
         <div style="margin-bottom: 20px;">
           <label style="display: block; font-size: 0.85rem; margin-bottom: 6px; font-weight: 700;">Message Body</label>
@@ -2087,7 +2087,7 @@ class AdminController {
 
             <div>
               <label style="font-size: 0.8rem; font-weight: 600; color: var(--text-muted);">Payee / Merchant Display Name</label>
-              <input type="text" class="glass-input" id="upi_payee" value="${cfg.payments.upiDirect.payeeName}" placeholder="Hipa Dating App" />
+              <input type="text" class="glass-input" id="upi_payee" value="${cfg.payments.upiDirect.payeeName}" placeholder="Peelin's Dating App" />
             </div>
 
             <div style="display: flex; gap: 10px;">
@@ -2215,7 +2215,7 @@ class AdminController {
               </div>
               <div style="flex: 1;">
                 <label style="font-size: 0.8rem; font-weight: 600; color: var(--text-muted);">Sender ID</label>
-                <input type="text" class="glass-input" id="f2s_senderId" value="${cfg.otp.fast2sms.senderId}" placeholder="HIPAAP" maxlength="6" />
+                <input type="text" class="glass-input" id="f2s_senderId" value="${cfg.otp.fast2sms.senderId}" placeholder="PEELIN" maxlength="6" />
               </div>
             </div>
 
@@ -3388,7 +3388,7 @@ class AdminController {
           resEl.textContent = '❌ Invalid Fast2SMS API Key length. Please paste your full API token.';
         } else {
           resEl.className = 'test-result-box success';
-          resEl.textContent = '✅ Fast2SMS route configured! Sender: ' + (cfg.otp.fast2sms.senderId || 'HIPAAP');
+          resEl.textContent = '✅ Fast2SMS route configured! Sender: ' + (cfg.otp.fast2sms.senderId || 'PEELIN');
         }
       } else if (testType === 'twilio') {
         const sid = cfg.otp.twilio.accountSid;
@@ -3482,7 +3482,7 @@ class AdminController {
         </div>
         <div>
           <label style="font-weight: 700; font-size: 0.9rem;">UPI ID for Manual Payments</label>
-          <input type="text" class="glass-input" value="hipa@upi" style="margin-top: 6px;" />
+          <input type="text" class="glass-input" value="peelins@upi" style="margin-top: 6px;" />
         </div>
         <button class="btn-primary" style="align-self: flex-start;" onclick="alert('Settings saved successfully!')">Save Configuration</button>
       </div>

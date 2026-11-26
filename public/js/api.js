@@ -1,7 +1,8 @@
 /* =========================================================
-   Hipa Dating App — API & Data Layer
-   Exact specifications from reference app screenshots
-   Brand: Hipa — Where Feelings Connect
+   Peelin's Dating App — API & Data Layer
+   Brand: Peelin's — Meet Live • Feel Real (18+ Verified)
+   Features: 3D Pixar Stylized Avatars, 18+ Audio & Video Calling,
+             Interactive Gifts, Stories, Lucky Spin & VIP Pass
    ========================================================= */
 
 export const HIPA_CREATORS = [
@@ -17,7 +18,7 @@ export const HIPA_CREATORS = [
     videoOnline: true,
     avatar: "/images/avatar_female_ashley.jpg",
     rating: 5.0,
-    callsCount: 3120,
+    callsCount: 3420,
     verified: true,
     tags: ["photography 📷", "politics 🏛️", "travel ✈️", "sports ⚽"],
     bio: "Free spirited traveler exploring hidden gems, new cuisines, and unforgettable global experiences daily."
@@ -34,168 +35,116 @@ export const HIPA_CREATORS = [
     videoOnline: true,
     avatar: "/images/avatar_male_aryan.jpg",
     rating: 4.9,
-    callsCount: 1840,
+    callsCount: 2840,
     verified: true,
-    tags: ["fitness 🏋️", "travel ✈️", "music 🎸"],
-    bio: "Passionate storyteller, wanderer, and music enthusiast. Let's vibe! ✨"
+    tags: ["fitness 🏋️", "travel ✈️", "music 🎸", "mountains 🏔️"],
+    bio: "Passionate storyteller, wanderer, and music enthusiast. Let's vibe on live call! ✨"
   },
   {
     id: 3,
-    name: "jannatkhan",
+    name: "Riya",
     gender: "female",
     age: 22,
-    language: "Hindi",
+    language: "Hindi & Punjabi",
     online: true,
     voiceRate: 10,
-    videoRate: 0,
-    videoOnline: false,
-    avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80",
+    videoRate: 10,
+    videoOnline: true,
+    avatar: "/images/avatar_female_riya.jpg",
     rating: 4.9,
-    callsCount: 1420,
+    callsCount: 2150,
     verified: true,
-    tags: ["dating 💖", "night chats 🌙"],
-    bio: "Hey there! Sweet chats & late-night vibes. Let's talk! 💕"
+    tags: ["night chats 🌙", "poetry ✍️", "coffee ☕", "fashion 👗"],
+    bio: "Warm smiles & soothing late-night conversations. Ready to listen to your day! 💕"
   },
   {
     id: 4,
-    name: "khushi",
+    name: "Kabir",
+    gender: "male",
+    age: 24,
+    language: "Hindi & English",
+    online: true,
+    voiceRate: 10,
+    videoRate: 10,
+    videoOnline: true,
+    avatar: "/images/avatar_male_kabir.jpg",
+    rating: 4.9,
+    callsCount: 1980,
+    verified: true,
+    tags: ["acoustic guitar 🎸", "cafe lover ☕", "deep talks 🌌"],
+    bio: "Musician and soul connector. Let me play an acoustic tune for you on live video! 🎶"
+  },
+  {
+    id: 5,
+    name: "Ananya",
     gender: "female",
     age: 21,
-    language: "Bengali",
+    language: "Bengali & Hindi",
     online: true,
     voiceRate: 10,
-    videoRate: 0,
-    videoOnline: false,
-    avatar: "https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=400&q=80",
-    rating: 4.8,
-    callsCount: 980,
-    verified: true,
-    tags: ["bengali 🌸", "music 🎵"],
-    bio: "Bengali beauty, love music and soothing conversations. 🌸"
-  },
-  {
-    id: 5,
-    name: "Simran",
-    gender: "female",
-    age: 23,
-    language: "Punjabi",
-    online: true,
-    voiceRate: 10,
-    videoRate: 60,
+    videoRate: 10,
     videoOnline: true,
-    avatar: "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=400&q=80",
+    avatar: "/images/avatar_female_ananya.jpg",
     rating: 5.0,
-    callsCount: 2340,
+    callsCount: 2640,
     verified: true,
-    tags: ["punjabi ✨", "video call 📹"],
-    bio: "Live video call verified creator! Positive energy only."
+    tags: ["books 📚", "art 🎨", "indie vibes 🎧", "sunset 🌅"],
+    bio: "Nerdy cuteness with round glasses & infinite curiosity. Tell me your favorite book! 🌸"
   },
   {
     id: 6,
-    name: "Heena",
-    gender: "female",
-    age: 24,
-    language: "Marathi",
-    online: true,
-    voiceRate: 10,
-    videoRate: 60,
-    videoOnline: true,
-    avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=400&q=80",
-    rating: 4.7,
-    callsCount: 890,
-    bio: "Marathi mulgi! Chill vibes and great listener. ☕"
-  },
-  {
-    id: 5,
-    name: "Susmita",
-    gender: "female",
-    age: 22,
-    language: "Odia",
-    online: true,
-    voiceRate: 10,
-    videoRate: 60,
-    videoOnline: true,
-    avatar: "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?auto=format&fit=crop&w=400&q=80",
-    rating: 4.8,
-    callsCount: 1150,
-    bio: "Friendly Odia creator. Let's share feelings! 💖"
-  },
-  {
-    id: 6,
-    name: "Damini",
-    gender: "female",
+    name: "Rohan",
+    gender: "male",
     age: 23,
-    language: "Telugu",
+    language: "Marathi & Hindi",
     online: true,
     voiceRate: 10,
-    videoRate: 60,
+    videoRate: 10,
     videoOnline: true,
-    avatar: "https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91?auto=format&fit=crop&w=400&q=80",
-    rating: 4.9,
-    callsCount: 1780,
-    bio: "Telugu girl, warm heart and exciting stories. 🌟"
+    avatar: "/images/avatar_male_rohan.jpg",
+    rating: 4.8,
+    callsCount: 1720,
+    verified: true,
+    tags: ["gaming 🎮", "tech 💻", "foodie 🍕", "movies 🎬"],
+    bio: "Full of good vibes and gaming trivia. Let's banter and laugh out loud! 🚀"
   },
   {
     id: 7,
-    name: "Pallavi",
+    name: "Tanya",
     gender: "female",
-    age: 25,
-    language: "Tamil",
-    online: false,
-    voiceRate: 0,
-    videoRate: 60,
+    age: 22,
+    language: "Punjabi & Hindi",
+    online: true,
+    voiceRate: 10,
+    videoRate: 10,
     videoOnline: true,
-    avatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=400&q=80",
-    rating: 4.6,
-    callsCount: 640,
-    bio: "Tamil creator. Connect on high quality video call. 💃"
+    avatar: "/images/avatar_female_tanya.jpg",
+    rating: 4.9,
+    callsCount: 3180,
+    verified: true,
+    tags: ["dance 💃", "punjabi beats 🎵", "laughing 😂", "makeup 💄"],
+    bio: "High energy, curly hair, and contagious laughter. Connect on high-quality video call! 💫"
   },
   {
     id: 8,
-    name: "mahiqueen",
-    gender: "female",
-    age: 21,
-    language: "Marathi",
+    name: "Dev",
+    gender: "male",
+    age: 24,
+    language: "Telugu & Hindi",
     online: true,
     voiceRate: 10,
-    videoRate: 0,
-    videoOnline: false,
-    avatar: "https://images.unsplash.com/photo-1502685104226-ee32379fefbe?auto=format&fit=crop&w=400&q=80",
-    rating: 4.7,
-    callsCount: 750,
-    bio: "Queen of good mood! Voice calls anytime. 👑"
-  },
-  {
-    id: 9,
-    name: "Priya",
-    gender: "female",
-    age: 23,
-    language: "Hindi",
-    online: true,
-    voiceRate: 10,
-    videoRate: 60,
+    videoRate: 10,
     videoOnline: true,
-    avatar: "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?auto=format&fit=crop&w=400&q=80",
-    rating: 4.9,
-    callsCount: 3120,
-    bio: "College student, love sharing day-to-day moments. 🌈"
-  },
-  {
-    id: 10,
-    name: "xvsea",
-    gender: "female",
-    age: 22,
-    language: "Bengali",
-    online: true,
-    voiceRate: 10,
-    videoRate: 60,
-    videoOnline: true,
-    avatar: "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&w=400&q=80",
+    avatar: "/images/avatar_male_dev.jpg",
     rating: 4.8,
-    callsCount: 1890,
-    bio: "Charming conversations and fun banter. 💫"
+    callsCount: 1450,
+    verified: true,
+    tags: ["sports ⚽", "gym 🏋️", "road trips 🏍️", "dogs 🐶"],
+    bio: "Active lifestyle, fitness enthusiast and loyal friend. Let's talk life & goals! ⚡"
   }
 ];
+
+export const PEELINS_CREATORS = HIPA_CREATORS;
 
 export const HIPA_COIN_PACKS = [
   { id: 1, coins: 40, price: 25, discount: "Save 30%", popular: false },
@@ -210,25 +159,29 @@ export const HIPA_COIN_PACKS = [
 ];
 
 export const HIPA_LANGUAGES = [
-  { code: "ta", name: "Tamil", native: "தமிழ்", char: "த" },
-  { code: "te", name: "Telugu", native: "తెలుగు", char: "తె" },
-  { code: "ml", name: "Malayalam", native: "മലയാളം", char: "മ" },
-  { code: "kn", name: "Kannada", native: "ಕನ್ನಡ", char: "ಕ" },
   { code: "hi", name: "Hindi", native: "हिंदी", char: "ह" },
   { code: "pa", name: "Punjabi", native: "ਪੰਜਾਬੀ", char: "ਪ" },
   { code: "mr", name: "Marathi", native: "मराठी", char: "म" },
   { code: "bn", name: "Bengali", native: "বাংলা", char: "ব" },
+  { code: "te", name: "Telugu", native: "తెలుగు", char: "తె" },
+  { code: "ta", name: "Tamil", native: "தமிழ்", char: "த" },
+  { code: "ml", name: "Malayalam", native: "മലയാളം", char: "മ" },
+  { code: "kn", name: "Kannada", native: "ಕನ್ನಡ", char: "ಕ" },
   { code: "as", name: "Assamese", native: "অসমীয়া", char: "অ" }
 ];
 
 export const HIPA_AVATARS = [
   "/images/avatar_female_ashley.jpg",
   "/images/avatar_male_aryan.jpg",
-  "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80",
-  "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=300&q=80",
-  "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=300&q=80",
-  "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=300&q=80"
+  "/images/avatar_female_riya.jpg",
+  "/images/avatar_male_kabir.jpg",
+  "/images/avatar_female_ananya.jpg",
+  "/images/avatar_male_rohan.jpg",
+  "/images/avatar_female_tanya.jpg",
+  "/images/avatar_male_dev.jpg"
 ];
+
+export const PEELINS_AVATARS = HIPA_AVATARS;
 
 export const HIPA_GIFTS = [
   { id: "rose", name: "Rose", icon: "🌹", coins: 5, animation: "fly-rose" },
@@ -241,10 +194,11 @@ export const HIPA_GIFTS = [
 
 export const HIPA_STORIES = [
   { id: 1, creatorId: 1, name: "Ashley", avatar: "/images/avatar_female_ashley.jpg", isLive: true, time: "Live Now", preview: "/images/avatar_female_ashley.jpg", caption: "Live in Mumbai! Join my video call 🌟" },
-  { id: 2, creatorId: 2, name: "Aryan", avatar: "/images/avatar_male_aryan.jpg", isLive: false, time: "12m ago", preview: "/images/avatar_male_aryan.jpg", caption: "Sunset vibes & jam session 🎸" },
-  { id: 3, creatorId: 5, name: "Simran", avatar: "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=400&q=80", isLive: true, time: "2m ago", preview: "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=400&q=80", caption: "Late night Punjabi chat ready! 📹" },
-  { id: 4, creatorId: 4, name: "Khushi", avatar: "https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=400&q=80", isLive: true, time: "5m ago", preview: "https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=400&q=80", caption: "Singing acoustic melodies today 🎵" },
-  { id: 5, creatorId: 3, name: "Jannat", avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80", isLive: false, time: "40m ago", preview: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80", caption: "Coffee first, feelings later ☕" }
+  { id: 2, creatorId: 2, name: "Aryan", avatar: "/images/avatar_male_aryan.jpg", isLive: false, time: "12m ago", preview: "/images/avatar_male_aryan.jpg", caption: "Sunset vibes & mountain hikes 🎸" },
+  { id: 3, creatorId: 3, name: "Riya", avatar: "/images/avatar_female_riya.jpg", isLive: true, time: "2m ago", preview: "/images/avatar_female_riya.jpg", caption: "Late night sweet chats ready! 📹" },
+  { id: 4, creatorId: 4, name: "Kabir", avatar: "/images/avatar_male_kabir.jpg", isLive: false, time: "5m ago", preview: "/images/avatar_male_kabir.jpg", caption: "Playing acoustic songs live 🎵" },
+  { id: 5, creatorId: 5, name: "Ananya", avatar: "/images/avatar_female_ananya.jpg", isLive: true, time: "Just now", preview: "/images/avatar_female_ananya.jpg", caption: "Reading poetry & sipping lavender tea ☕" },
+  { id: 6, creatorId: 7, name: "Tanya", avatar: "/images/avatar_female_tanya.jpg", isLive: true, time: "8m ago", preview: "/images/avatar_female_tanya.jpg", caption: "Punjabi party vibes right now! 💃" }
 ];
 
 export const hipaAudio = {

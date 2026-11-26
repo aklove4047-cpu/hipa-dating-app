@@ -7,7 +7,7 @@
              Recent Calls Log, Friends Deck, User Profile & Settings.
    ========================================================= */
 
-import { hipaApi, HIPA_CREATORS, HIPA_COIN_PACKS, HIPA_LANGUAGES, HIPA_AVATARS, HIPA_GIFTS, HIPA_STORIES, hipaAudio } from './api.js?v=10.0';
+import { hipaApi, HIPA_CREATORS, HIPA_COIN_PACKS, HIPA_LANGUAGES, HIPA_AVATARS, HIPA_GIFTS, HIPA_STORIES, hipaAudio } from './api.js?v=11.0';
 
 class HipaApp {
   constructor() {
@@ -51,10 +51,10 @@ class HipaApp {
       <div class="onboarding-container" style="justify-content: space-between;">
         <div class="onboarding-header-decor">
           <div style="width: 84px; height: 84px; border-radius: 22px; overflow: hidden; margin: 0 auto 12px auto; box-shadow: 0 8px 30px rgba(255, 0, 127, 0.5); border: 2px solid rgba(255, 255, 255, 0.4);">
-            <img src="/images/hipa_brand_logo.jpg" style="width: 100%; height: 100%; object-fit: cover;" />
+            <img src="/images/peelins_logo.jpg" style="width: 100%; height: 100%; object-fit: cover;" />
           </div>
           <div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
-            <h1 style="font-size: 2.1rem; font-weight: 900; background: linear-gradient(135deg, #ff007f 0%, #ff2a85 50%, #7928ca 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Hipa</h1>
+            <h1 style="font-size: 2.1rem; font-weight: 900; background: linear-gradient(135deg, #ff007f 0%, #ff2a85 50%, #7928ca 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Peelin's</h1>
             <span class="badge-18-plus">18+</span>
           </div>
           <p style="font-size: 0.95rem; color: #6b7280; font-weight: 700; margin-top: 2px;">Meet Live • Feel Real</p>
@@ -99,7 +99,7 @@ class HipaApp {
             <span style="font-weight: 700; color: #1f2937;">Have a referral code?</span>
           </label>
           <div id="referralCodeBox" style="margin-bottom: 14px; display: flex; gap: 8px;">
-            <input type="text" id="inputRefCode" class="glass-input" value="HIPA2026" placeholder="Enter referral code" style="background: #f9fafb; border-color: #e5e7eb; color: #111827; font-weight: 700;" />
+            <input type="text" id="inputRefCode" class="glass-input" value="PEELINS2026" placeholder="Enter referral code" style="background: #f9fafb; border-color: #e5e7eb; color: #111827; font-weight: 700;" />
             <button class="btn-secondary" id="btnApplyRef" style="padding: 0 18px; font-weight: 800; background: #4b5563; color: #ffffff;">Apply</button>
           </div>
           <div id="refSuccessMsg" style="font-size: 0.75rem; color: #10b981; font-weight: 700; margin-top: -10px; margin-bottom: 14px;">
@@ -113,7 +113,7 @@ class HipaApp {
           </label>
           <label class="checkbox-row">
             <input type="checkbox" id="chkTerms" checked />
-            <span>I accept <strong style="color: var(--primary-pink);">terms & conditions</strong>, and <strong style="color: var(--primary-pink);">community guidelines & moderation policy</strong> of Hipa.</span>
+            <span>I accept <strong style="color: var(--primary-pink);">terms & conditions</strong>, and <strong style="color: var(--primary-pink);">community guidelines & moderation policy</strong> of Peelin's.</span>
           </label>
 
           <button class="btn-pink-block" id="btnSendOtp" style="margin-top: 10px;">
@@ -133,7 +133,7 @@ class HipaApp {
       const termsChk = root.querySelector('#chkTerms').checked;
 
       if (!ageChk) {
-        alert('You must be 18 years or older to use Hipa.');
+        alert('You must be 18 years or older to use Peelin\'s.');
         return;
       }
       if (!termsChk) {
@@ -162,7 +162,7 @@ class HipaApp {
 
         <div class="onboarding-header-decor">
           <div class="onboarding-logo">💬</div>
-          <h1 style="font-size: 1.8rem; font-weight: 900; color: #111827;">Hipa</h1>
+          <h1 style="font-size: 1.8rem; font-weight: 900; color: #111827;">Peelin's</h1>
           <p style="font-size: 0.85rem; color: var(--text-muted); font-weight: 600;">Where Feelings Connect</p>
         </div>
 
@@ -494,7 +494,7 @@ class HipaApp {
         <div id="btnOpenVIPClub" style="background: linear-gradient(135deg, rgba(168, 85, 247, 0.18), rgba(255, 0, 127, 0.18)); border: 1.5px solid rgba(168, 85, 247, 0.4); border-radius: 16px; padding: 10px 14px; display: flex; align-items: center; gap: 10px; cursor: pointer; box-shadow: 0 4px 15px rgba(0,0,0,0.3);">
           <span style="font-size: 1.5rem;">👑</span>
           <div>
-            <div style="font-weight: 900; font-size: 0.82rem; color: #ff85c0;">Hipa VIP Pass</div>
+            <div style="font-weight: 900; font-size: 0.82rem; color: #ff85c0;">Peelin's VIP Pass</div>
             <div style="font-size: 0.68rem; color: #d1c7e6;">Free calls & perks</div>
           </div>
         </div>
@@ -1080,7 +1080,7 @@ class HipaApp {
     container.querySelector('#btnMenuGuidelines').onclick = () => alert('📋 Community Guidelines: Harassment, hate speech & nudity are strictly banned.');
     container.querySelector('#btnMenuWarnings').onclick = () => this.showWarningsModal();
     container.querySelector('#btnMenuBlocklist').onclick = () => alert('🚫 Blocklist: You have 0 blocked users.');
-    container.querySelector('#btnMenuHelp').onclick = () => alert('❓ Help: Email us at support@hipa-app.com or message 24/7 in app.');
+    container.querySelector('#btnMenuHelp').onclick = () => alert('❓ Help: Email us at support@peelins-app.com or message 24/7 in app.');
 
     container.querySelector('#chkDndToggle').onchange = (e) => {
       user.isDnd = e.target.checked;
@@ -1162,7 +1162,7 @@ class HipaApp {
 
     addBtn.onclick = () => {
       modal.remove();
-      this.showPaymentCheckoutModal(selectedPack.price, selectedPack.coins, `${selectedPack.coins} Hipa Coins Pack`);
+      this.showPaymentCheckoutModal(selectedPack.price, selectedPack.coins, `${selectedPack.coins} Peelin's Coins Pack`);
     };
   }
 
@@ -1188,7 +1188,7 @@ class HipaApp {
           </div>
 
           <div class="offer-coins-large">60</div>
-          <div style="font-size: 1.05rem; font-weight: 800; letter-spacing: 0.5px;">Hipa coins</div>
+          <div style="font-size: 1.05rem; font-weight: 800; letter-spacing: 0.5px;">Peelin's coins</div>
         </div>
 
         <div class="offer-body-white">
@@ -1263,7 +1263,7 @@ class HipaApp {
           <div style="display: flex; align-items: center; gap: 14px;">
             <button id="btnClosePay" style="background: none; border: none; color: #ffffff; font-size: 1.3rem; cursor: pointer;">←</button>
             <div style="width: 32px; height: 32px; border-radius: 8px; background: rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; font-weight: 900;">H</div>
-            <span style="font-weight: 800; font-size: 1.15rem;">Hipa</span>
+            <span style="font-weight: 800; font-size: 1.15rem;">Peelin's</span>
           </div>
           <div style="width: 32px; height: 32px; border-radius: 50%; background: rgba(255,255,255,0.25); display: flex; align-items: center; justify-content: center;">👤</div>
         </div>
@@ -1351,7 +1351,7 @@ class HipaApp {
 
     modal.querySelector('#btnConfirmPay').onclick = () => {
       hipaApi.addCoins(coins, `${coins} Coins Pack`, "UTR-" + Date.now().toString().slice(-8));
-      alert(`🎉 Payment of ₹${amount} Successful!\n${coins} Hipa coins have been credited to your wallet.`);
+      alert(`🎉 Payment of ₹${amount} Successful!\n${coins} Peelin's coins have been credited to your wallet.`);
       modal.remove();
       document.getElementById('userCoinsCount').textContent = hipaApi.getCoins();
     };
@@ -1719,7 +1719,7 @@ class HipaApp {
             this.triggerFlyingGiftAnimation('🪙');
             const coinEl = document.getElementById('userCoinsCount');
             if (coinEl) coinEl.textContent = hipaApi.getCoins();
-            alert(`🎉 Congratulations! You won ${res.prizeWon} Free Hipa Coins!\nNew Balance: ${res.newBalance} coins`);
+            alert(`🎉 Congratulations! You won ${res.prizeWon} Free Peelin's Coins!\nNew Balance: ${res.newBalance} coins`);
             modal.remove();
           } else {
             alert(res.error);
@@ -1738,7 +1738,7 @@ class HipaApp {
         <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;">
           <div style="display: flex; align-items: center; gap: 8px;">
             <span style="font-size: 1.8rem;">👑</span>
-            <h3 style="font-size: 1.35rem; font-weight: 900; color: #ffd700; margin: 0;">Hipa VIP Club</h3>
+            <h3 style="font-size: 1.35rem; font-weight: 900; color: #ffd700; margin: 0;">Peelin's VIP Club</h3>
           </div>
           <button id="btnCloseVIPModal" style="background: rgba(255,255,255,0.1); border: none; width: 32px; height: 32px; border-radius: 50%; color: #fff; cursor: pointer;">✕</button>
         </div>
@@ -1769,7 +1769,7 @@ class HipaApp {
       const coinEl = document.getElementById('userCoinsCount');
       if (coinEl) coinEl.textContent = hipaApi.getCoins();
       this.triggerFlyingGiftAnimation('👑');
-      alert('👑 Welcome to Hipa VIP Gold Club! 200 bonus coins added.');
+      alert('👑 Welcome to Peelin\'s VIP Gold Club! 200 bonus coins added.');
       modal.remove();
     };
   }
@@ -1927,7 +1927,7 @@ class HipaApp {
               <label style="font-weight: 800; font-size: 0.9rem; color: #111827;">Short Audio Voice Verification</label>
             </div>
             <div style="font-size: 0.78rem; color: #6b7280; margin-bottom: 10px;">
-              Record a 5-second voice greeting: <em>"Hi, this is my real voice on Hipa platform."</em>
+              Record a 5-second voice greeting: <em>"Hi, this is my real voice on Peelin\'s platform."</em>
             </div>
 
             <button type="button" class="voice-record-btn" id="btnToggleVoiceRecord">
@@ -2051,7 +2051,7 @@ class HipaApp {
       const age = new Date().getFullYear() - birthYear;
 
       if (age < 18) {
-        alert('⚠️ You must be at least 18 years old to access calling features on Hipa.');
+        alert('⚠️ You must be at least 18 years old to access calling features on Peelin\'s.');
         return;
       }
 
