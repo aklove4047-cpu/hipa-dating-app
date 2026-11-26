@@ -253,6 +253,101 @@ class HipaApiService {
     }
   }
 
+
+  // ==========================================
+  // DYNAMIC AVATAR LIBRARY (Admin Controlled)
+  // ==========================================
+  getAvatars() {
+    const saved = localStorage.getItem('peelins_custom_avatars');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      } catch (e) {}
+    }
+    return HIPA_AVATARS;
+  }
+
+  saveAvatars(list) {
+    localStorage.setItem('peelins_custom_avatars', JSON.stringify(list));
+    try {
+      const bc = new BroadcastChannel('hipa_users_sync');
+      bc.postMessage({ type: 'AVATARS_UPDATED', avatars: list });
+      setTimeout(() => bc.close(), 1000);
+    } catch (e) {}
+  }
+
+  addAvatar(url, name = "Avatar", gender = "female") {
+    const list = [...this.getAvatars()];
+    if (!list.includes(url)) {
+      list.unshift(url);
+      this.saveAvatars(list);
+    }
+    return list;
+  }
+
+  deleteAvatar(url) {
+    let list = this.getAvatars().filter(u => u !== url);
+    if (list.length === 0) list = [...HIPA_AVATARS];
+    this.saveAvatars(list);
+    return list;
+  }
+
+  // ==========================================
+  // WHATSAPP GROUP CONFIGURATION
+  // ==========================================
+  getWhatsAppConfig() {
+    const saved = localStorage.getItem('peelins_whatsapp_config');
+    if (saved) {
+      try { return JSON.parse(saved); } catch (e) {}
+    }
+    return {
+      enabled: true,
+      groupName: "Peelin's Official VIP Community",
+      inviteLink: "https://chat.whatsapp.com/invite/peelins-official-18",
+      supportNumber: "+919511088531"
+    };
+  }
+
+  saveWhatsAppConfig(cfg) {
+    localStorage.setItem('peelins_whatsapp_config', JSON.stringify(cfg));
+    try {
+      const bc = new BroadcastChannel('hipa_users_sync');
+      bc.postMessage({ type: 'WHATSAPP_CONFIG_UPDATED', config: cfg });
+      setTimeout(() => bc.close(), 1000);
+    } catch (e) {}
+  }
+
+  // ==========================================
+  // ONLINE / OFFLINE AVAILABILITY STATUS
+  // ==========================================
+  setUserOnlineStatus(isOnline) {
+    const u = this.getUser();
+    if (u) {
+      u.isOnline = !!isOnline;
+      u.lastSeen = new Date().toISOString();
+      this.saveUser(u);
+      try {
+        let all = JSON.parse(localStorage.getItem('hipa_all_users') || '[]');
+        const idx = all.findIndex(x => x.phone === u.phone);
+        if (idx !== -1) {
+          all[idx].isOnline = !!isOnline;
+          all[idx].lastSeen = u.lastSeen;
+          localStorage.setItem('hipa_all_users', JSON.stringify(all));
+        }
+        const bc = new BroadcastChannel('hipa_users_sync');
+        bc.postMessage({ type: 'USER_STATUS_CHANGED', userId: u.id, isOnline: !!isOnline });
+        setTimeout(() => bc.close(), 1000);
+      } catch (e) {}
+    }
+    return isOnline;
+  }
+
+  getUserOnlineStatus() {
+    const u = this.getUser();
+    return u ? (u.isOnline !== false) : true;
+  }
+
   getGatewayConfigs() {
     const saved = localStorage.getItem('hipa_system_api_configs');
     if (saved) {
@@ -472,6 +567,7 @@ class HipaApiService {
     const pending = JSON.parse(sessionStorage.getItem('hipa_pending_phone') || sessionStorage.getItem('hima_pending_phone') || 'null') || {};
     const enteredName = (name || '').trim();
     const finalName = enteredName || ("User" + Math.floor(100 + Math.random() * 900));
+    const isFemale = (gender === 'female');
 
     const newUser = {
       id: Date.now(),
@@ -485,7 +581,9 @@ class HipaApiService {
       referralCode: pending.referralCode || "",
       isDnd: false,
       notifications: true,
-      verified: false,
+      verified: !isFemale, // Male is auto-verified; Female requires video & voice note admin approval!
+      verificationStatus: isFemale ? 'pending_approval' : 'approved',
+      isOnline: true,
       isPremium: false,
       status: "active",
       city: "Mumbai",
@@ -572,15 +670,16 @@ class HipaApiService {
     const payload = {
       id: Date.now(),
       userId: user.id || Date.now(),
-      name: user.username || user.name || "User",
+      name: user.username || user.name || dossier.name || "User",
       phone: user.phone || "+919876543210",
       gender: user.gender || dossier.gender || "female",
       age: dossier.age || 21,
       dob: dossier.dob || "2003-05-15",
-      profilePhoto: user.avatar || "/images/avatar_female_ashley.jpg",
+      profilePhoto: user.avatar || dossier.profilePhoto || "/images/avatar_female_ashley.jpg",
       selfiePhoto: dossier.selfiePhoto || "/images/avatar_female_ashley.jpg",
-      audioUrl: dossier.audioUrl || "https://actions.google.com/sounds/v1/speech/hello_greeting.ogg",
-      poseReq: dossier.poseReq || "Peace Sign ✌️",
+      audioUrl: dossier.audioUrl || dossier.voiceAudioUrl || "https://actions.google.com/sounds/v1/speech/hello_greeting.ogg",
+      videoUrl: dossier.videoUrl || "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
+      poseReq: dossier.poseReq || "Peace Sign ✌️ & Video Selfie",
       status: "pending",
       submittedAt: new Date().toISOString()
     };
@@ -588,11 +687,14 @@ class HipaApiService {
     user.verificationStatus = 'pending_approval';
     user.dob = payload.dob;
     user.age = payload.age;
+    if (dossier.videoUrl) user.videoVerifUrl = dossier.videoUrl;
+    if (dossier.audioUrl) user.voiceAudioUrl = dossier.audioUrl;
     this.saveUser(user);
 
     // Save locally for instant tab sync
     try {
       let queue = JSON.parse(localStorage.getItem('hipa_verifications_queue') || '[]');
+      queue = queue.filter(q => q.phone !== payload.phone);
       queue.unshift(payload);
       localStorage.setItem('hipa_verifications_queue', JSON.stringify(queue));
     } catch (e) {}
@@ -611,7 +713,7 @@ class HipaApiService {
       }).catch(() => {});
     });
 
-    // Broadcast to Admin Panel
+    // Real-time broadcast to Admin Panel
     try {
       const bc = new BroadcastChannel('hipa_users_sync');
       bc.postMessage({ type: 'VERIFICATION_SUBMITTED', item: payload });

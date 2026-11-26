@@ -196,6 +196,7 @@ class AdminController {
     } else {
       this.renderApp();
       this.initRealtimeUserSync();
+      this.updateAvatarBadge();
     }
   }
 
@@ -228,7 +229,7 @@ class AdminController {
               this.showToast(`🎉 New user registered: ${u.username || u.phone}`);
             }
           } else if (ev.data.type === 'VERIFICATION_SUBMITTED') {
-            const v = ev.data.verification;
+            const v = ev.data.verification || ev.data.item;
             if (v) {
               const existingIdx = ADMIN_DATA.verifications.findIndex(item => String(item.id) === String(v.id) || (item.phone && item.phone === v.phone));
               if (existingIdx >= 0) {
@@ -237,9 +238,10 @@ class AdminController {
                 ADMIN_DATA.verifications.unshift(v);
               }
               this.updateVerificationBadge();
-              this.showToast(`🛡️ New 18+ Verification Request from ${v.name}!`);
+              this.playNotificationChime();
+              this.showToast(`🛡️ New 18+ Verification Request from ${v.name || 'Female User'}!`);
               if (this.currentView === 'verifications') {
-                const container = document.getElementById('adminViewContainer');
+                const container = document.getElementById('adminMainContent') || document.getElementById('adminViewContainer');
                 if (container) this.renderVerifications(container);
               }
             }
@@ -250,7 +252,7 @@ class AdminController {
               this.updateReportsBadge();
               this.showToast(`🚨 Security Alert: Report filed against ${r.reportedUser}`);
               if (this.currentView === 'reports') {
-                const container = document.getElementById('adminViewContainer');
+                const container = document.getElementById('adminMainContent') || document.getElementById('adminViewContainer');
                 if (container) this.renderReports(container);
               }
             }
@@ -411,6 +413,82 @@ class AdminController {
     });
     const kpiEl = document.getElementById('kpiPendingVerificationsVal');
     if (kpiEl) kpiEl.textContent = count;
+  }
+
+  playNotificationChime() {
+    try {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(587.33, ctx.currentTime); // D5
+      osc.frequency.setValueAtTime(880.00, ctx.currentTime + 0.12); // A5
+      gain.gain.setValueAtTime(0.25, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.45);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.5);
+    } catch (e) {}
+  }
+
+  getAvatars() {
+    const saved = localStorage.getItem('peelins_custom_avatars');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      } catch (e) {}
+    }
+    return [
+      "/images/avatar_female_riya.jpg",
+      "/images/avatar_male_kabir.jpg",
+      "/images/avatar_female_ananya.jpg",
+      "/images/avatar_male_rohan.jpg",
+      "/images/avatar_female_tanya.jpg",
+      "/images/avatar_male_dev.jpg"
+    ];
+  }
+
+  saveAvatars(list) {
+    localStorage.setItem('peelins_custom_avatars', JSON.stringify(list));
+    try {
+      const bc = new BroadcastChannel('hipa_users_sync');
+      bc.postMessage({ type: 'AVATARS_UPDATED', avatars: list });
+      setTimeout(() => bc.close(), 1000);
+    } catch (e) {}
+    this.updateAvatarBadge();
+  }
+
+  addAvatar(url) {
+    const list = [...this.getAvatars()];
+    if (!list.includes(url)) {
+      list.unshift(url);
+      this.saveAvatars(list);
+    }
+    return list;
+  }
+
+  deleteAvatar(url) {
+    let list = this.getAvatars().filter(u => u !== url);
+    if (list.length === 0) {
+      list = [
+        "/images/avatar_female_riya.jpg",
+        "/images/avatar_male_kabir.jpg"
+      ];
+    }
+    this.saveAvatars(list);
+    return list;
+  }
+
+  updateAvatarBadge() {
+    const count = this.getAvatars().length;
+    document.querySelectorAll('.admin-nav-item[data-view="avatars"] .admin-nav-badge, #badgeAvatarCount').forEach(el => {
+      el.textContent = count;
+      el.style.background = '#ff007f';
+    });
   }
 
   updateReportsBadge() {
@@ -625,6 +703,8 @@ class AdminController {
       this.renderBroadcast(container);
     } else if (view === 'settings') {
       this.renderSettings(container);
+    } else if (view === 'avatars') {
+      this.renderAvatars(container);
     } else {
       container.innerHTML = `<div class="glass-panel" style="padding: 24px;"><h3>Module: ${view}</h3></div>`;
     }
@@ -1096,6 +1176,17 @@ class AdminController {
                 </div>
               </div>
 
+              <!-- Video Recording Preview (Selfie Video / Wave) -->
+              ${v.videoUrl ? `
+                <div style="background: rgba(255,255,255,0.04); border: 1.5px solid rgba(255, 0, 127, 0.4); border-radius: 12px; padding: 10px 14px; margin-bottom: 14px;">
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                    <span style="font-size: 0.78rem; font-weight: 800; color: #ff85c0;">📹 Live Video Selfie (Wave / Pose Verification):</span>
+                    <span style="font-size: 0.7rem; color: #10b981; font-weight: 800; background: rgba(16,185,129,0.15); padding: 2px 6px; border-radius: 4px;">Video Ready ✓</span>
+                  </div>
+                  <video controls src="${v.videoUrl}" style="width: 100%; max-height: 190px; border-radius: 8px; background: #000; object-fit: contain; outline: none;"></video>
+                </div>
+              ` : ''}
+
               <!-- Voice Recording Player -->
               <div style="background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 10px 14px; margin-bottom: 14px;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
@@ -1219,7 +1310,7 @@ class AdminController {
     this.updateVerificationBadge();
     this.showToast(`✅ ${v.name} approved! 18+ calling access unlocked.`);
 
-    const container = document.getElementById('adminViewContainer');
+    const container = document.getElementById('adminMainContent') || document.getElementById('adminViewContainer');
     if (container) this.renderVerifications(container);
   }
 
@@ -1271,7 +1362,7 @@ class AdminController {
     this.updateVerificationBadge();
     this.showToast(`❌ Verification rejected for ${v.name}.`);
 
-    const container = document.getElementById('adminViewContainer');
+    const container = document.getElementById('adminMainContent') || document.getElementById('adminViewContainer');
     if (container) this.renderVerifications(container);
   }
 
@@ -1398,7 +1489,7 @@ class AdminController {
     this.updateReportsBadge();
     this.showToast(`🛡️ Report resolved: ${action} applied.`);
 
-    const container = document.getElementById('adminViewContainer');
+    const container = document.getElementById('adminMainContent') || document.getElementById('adminViewContainer');
     if (container) this.renderReports(container);
   }
 
@@ -3462,33 +3553,285 @@ class AdminController {
       }
     }
 
-    renderSettings(container) {
-      container.innerHTML = `
-      <div class="admin-topbar">
-        <div>
-          <h1 style="font-size: 1.8rem; font-weight: 800;">System Settings</h1>
-          <p style="color: var(--text-muted); font-size: 0.9rem;">Global app configuration, limits & safety rules</p>
-        </div>
-      </div>
 
-      <div class="glass-panel" style="max-width: 680px; padding: 28px; display: flex; flex-direction: column; gap: 18px;">
-        <div>
-          <label style="font-weight: 700; font-size: 0.9rem;">Free Daily Swipes Limit</label>
-          <input type="number" class="glass-input" value="25" style="margin-top: 6px;" />
+    renderAvatars(container) {
+      const avatars = this.getAvatars();
+      container.innerHTML = `
+        <div class="admin-topbar">
+          <div>
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 4px;">
+              <h1 style="font-size: 1.8rem; font-weight: 900; background: linear-gradient(135deg, #ffffff 50%, #ff8bb8 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Avatar Library Management</h1>
+              <span style="background: #ff007f; color: #fff; font-size: 0.75rem; font-weight: 800; padding: 4px 10px; border-radius: 999px;">${avatars.length} Active Avatars</span>
+            </div>
+            <p style="color: var(--text-muted); font-size: 0.9rem;">Manage profile avatar photos available for users in the Website & Android APK. Add new photos via URL or direct file upload, or remove obsolete ones.</p>
+          </div>
+          <button id="btnResetAvatars" class="btn-secondary" style="padding: 10px 18px; font-size: 0.85rem; border-color: rgba(255,255,255,0.25);">
+            🔄 Reset to Defaults
+          </button>
         </div>
-        <div>
-          <label style="font-weight: 700; font-size: 0.9rem;">Daily Free Call Minutes</label>
-          <input type="number" class="glass-input" value="30" style="margin-top: 6px;" />
+
+        <!-- Add New Avatar Form Card -->
+        <div class="glass-panel" style="padding: 24px; margin-bottom: 24px; border-color: rgba(255, 0, 127, 0.4); box-shadow: 0 10px 30px rgba(0,0,0,0.35);">
+          <h3 style="font-size: 1.2rem; font-weight: 900; color: #ffffff; margin-bottom: 14px; display: flex; align-items: center; gap: 8px;">
+            <span>➕</span> Add New Avatar Photo
+          </h3>
+
+          <div style="display: grid; grid-template-columns: 1fr auto; gap: 20px; align-items: start;">
+            <div style="display: flex; flex-direction: column; gap: 14px;">
+              <div>
+                <label style="font-size: 0.82rem; font-weight: 800; color: #ff85c0; text-transform: uppercase;">Option 1: Image URL</label>
+                <input type="url" id="inputAvatarUrl" class="glass-input" placeholder="https://example.com/avatar.jpg" style="margin-top: 6px; width: 100%;" />
+              </div>
+
+              <div>
+                <label style="font-size: 0.82rem; font-weight: 800; color: #ff85c0; text-transform: uppercase;">Option 2: Direct File Upload (From Phone / PC)</label>
+                <input type="file" id="inputAvatarFile" accept="image/*" class="glass-input" style="margin-top: 6px; width: 100%; padding: 8px 12px; cursor: pointer;" />
+              </div>
+
+              <div style="display: flex; gap: 12px;">
+                <div style="flex: 1;">
+                  <label style="font-size: 0.82rem; font-weight: 800; color: #c9bfdc; text-transform: uppercase;">Avatar Label / Name</label>
+                  <input type="text" id="inputAvatarName" class="glass-input" placeholder="e.g. Simran, Pooja, Aryan" style="margin-top: 6px; width: 100%;" />
+                </div>
+                <div style="width: 140px;">
+                  <label style="font-size: 0.82rem; font-weight: 800; color: #c9bfdc; text-transform: uppercase;">Gender Tag</label>
+                  <select id="selectAvatarGender" class="glass-input" style="margin-top: 6px; width: 100%; cursor: pointer;">
+                    <option value="female" selected>♀ Female</option>
+                    <option value="male">♂ Male</option>
+                  </select>
+                </div>
+              </div>
+
+              <button id="btnAddAvatarSubmit" class="btn-primary" style="align-self: flex-start; padding: 12px 24px; font-weight: 800; font-size: 0.92rem; background: linear-gradient(135deg, #ff007f, #7928ca); border: none; border-radius: 12px; box-shadow: 0 4px 20px rgba(255, 0, 127, 0.45); cursor: pointer;">
+                🚀 Publish Avatar to App & Web
+              </button>
+            </div>
+
+            <!-- Live Thumbnail Preview -->
+            <div style="text-align: center; background: rgba(0,0,0,0.3); border: 1.5px dashed rgba(255,255,255,0.25); border-radius: 16px; padding: 18px 24px;">
+              <div style="font-size: 0.75rem; font-weight: 800; color: #d1c7e6; margin-bottom: 8px;">LIVE PREVIEW</div>
+              <div style="width: 110px; height: 110px; border-radius: 50%; border: 3px solid #ff007f; overflow: hidden; margin: 0 auto; box-shadow: 0 0 20px rgba(255,0,127,0.5);">
+                <img id="imgAvatarPreview" src="${avatars[0] || '/images/avatar_female_ashley.jpg'}" style="width: 100%; height: 100%; object-fit: cover;" />
+              </div>
+              <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 8px;">Square or 1:1 ratio recommended</div>
+            </div>
+          </div>
         </div>
-        <div>
-          <label style="font-weight: 700; font-size: 0.9rem;">UPI ID for Manual Payments</label>
-          <input type="text" class="glass-input" value="peelins@upi" style="margin-top: 6px;" />
+
+        <!-- Avatars Gallery Grid -->
+        <h3 style="font-size: 1.15rem; font-weight: 800; color: #ffffff; margin-bottom: 14px;">
+          Available User Avatars (${avatars.length})
+        </h3>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 16px;">
+          ${avatars.map((url, idx) => `
+            <div class="glass-panel" style="padding: 14px; text-align: center; border-color: rgba(255,255,255,0.12); position: relative; border-radius: 16px; transition: transform 0.2s ease;">
+              <div style="position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.6); color: #fff; font-size: 0.7rem; font-weight: 800; padding: 2px 7px; border-radius: 6px;">
+                #${idx + 1}
+              </div>
+              <div style="width: 100px; height: 100px; border-radius: 50%; overflow: hidden; margin: 10px auto 12px auto; border: 2.5px solid #ff007f; box-shadow: 0 4px 15px rgba(255,0,127,0.3);">
+                <img src="${url}" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.src='/images/avatar_female_ashley.jpg'" />
+              </div>
+              <div style="font-size: 0.72rem; color: var(--text-muted); font-family: monospace; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-bottom: 10px;">
+                ${url.startsWith('data:') ? 'Local Upload' : url.split('/').pop()}
+              </div>
+              <button class="btn-delete-avatar btn-secondary" data-url="${url}" style="width: 100%; padding: 8px; font-size: 0.78rem; font-weight: 700; color: #ef4444; border-color: rgba(239,68,68,0.4); cursor: pointer;">
+                🗑️ Delete Avatar
+              </button>
+            </div>
+          `).join('')}
         </div>
-        <button class="btn-primary" style="align-self: flex-start;" onclick="alert('Settings saved successfully!')">Save Configuration</button>
-      </div>
-    `;
+      `;
+
+      // Live preview URL input
+      const urlInput = container.querySelector('#inputAvatarUrl');
+      const fileInput = container.querySelector('#inputAvatarFile');
+      const imgPrev = container.querySelector('#imgAvatarPreview');
+
+      if (urlInput && imgPrev) {
+        urlInput.oninput = () => {
+          if (urlInput.value.trim()) {
+            imgPrev.src = urlInput.value.trim();
+          }
+        };
+      }
+
+      if (fileInput && imgPrev) {
+        fileInput.onchange = (e) => {
+          const file = e.target.files[0];
+          if (file) {
+            const reader = new FileReader();
+            reader.onload = (loadEv) => {
+              imgPrev.src = loadEv.target.result;
+            };
+            reader.readAsDataURL(file);
+          }
+        };
+      }
+
+      // Add Avatar Submit
+      const btnAdd = container.querySelector('#btnAddAvatarSubmit');
+      if (btnAdd) {
+        btnAdd.onclick = () => {
+          let chosenUrl = (urlInput ? urlInput.value.trim() : '');
+          if (!chosenUrl && imgPrev.src && !imgPrev.src.includes('avatar_female_ashley.jpg')) {
+            chosenUrl = imgPrev.src;
+          }
+          if (!chosenUrl) {
+            alert('Please enter an image URL or choose an image file to upload.');
+            return;
+          }
+          this.addAvatar(chosenUrl);
+          this.showToast('✅ New avatar added! Live across Web & Android APK.');
+          this.renderAvatars(container);
+        };
+      }
+
+      // Delete Avatar buttons
+      container.querySelectorAll('.btn-delete-avatar').forEach(btn => {
+        btn.onclick = () => {
+          const u = btn.getAttribute('data-url');
+          if (confirm('Delete this avatar from the user library?')) {
+            this.deleteAvatar(u);
+            this.showToast('🗑️ Avatar deleted successfully');
+            this.renderAvatars(container);
+          }
+        };
+      });
+
+      // Reset Avatars button
+      const btnReset = container.querySelector('#btnResetAvatars');
+      if (btnReset) {
+        btnReset.onclick = () => {
+          if (confirm('Reset avatar library to the default factory set?')) {
+            localStorage.removeItem('peelins_custom_avatars');
+            this.saveAvatars(this.getAvatars());
+            this.showToast('🔄 Avatars reset to default factory collection');
+            this.renderAvatars(container);
+          }
+        };
+      }
+    }
+
+    renderSettings(container) {
+      let waCfg = {
+        enabled: true,
+        groupName: "Peelin's Official VIP Community",
+        inviteLink: "https://chat.whatsapp.com/invite/peelins-official-18",
+        supportNumber: "+919511088531"
+      };
+      const savedWa = localStorage.getItem('peelins_whatsapp_config');
+      if (savedWa) {
+        try { waCfg = Object.assign(waCfg, JSON.parse(savedWa)); } catch (e) {}
+      }
+
+      container.innerHTML = `
+        <div class="admin-topbar">
+          <div>
+            <h1 style="font-size: 1.8rem; font-weight: 800;">App & System Settings</h1>
+            <p style="color: var(--text-muted); font-size: 0.9rem;">Global app configuration, official WhatsApp links, calling rates & safety limits</p>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 20px;">
+          <!-- Official WhatsApp Group Settings -->
+          <div class="glass-panel" style="padding: 24px; border-color: rgba(37, 211, 102, 0.4); box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 16px;">
+              <div style="width: 40px; height: 40px; border-radius: 10px; background: #25D366; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; color: #fff;">
+                💬
+              </div>
+              <div>
+                <h3 style="font-size: 1.15rem; font-weight: 800; color: #fff; margin: 0;">Official WhatsApp Community</h3>
+                <p style="font-size: 0.75rem; color: #86efac; margin: 0;">Invite links shown after registration and in profile</p>
+              </div>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 14px;">
+              <div>
+                <label style="font-size: 0.8rem; font-weight: 700; color: #d1d5db;">Community Group Name</label>
+                <input type="text" id="settingWaGroupName" class="glass-input" value="${waCfg.groupName}" style="margin-top: 5px; width: 100%;" />
+              </div>
+
+              <div>
+                <label style="font-size: 0.8rem; font-weight: 700; color: #d1d5db;">Official Invite Link URL</label>
+                <input type="url" id="settingWaInviteLink" class="glass-input" value="${waCfg.inviteLink}" style="margin-top: 5px; width: 100%; font-family: monospace;" />
+              </div>
+
+              <div>
+                <label style="font-size: 0.8rem; font-weight: 700; color: #d1d5db;">Official Support Mobile Number</label>
+                <input type="tel" id="settingWaSupportNum" class="glass-input" value="${waCfg.supportNumber}" style="margin-top: 5px; width: 100%;" />
+              </div>
+
+              <button id="btnSaveWhatsAppSettings" class="btn-primary" style="margin-top: 6px; padding: 11px; font-weight: 800; background: linear-gradient(135deg, #10b981, #059669); border: none;">
+                Save WhatsApp Settings ✓
+              </button>
+            </div>
+          </div>
+
+          <!-- General App Settings -->
+          <div class="glass-panel" style="padding: 24px; border-color: rgba(255, 0, 127, 0.35);">
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 16px;">
+              <div style="width: 40px; height: 40px; border-radius: 10px; background: #ff007f; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; color: #fff;">
+                ⚙️
+              </div>
+              <div>
+                <h3 style="font-size: 1.15rem; font-weight: 800; color: #fff; margin: 0;">General Platform Rules</h3>
+                <p style="font-size: 0.75rem; color: #ff85c0; margin: 0;">Controls user call quotas & payment details</p>
+              </div>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 14px;">
+              <div>
+                <label style="font-size: 0.8rem; font-weight: 700; color: #d1d5db;">Free Daily Swipes Limit</label>
+                <input type="number" id="settingDailySwipes" class="glass-input" value="25" style="margin-top: 5px; width: 100%;" />
+              </div>
+
+              <div>
+                <label style="font-size: 0.8rem; font-weight: 700; color: #d1d5db;">Daily Free Call Bonus (Minutes)</label>
+                <input type="number" id="settingFreeCallMins" class="glass-input" value="30" style="margin-top: 5px; width: 100%;" />
+              </div>
+
+              <div>
+                <label style="font-size: 0.8rem; font-weight: 700; color: #d1d5db;">UPI ID for Direct Payments</label>
+                <input type="text" id="settingUpiId" class="glass-input" value="peelins@upi" style="margin-top: 5px; width: 100%; font-family: monospace;" />
+              </div>
+
+              <button id="btnSaveGeneralSettings" class="btn-primary" style="margin-top: 6px; padding: 11px; font-weight: 800;">
+                Save Configuration ✓
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+
+      // Bind WhatsApp save
+      const btnSaveWa = container.querySelector('#btnSaveWhatsAppSettings');
+      if (btnSaveWa) {
+        btnSaveWa.onclick = () => {
+          const name = container.querySelector('#settingWaGroupName').value.trim();
+          const link = container.querySelector('#settingWaInviteLink').value.trim();
+          const phone = container.querySelector('#settingWaSupportNum').value.trim();
+          const cfg = { enabled: true, groupName: name, inviteLink: link, supportNumber: phone };
+          localStorage.setItem('peelins_whatsapp_config', JSON.stringify(cfg));
+          try {
+            const bc = new BroadcastChannel('hipa_users_sync');
+            bc.postMessage({ type: 'WHATSAPP_CONFIG_UPDATED', config: cfg });
+            setTimeout(() => bc.close(), 1000);
+          } catch (e) {}
+          this.showToast('✅ WhatsApp community settings saved & broadcasted!');
+        };
+      }
+
+      // Bind General save
+      const btnSaveGen = container.querySelector('#btnSaveGeneralSettings');
+      if (btnSaveGen) {
+        btnSaveGen.onclick = () => {
+          this.showToast('✅ Platform configuration updated successfully!');
+        };
+      }
     }
   }
+
 
 document.addEventListener('DOMContentLoaded', () => {
   const admin = new AdminController();

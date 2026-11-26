@@ -26,11 +26,61 @@ class HipaApp {
   }
 
   init() {
+    this.setupBroadcastSync();
     if (!hipaApi.isLoggedIn()) {
       this.renderOnboardingStep1();
     } else {
       this.renderMainApp();
     }
+  }
+
+  setupBroadcastSync() {
+    try {
+      this.syncChannel = new BroadcastChannel('hipa_users_sync');
+      this.syncChannel.onmessage = (ev) => {
+        if (!ev.data) return;
+        if (ev.data.type === 'VERIFICATION_APPROVED') {
+          const curUser = hipaApi.getUser();
+          if (curUser && (String(curUser.id) === String(ev.data.userId) || curUser.phone === ev.data.phone)) {
+            curUser.verified = true;
+            curUser.verificationStatus = 'approved';
+            hipaApi.saveUser(curUser);
+            this.user = curUser;
+            this.showVerificationApprovedCelebration();
+            if (this.currentTab === 'profile') {
+              const root = document.getElementById('mainViewport');
+              if (root) this.renderProfileTab(root);
+            }
+          }
+        } else if (ev.data.type === 'USER_STATUS_CHANGED') {
+          if (this.currentTab === 'profile') {
+            const root = document.getElementById('mainViewport');
+            if (root) this.renderProfileTab(root);
+          }
+        }
+      };
+    } catch (e) {}
+  }
+
+  showVerificationApprovedCelebration() {
+    const modal = document.createElement('div');
+    modal.className = 'offer-modal-overlay';
+    modal.style.zIndex = '999999';
+    modal.innerHTML = `
+      <div class="offer-card-sheet" style="padding: 26px 20px; text-align: center; max-width: 420px; margin: auto;">
+        <div style="font-size: 3.5rem; margin-bottom: 8px;">🎉</div>
+        <div style="background: rgba(16, 185, 129, 0.15); border: 1.5px solid #10b981; border-radius: 999px; display: inline-block; padding: 4px 14px; color: #10b981; font-weight: 800; font-size: 0.78rem; margin-bottom: 12px;">Female Identity Verification Completed</div>
+        <h2 style="font-size: 1.45rem; font-weight: 900; color: #ffffff; margin-bottom: 8px;">Account Verified & Activated!</h2>
+        <p style="font-size: 0.88rem; color: #d1d5db; line-height: 1.5; margin-bottom: 20px;">
+          Admin has approved your voice note and video verification. Your female profile is now 100% active. You can now receive voice & video calls, earn rewards, and connect freely!
+        </p>
+        <button id="btnDismissVerifCelebration" class="btn-primary" style="width: 100%; padding: 14px; font-size: 1rem; font-weight: 800; background: linear-gradient(135deg, #10b981, #059669); border: none; border-radius: 14px; box-shadow: 0 4px 20px rgba(16, 185, 129, 0.4); cursor: pointer;">
+          Start Connecting Now 🚀
+        </button>
+      </div>
+    `;
+    document.body.appendChild(modal);
+    modal.querySelector('#btnDismissVerifCelebration').onclick = () => modal.remove();
   }
 
   // ==========================================
@@ -377,23 +427,14 @@ class HipaApp {
     };
   }
 
-  // Step 4: Who are you? (Name Input, Gender & 8 3D Pixar Avatars Grid without names)
+  // Step 4: Who are you? (Name Input, Gender & Dynamic Avatars Grid)
   renderOnboardingStep4() {
     const root = document.getElementById('mainViewport');
     root.style.padding = '0';
     root.style.overflowY = 'auto';
     root.style.webkitOverflowScrolling = 'touch';
 
-    const avatarCatalog = [
-      "/images/avatar_female_ashley.jpg",
-      "/images/avatar_male_aryan.jpg",
-      "/images/avatar_female_riya.jpg",
-      "/images/avatar_male_kabir.jpg",
-      "/images/avatar_female_ananya.jpg",
-      "/images/avatar_male_rohan.jpg",
-      "/images/avatar_female_tanya.jpg",
-      "/images/avatar_male_dev.jpg"
-    ];
+    const avatarCatalog = hipaApi.getAvatars();
 
     root.innerHTML = `
       <div class="onboarding-container">
@@ -403,15 +444,30 @@ class HipaApp {
           <div style="flex: 1; height: 6px; background: rgba(255,255,255,0.12); border-radius: 10px; overflow: hidden;">
             <div style="width: 100%; height: 100%; background: var(--primary-gradient); box-shadow: 0 0 10px #ff007f;"></div>
           </div>
-          <span style="font-size: 0.82rem; font-weight: 800; color: #ff85c0;">Final Step</span>
+          <span style="font-size: 0.82rem; font-weight: 800; color: #ff85c0;">Profile Setup</span>
         </div>
 
-        <h1 style="font-size: 1.75rem; font-weight: 900; color: #ffffff; margin-bottom: 4px;">Profile Setup</h1>
+        <h1 style="font-size: 1.75rem; font-weight: 900; color: #ffffff; margin-bottom: 4px;">Choose Your Gender</h1>
         <p style="font-size: 0.88rem; color: #c9bfdc; font-weight: 600; margin-bottom: 18px;">
-          Enter your name, choose your gender & pick your avatar
+          Select your registration type to personalize your experience
         </p>
 
-        <!-- 1. Custom Name Input -->
+        <!-- 1. Gender Selection (Prominent Male vs Female) -->
+        <div class="gender-cards-row" style="margin-bottom: 18px;">
+          <div class="gender-box ${this.selectedGender === 'male' ? 'selected' : ''}" data-gender="male" style="background: rgba(255,255,255,0.06); border: 2px solid ${this.selectedGender === 'male' ? 'var(--primary-pink)' : 'rgba(255,255,255,0.12)'}; border-radius: 20px; padding: 14px; text-align: center; cursor: pointer; transition: all 0.2s ease;">
+            <div class="gender-circle-icon" style="font-size: 2rem; margin-bottom: 4px;">♂</div>
+            <div style="font-size: 1.15rem; font-weight: 900; color: #ffffff; margin-bottom: 2px;">Male Account</div>
+            <div style="font-size: 0.72rem; color: #38bdf8; font-weight: 700;">Connect with verified creators</div>
+          </div>
+
+          <div class="gender-box ${this.selectedGender === 'female' ? 'selected' : ''}" data-gender="female" style="background: rgba(255,255,255,0.06); border: 2px solid ${this.selectedGender === 'female' ? 'var(--primary-pink)' : 'rgba(255,255,255,0.12)'}; border-radius: 20px; padding: 14px; text-align: center; cursor: pointer; transition: all 0.2s ease;">
+            <div class="gender-circle-icon" style="font-size: 2rem; margin-bottom: 4px;">♀</div>
+            <div style="font-size: 1.15rem; font-weight: 900; color: #ffffff; margin-bottom: 2px;">Female Account</div>
+            <div style="font-size: 0.72rem; color: #ff85c0; font-weight: 700;">Voice & Video Verified Creator</div>
+          </div>
+        </div>
+
+        <!-- 2. Custom Name Input -->
         <div style="margin-bottom: 18px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,0,127,0.3); border-radius: 18px; padding: 14px 16px;">
           <label style="display: block; font-size: 0.74rem; font-weight: 800; color: #ff85c0; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 8px;">
             Your Name / Nickname
@@ -419,31 +475,13 @@ class HipaApp {
           <input type="text" id="inputUserName" class="glass-input" placeholder="Enter your name (e.g. Rahul, Priya)" maxlength="24" autocomplete="name" value="" style="padding: 12px 16px; font-size: 1.1rem; font-weight: 700; color: #ffffff !important; background: rgba(255,255,255,0.08); border: 1.5px solid rgba(255,0,127,0.4); border-radius: 14px; width: 100%; outline: none;" />
         </div>
 
-        <!-- 2. Gender Selection -->
-        <label style="display: block; font-size: 0.74rem; font-weight: 800; color: #ff85c0; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 8px;">
-          Select Gender
-        </label>
-        <div class="gender-cards-row" style="margin-bottom: 20px;">
-          <div class="gender-box ${this.selectedGender === 'male' ? 'selected' : ''}" data-gender="male" style="background: rgba(255,255,255,0.06); border: 2px solid ${this.selectedGender === 'male' ? 'var(--primary-pink)' : 'rgba(255,255,255,0.12)'}; border-radius: 20px; padding: 14px; text-align: center; cursor: pointer; transition: all 0.2s ease;">
-            <div class="gender-circle-icon" style="font-size: 2rem; margin-bottom: 4px;">♂</div>
-            <div style="font-size: 1.1rem; font-weight: 900; color: #ffffff; margin-bottom: 2px;">Male</div>
-            <div style="font-size: 0.72rem; color: #ff85c0; font-weight: 700;">Connect with creators</div>
-          </div>
-
-          <div class="gender-box ${this.selectedGender === 'female' ? 'selected' : ''}" data-gender="female" style="background: rgba(255,255,255,0.06); border: 2px solid ${this.selectedGender === 'female' ? 'var(--primary-pink)' : 'rgba(255,255,255,0.12)'}; border-radius: 20px; padding: 14px; text-align: center; cursor: pointer; transition: all 0.2s ease;">
-            <div class="gender-circle-icon" style="font-size: 2rem; margin-bottom: 4px;">♀</div>
-            <div style="font-size: 1.1rem; font-weight: 900; color: #ffffff; margin-bottom: 2px;">Female</div>
-            <div style="font-size: 0.72rem; color: #ff85c0; font-weight: 700;">Become a creator</div>
-          </div>
-        </div>
-
         <!-- 3. Avatar Picker (Photos Only, NO Names on Avatars) -->
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
           <span style="font-size: 0.95rem; font-weight: 900; color: #ffffff;">Pick your avatar</span>
-          <span style="font-size: 0.76rem; color: #ff85c0; font-weight: 700;">Tap to select</span>
+          <span style="font-size: 0.76rem; color: #ff85c0; font-weight: 700;">Select character</span>
         </div>
 
-        <div class="avatar-grid-8" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 22px;">
+        <div class="avatar-grid-8" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px;">
           ${avatarCatalog.map((av) => `
             <div class="avatar-card-tile ${this.selectedAvatar === av ? 'selected' : ''}" data-avatar="${av}" style="padding: 6px; border-radius: 20px; background: rgba(255,255,255,0.06); border: 2.5px solid ${this.selectedAvatar === av ? 'var(--primary-pink)' : 'rgba(255,255,255,0.12)'}; display: flex; align-items: center; justify-content: center; cursor: pointer; position: relative; transition: all 0.2s ease; box-shadow: ${this.selectedAvatar === av ? '0 0 20px rgba(255,0,127,0.5)' : 'none'};">
               <img src="${av}" alt="Avatar" style="width: 100%; aspect-ratio: 1/1; border-radius: 16px; object-fit: cover; display: block;" />
@@ -452,12 +490,19 @@ class HipaApp {
           `).join('')}
         </div>
 
-        <div style="display: flex; align-items: center; gap: 8px; color: #ffd700; font-size: 0.82rem; font-weight: 700; margin-bottom: 18px; background: rgba(255,215,0,0.1); border: 1px solid rgba(255,215,0,0.3); border-radius: 14px; padding: 12px 14px;">
-          <span>🎁</span> Welcome Bonus: <strong>60 Free Coins</strong> will be added to your wallet!
+        <!-- Female Verification Notice -->
+        <div id="femaleVerifNotice" style="display: ${this.selectedGender === 'female' ? 'flex' : 'none'}; align-items: flex-start; gap: 10px; background: rgba(245, 158, 11, 0.12); border: 1.5px solid #f59e0b; border-radius: 16px; padding: 12px 14px; margin-bottom: 18px;">
+          <span style="font-size: 1.3rem;">🛡️</span>
+          <div>
+            <div style="font-size: 0.84rem; font-weight: 900; color: #fbbf24;">Female Security Verification Required</div>
+            <div style="font-size: 0.75rem; color: #d1c7e6; margin-top: 2px;">
+              Female profiles require submitting a short <strong>Voice Note</strong> and <strong>Video Recording</strong> for safety and admin approval.
+            </div>
+          </div>
         </div>
 
         <button class="btn-pink-block" id="btnFinishOnboarding" style="font-size: 1.1rem; font-weight: 900; box-shadow: 0 0 30px rgba(255,0,127,0.55); margin-bottom: 24px;">
-          Complete Setup & Enter Peelin's ➔
+          ${this.selectedGender === 'female' ? 'Continue to Female Verification ➔' : "Complete Setup & Enter Peelin's ➔"}
         </button>
       </div>
     `;
@@ -474,6 +519,16 @@ class HipaApp {
         box.classList.add('selected');
         box.style.borderColor = 'var(--primary-pink)';
         this.selectedGender = box.getAttribute('data-gender');
+
+        const notice = root.querySelector('#femaleVerifNotice');
+        const finishBtn = root.querySelector('#btnFinishOnboarding');
+        if (this.selectedGender === 'female') {
+          if (notice) notice.style.display = 'flex';
+          if (finishBtn) finishBtn.textContent = 'Continue to Female Verification ➔';
+        } else {
+          if (notice) notice.style.display = 'none';
+          if (finishBtn) finishBtn.textContent = "Complete Setup & Enter Peelin's ➔";
+        }
 
         // Pre-select matching default avatar
         const defaultMatch = this.selectedGender === 'female' ? '/images/avatar_female_ashley.jpg' : '/images/avatar_male_aryan.jpg';
@@ -528,10 +583,301 @@ class HipaApp {
         return;
       }
 
-      this.user = hipaApi.finishOnboarding(this.selectedLanguage, this.selectedGender, this.selectedAvatar, enteredName);
+      if (this.selectedGender === 'female') {
+        // Direct female to mandatory voice & video verification step
+        this.renderFemaleVerificationStep(enteredName);
+      } else {
+        // Male finishes onboarding directly
+        this.user = hipaApi.finishOnboarding(this.selectedLanguage, this.selectedGender, this.selectedAvatar, enteredName);
+        root.style.padding = '';
+        this.renderMainApp();
+        this.showPostRegistrationWhatsAppModal();
+      }
+    };
+  }
+
+  // Step 5: Female Identity Verification (Voice Note & Video Recording)
+  renderFemaleVerificationStep(userName) {
+    const root = document.getElementById('mainViewport');
+    root.style.padding = '0';
+    root.style.overflowY = 'auto';
+
+    root.innerHTML = `
+      <div class="onboarding-container" style="padding-bottom: 40px;">
+        <!-- Top Bar -->
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;">
+          <button class="btn-secondary" id="btnBackToStep4" style="width: 42px; height: 42px; border-radius: 50%; padding: 0; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.2); color: #ffffff; font-size: 1.2rem; cursor: pointer;">←</button>
+          <span style="font-size: 0.82rem; font-weight: 800; color: #ff85c0;">Female Security Verification</span>
+        </div>
+
+        <div style="text-align: center; margin-bottom: 16px;">
+          <div style="width: 68px; height: 68px; margin: 0 auto 10px auto; border-radius: 20px; background: linear-gradient(135deg, #ff007f, #7928ca); display: flex; align-items: center; justify-content: center; font-size: 2rem; box-shadow: 0 0 25px rgba(255,0,127,0.5);">
+            🛡️
+          </div>
+          <h1 style="font-size: 1.6rem; font-weight: 900; color: #ffffff; margin-bottom: 4px;">Female Verification</h1>
+          <p style="font-size: 0.84rem; color: #c9bfdc; max-width: 380px; margin: 0 auto;">
+            Submit your <strong>Voice Note</strong> and <strong>Video Recording</strong> to verify identity and unlock creator calling features.
+          </p>
+        </div>
+
+        <form id="formFemaleOnboardingVerif" style="display: flex; flex-direction: column; gap: 14px;">
+          <!-- 1. Voice Note Recording -->
+          <div style="background: rgba(255,255,255,0.05); border: 1.5px solid rgba(255,0,127,0.3); border-radius: 18px; padding: 16px;">
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+              <div class="step-circle">1</div>
+              <label style="font-weight: 800; font-size: 0.92rem; color: #ffffff;">5-Second Voice Note</label>
+            </div>
+            <div style="font-size: 0.78rem; color: #c9bfdc; margin-bottom: 10px;">
+              Say: <em style="color: #ffd700;">"Hi, this is ${userName}, my real voice on Peelin\'s."</em>
+            </div>
+
+            <button type="button" class="voice-record-btn" id="btnRecordVoiceNote">
+              <span id="voiceRecordIcon">🎙️</span>
+              <span id="voiceRecordText">Tap to Record Voice Note</span>
+            </button>
+
+            <div id="voiceNotePreviewBox" style="display: none; margin-top: 12px;">
+              <div style="font-size: 0.75rem; font-weight: 700; color: #10b981; margin-bottom: 4px;">✓ Voice Note Captured:</div>
+              <audio id="voiceNotePlayback" controls style="width: 100%; height: 36px; border-radius: 8px;"></audio>
+            </div>
+          </div>
+
+          <!-- 2. Video Recording / Selfie Video -->
+          <div style="background: rgba(255,255,255,0.05); border: 1.5px solid rgba(255,0,127,0.3); border-radius: 18px; padding: 16px;">
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+              <div class="step-circle">2</div>
+              <label style="font-weight: 800; font-size: 0.92rem; color: #ffffff;">Video Recording / Selfie Video</label>
+            </div>
+            <div style="font-size: 0.78rem; color: #c9bfdc; margin-bottom: 10px;">
+              Capture a short 3-5 second live video selfie waving or saying hello.
+            </div>
+
+            <div style="display: flex; gap: 10px; align-items: center;">
+              <label for="inputVideoFile" class="btn-secondary" style="flex: 1; padding: 12px; font-size: 0.82rem; font-weight: 800; text-align: center; cursor: pointer; background: rgba(255,255,255,0.08); border: 1.5px solid rgba(255,255,255,0.25); border-radius: 14px; color: #ffffff;">
+                📹 Record / Upload Video
+              </label>
+              <input type="file" id="inputVideoFile" accept="video/*" capture="user" style="display: none;" />
+            </div>
+
+            <div id="videoPreviewWrap" style="display: none; margin-top: 12px;">
+              <div style="font-size: 0.75rem; font-weight: 700; color: #10b981; margin-bottom: 4px;">✓ Video Recording Captured:</div>
+              <video id="videoPlaybackPreview" controls style="width: 100%; max-height: 140px; border-radius: 12px; background: #000; border: 1px solid #10b981;"></video>
+            </div>
+          </div>
+
+          <!-- 3. Live Selfie Photo -->
+          <div style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.12); border-radius: 18px; padding: 16px;">
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+              <div class="step-circle">3</div>
+              <label style="font-weight: 800; font-size: 0.92rem; color: #ffffff;">Live Selfie Photo</label>
+            </div>
+            <div style="display: flex; gap: 12px; align-items: center;">
+              <div id="selfieBox" style="width: 70px; height: 70px; border-radius: 14px; background: rgba(255,255,255,0.08); border: 2px dashed rgba(255,0,127,0.5); display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0;">
+                <span id="selfieIcon" style="font-size: 1.6rem;">🤳</span>
+                <img id="selfieImg" src="" style="width: 100%; height: 100%; object-fit: cover; display: none;" />
+              </div>
+              <div style="flex: 1;">
+                <label for="inputSelfieFileStep5" class="btn-secondary" style="padding: 10px; font-size: 0.8rem; font-weight: 800; text-align: center; cursor: pointer; display: block; border-radius: 12px; color: #fff;">
+                  📸 Capture Selfie
+                </label>
+                <input type="file" id="inputSelfieFileStep5" accept="image/*" capture="user" style="display: none;" />
+              </div>
+            </div>
+          </div>
+
+          <!-- 4. Date of Birth -->
+          <div style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.12); border-radius: 18px; padding: 14px 16px;">
+            <label style="display: block; font-size: 0.76rem; font-weight: 800; color: #ff85c0; text-transform: uppercase; margin-bottom: 6px;">Date of Birth (18+ Required)</label>
+            <input type="date" id="inputDobStep5" class="glass-input" required max="2008-11-26" value="2003-05-15" style="padding: 10px 14px; font-size: 0.9rem;" />
+          </div>
+
+          <button type="submit" class="btn-pink-block" id="btnSubmitFemaleVerif" style="font-size: 1.05rem; font-weight: 900; box-shadow: 0 0 25px rgba(255,0,127,0.5); margin-top: 6px;">
+            Submit Verification to Admin ➔
+          </button>
+        </form>
+      </div>
+    `;
+
+    root.querySelector('#btnBackToStep4').onclick = () => this.renderOnboardingStep4();
+
+    // Voice note handler
+    let voiceUrl = "https://actions.google.com/sounds/v1/speech/hello_greeting.ogg";
+    let isRecording = false;
+    let recTimer = null;
+    let recSecs = 0;
+    let mediaRec = null;
+    let chunks = [];
+    const btnRecord = root.querySelector('#btnRecordVoiceNote');
+    const txtRecord = root.querySelector('#voiceRecordText');
+    const iconRecord = root.querySelector('#voiceRecordIcon');
+    const audioBox = root.querySelector('#voiceNotePreviewBox');
+    const audioPlay = root.querySelector('#voiceNotePlayback');
+
+    const stopAudioRec = () => {
+      if (recTimer) clearInterval(recTimer);
+      isRecording = false;
+      btnRecord.classList.remove('recording');
+      iconRecord.textContent = '✓';
+      txtRecord.textContent = 'Voice Note Captured!';
+      if (mediaRec && mediaRec.state !== 'inactive') {
+        mediaRec.stop();
+      } else {
+        audioPlay.src = voiceUrl;
+        audioBox.style.display = 'block';
+      }
+    };
+
+    btnRecord.onclick = async () => {
+      if (!isRecording) {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({ audio: true }).catch(() => null);
+          isRecording = true;
+          btnRecord.classList.add('recording');
+          iconRecord.textContent = '⏹️';
+          recSecs = 0;
+          txtRecord.textContent = 'Recording Voice Note... (05s)';
+
+          recTimer = setInterval(() => {
+            recSecs++;
+            txtRecord.textContent = `Recording Voice Note... (0${Math.max(0, 5 - recSecs)}s)`;
+            if (recSecs >= 5) stopAudioRec();
+          }, 1000);
+
+          if (stream) {
+            mediaRec = new MediaRecorder(stream);
+            chunks = [];
+            mediaRec.ondataavailable = e => chunks.push(e.data);
+            mediaRec.onstop = () => {
+              const blob = new Blob(chunks, { type: 'audio/webm' });
+              voiceUrl = URL.createObjectURL(blob);
+              audioPlay.src = voiceUrl;
+              audioBox.style.display = 'block';
+              stream.getTracks().forEach(t => t.stop());
+            };
+            mediaRec.start();
+          }
+        } catch (err) {
+          isRecording = true;
+          btnRecord.classList.add('recording');
+          setTimeout(() => stopAudioRec(), 3000);
+        }
+      } else {
+        stopAudioRec();
+      }
+    };
+
+    // Video recording handler
+    let videoUrl = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4";
+    const videoInput = root.querySelector('#inputVideoFile');
+    const videoBox = root.querySelector('#videoPreviewWrap');
+    const videoPlay = root.querySelector('#videoPlaybackPreview');
+
+    videoInput.onchange = (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        videoUrl = URL.createObjectURL(file);
+        videoPlay.src = videoUrl;
+        videoBox.style.display = 'block';
+      }
+    };
+
+    // Selfie photo handler
+    let selfieUrl = "/images/avatar_female_ashley.jpg";
+    const selfieInput = root.querySelector('#inputSelfieFileStep5');
+    const selfieImg = root.querySelector('#selfieImg');
+    const selfieIcon = root.querySelector('#selfieIcon');
+
+    selfieInput.onchange = (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = ev => {
+          selfieUrl = ev.target.result;
+          selfieImg.src = selfieUrl;
+          selfieImg.style.display = 'block';
+          selfieIcon.style.display = 'none';
+        };
+        reader.readAsDataURL(file);
+      }
+    };
+
+    // Submit handler
+    const form = root.querySelector('#formFemaleOnboardingVerif');
+    form.onsubmit = async (e) => {
+      e.preventDefault();
+      const dobVal = root.querySelector('#inputDobStep5').value;
+      const birthYear = new Date(dobVal).getFullYear();
+      const age = new Date().getFullYear() - birthYear;
+
+      // 1. Create female account (starts with verificationStatus = 'pending_approval')
+      this.user = hipaApi.finishOnboarding(this.selectedLanguage, 'female', this.selectedAvatar, userName);
+
+      // 2. Submit dossier with Voice Note and Video Recording to Admin
+      await hipaApi.submitVerification({
+        name: userName,
+        gender: 'female',
+        dob: dobVal,
+        age: age,
+        profilePhoto: this.selectedAvatar,
+        selfiePhoto: selfieUrl,
+        audioUrl: voiceUrl,
+        videoUrl: videoUrl,
+        poseReq: "Peace Sign ✌️ & Video Selfie"
+      });
+
       root.style.padding = '';
       this.renderMainApp();
-      setTimeout(() => this.showWelcomeOfferModal(), 800);
+      this.showPostRegistrationWhatsAppModal(true); // female pending flag
+    };
+  }
+
+  // ==========================================
+  // POST-REGISTRATION WHATSAPP MODAL
+  // ==========================================
+  showPostRegistrationWhatsAppModal(isFemalePending = false) {
+    const waCfg = hipaApi.getWhatsAppConfig();
+    const modal = document.createElement('div');
+    modal.className = 'offer-modal-overlay';
+    modal.style.zIndex = '999999';
+
+    modal.innerHTML = `
+      <div class="offer-card-sheet" style="padding: 24px; text-align: center;">
+        <div style="font-size: 3rem; margin-bottom: 8px;">🎉</div>
+        <h2 style="font-size: 1.45rem; font-weight: 900; color: #ffffff; margin-bottom: 6px;">Registration Successful!</h2>
+        
+        ${isFemalePending ? `
+          <div class="female-verif-badge pending" style="text-align: left; margin: 14px 0 18px 0;">
+            <span class="female-verif-icon">⏳</span>
+            <div>
+              <div class="female-verif-title">Verification Under Admin Review</div>
+              <div class="female-verif-desc">Your voice note & video recording have been submitted to Admin. Your profile will show "Pending Verification" until approval.</div>
+            </div>
+          </div>
+        ` : `
+          <p style="font-size: 0.88rem; color: #c9bfdc; margin-bottom: 18px;">
+            Welcome to Peelin's! You've received <strong>+60 Welcome Coins</strong>. Join our official WhatsApp community!
+          </p>
+        `}
+
+        <div style="background: rgba(37, 211, 102, 0.12); border: 1.5px solid #25D366; border-radius: 20px; padding: 18px; margin-bottom: 20px;">
+          <div style="font-size: 2.2rem; margin-bottom: 6px;">💬</div>
+          <div style="font-size: 1.05rem; font-weight: 900; color: #25D366; margin-bottom: 4px;">Join Official WhatsApp Group</div>
+          <div style="font-size: 0.78rem; color: #d1c7e6; margin-bottom: 14px;">Connect with verified creators, platform guidelines & VIP support.</div>
+          <a href="${waCfg.inviteLink}" target="_blank" class="btn-whatsapp" id="btnJoinWaPostReg">
+            <span>🟢</span> Join WhatsApp Group
+          </a>
+        </div>
+
+        <button class="btn-secondary" id="btnCloseWaPostReg" style="width: 100%; padding: 12px; border-radius: 9999px; font-weight: 800; background: rgba(255,255,255,0.08); color: #ffffff; border: 1px solid rgba(255,255,255,0.2);">
+          Enter Peelin's App ➔
+        </button>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+    modal.querySelector('#btnCloseWaPostReg').onclick = () => modal.remove();
+    modal.querySelector('#btnJoinWaPostReg').onclick = () => {
+      setTimeout(() => modal.remove(), 1000);
     };
   }
 
@@ -555,6 +901,39 @@ class HipaApp {
   }
 
   bindGlobalEvents() {
+    // Top Bar Online Status Toggle
+    const topBarOnline = document.getElementById('topBarOnlineStatus');
+    const updateTopBarOnlineUI = () => {
+      const isOnline = hipaApi.getUserOnlineStatus();
+      const dot = document.getElementById('topBarOnlineDot');
+      const text = document.getElementById('topBarOnlineText');
+      if (dot) {
+        dot.style.background = isOnline ? '#10b981' : '#9ca3af';
+        dot.style.boxShadow = isOnline ? '0 0 8px #10b981' : 'none';
+      }
+      if (text) {
+        text.textContent = isOnline ? 'Online' : 'Offline';
+      }
+      if (topBarOnline) {
+        topBarOnline.style.background = isOnline ? 'rgba(16, 185, 129, 0.12)' : 'rgba(156, 163, 175, 0.15)';
+        topBarOnline.style.borderColor = isOnline ? 'rgba(16, 185, 129, 0.35)' : 'rgba(156, 163, 175, 0.4)';
+        topBarOnline.style.color = isOnline ? '#10b981' : '#9ca3af';
+      }
+    };
+    updateTopBarOnlineUI();
+    if (topBarOnline) {
+      topBarOnline.onclick = () => {
+        const cur = hipaApi.getUserOnlineStatus();
+        const next = !cur;
+        hipaApi.setUserOnlineStatus(next);
+        updateTopBarOnlineUI();
+        if (this.currentTab === 'profile') {
+          const root = document.getElementById('mainViewport');
+          if (root) this.renderProfileTab(root);
+        }
+      };
+    }
+
     // Open Wallet on Coin pill tap
     const coinBtn = document.getElementById('btnOpenWalletTop');
     if (coinBtn) {
@@ -1082,6 +1461,11 @@ class HipaApp {
   renderProfileTab(container) {
     const user = this.user || { username: 'JgckA625', avatar: HIPA_AVATARS[0] };
     const warnings = hipaApi.getWarnings();
+    const isFemale = user.gender === 'female';
+    const isApproved = user.verified || user.verificationStatus === 'approved';
+    const isPending = isFemale && !isApproved;
+    const isOnline = user.isOnline !== false;
+    const waCfg = hipaApi.getWhatsAppConfig();
 
     container.innerHTML = `
       <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;">
@@ -1099,16 +1483,82 @@ class HipaApp {
       <!-- Profile Summary Card -->
       <div class="glass-card" style="background: #ffffff; border: 1.5px solid var(--primary-pink); border-radius: var(--radius-lg); padding: 22px 18px; box-shadow: 0 4px 18px rgba(255, 0, 127, 0.12);">
         <div style="display: flex; align-items: center; gap: 16px;">
-          <div style="width: 72px; height: 72px; border-radius: 50%; border: 2.5px solid var(--primary-pink); padding: 2px; position: relative;">
+          <div style="width: 72px; height: 72px; border-radius: 50%; border: 2.5px solid var(--primary-pink); padding: 2px; position: relative; flex-shrink: 0;">
             <img src="${user.avatar || HIPA_AVATARS[0]}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;" />
             <div style="position: absolute; bottom: 0; right: 0; width: 22px; height: 22px; background: var(--primary-pink); border: 2px solid #ffffff; border-radius: 50%; color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 0.7rem;">
               ✏️
             </div>
           </div>
-          <div>
-            <h2 style="font-size: 1.35rem; font-weight: 800; color: #111827;">${user.username}</h2>
-            <div style="font-size: 0.8rem; color: var(--text-muted);">${user.phone || '+91 95110 88531'}</div>
+          <div style="flex: 1; min-width: 0;">
+            <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+              <h2 style="font-size: 1.35rem; font-weight: 800; color: #111827; margin: 0; word-break: break-word;">${user.username}</h2>
+              <span style="font-size: 0.72rem; padding: 2px 8px; border-radius: 999px; font-weight: 800; background: ${user.gender === 'female' ? '#fdf2f8' : '#eff6ff'}; color: ${user.gender === 'female' ? '#db2777' : '#2563eb'}; border: 1px solid ${user.gender === 'female' ? '#fbcfe8' : '#bfdbfe'};">
+                ${user.gender === 'female' ? '♀ Female' : '♂ Male'}
+              </span>
+            </div>
+            <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 2px;">${user.phone || '+91 95110 88531'}</div>
           </div>
+        </div>
+
+        <!-- Female Identity Verification Status Banner -->
+        ${isFemale ? (isApproved ? `
+          <div class="female-verif-badge approved" style="margin-top: 14px; padding: 12px 14px; background: rgba(16, 185, 129, 0.12); border: 1.5px solid #10b981; border-radius: 14px;">
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <span style="font-size: 1.4rem;">🛡️</span>
+                <div>
+                  <div style="font-weight: 800; font-size: 0.92rem; color: #065f46;">Female Identity Verification Completed</div>
+                  <div style="font-size: 0.74rem; color: #047857;">Account approved & 100% active for calls & rewards!</div>
+                </div>
+              </div>
+              <span style="background: #10b981; color: #ffffff; padding: 3px 9px; border-radius: 999px; font-size: 0.7rem; font-weight: 800;">Verified ✓</span>
+            </div>
+          </div>
+        ` : `
+          <div class="female-verif-badge pending" style="margin-top: 14px; padding: 12px 14px; background: rgba(245, 158, 11, 0.12); border: 1.5px solid #f59e0b; border-radius: 14px;">
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <span style="font-size: 1.4rem;">⏳</span>
+                <div>
+                  <div style="font-weight: 800; font-size: 0.92rem; color: #b45309;">Pending Verification</div>
+                  <div style="font-size: 0.74rem; color: #92400e;">Admin is reviewing your voice note & video selfie.</div>
+                </div>
+              </div>
+              <span style="background: #fef3c7; color: #b45309; padding: 3px 9px; border-radius: 999px; font-size: 0.7rem; font-weight: 800;">Under Review</span>
+            </div>
+          </div>
+        `) : ''}
+
+        <!-- Online / Offline Status Toggle Card -->
+        <div style="margin-top: 14px; background: #f9fafb; border: 1.5px solid #e5e7eb; border-radius: 14px; padding: 12px 14px; display: flex; align-items: center; justify-content: space-between;">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <div class="status-dot-indicator ${isOnline ? 'online' : 'offline'}" id="profileStatusDot"></div>
+            <div>
+              <div style="font-size: 0.88rem; font-weight: 800; color: #111827;">Availability Status</div>
+              <div style="font-size: 0.74rem; color: var(--text-muted);" id="profileStatusText">
+                ${isOnline ? '🟢 Online — Visible to calls & match' : '⚪ Offline — Hidden from live discovery'}
+              </div>
+            </div>
+          </div>
+          <button id="btnToggleOnlineStatus" class="btn" style="padding: 7px 16px; font-size: 0.8rem; font-weight: 800; border-radius: 20px; background: ${isOnline ? '#10b981' : '#6b7280'}; color: #ffffff; border: none; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.15);">
+            ${isOnline ? 'Online 🟢' : 'Offline ⚪'}
+          </button>
+        </div>
+
+        <!-- Official WhatsApp Group Card -->
+        <div class="whatsapp-banner-card" style="margin-top: 14px; background: linear-gradient(135deg, rgba(37, 211, 102, 0.12), rgba(18, 140, 126, 0.12)); border: 1.5px solid #25D366; border-radius: 14px; padding: 12px 14px; display: flex; align-items: center; justify-content: space-between; gap: 10px;">
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <div style="width: 40px; height: 40px; border-radius: 10px; background: #25D366; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; color: white; flex-shrink: 0;">
+              💬
+            </div>
+            <div>
+              <div style="font-weight: 800; font-size: 0.88rem; color: #065f46;">Official WhatsApp Group</div>
+              <div style="font-size: 0.72rem; color: #047857;">Exclusive live events & verified creator perks</div>
+            </div>
+          </div>
+          <button id="btnProfileWhatsApp" class="btn-whatsapp" style="padding: 8px 14px; font-size: 0.78rem; font-weight: 800; border-radius: 20px; background: #25D366; color: #ffffff; border: none; cursor: pointer; white-space: nowrap;">
+            Join Group
+          </button>
         </div>
 
         <div style="height: 1px; background: #f3f4f6; margin: 18px 0 14px 0;"></div>
@@ -1230,6 +1680,40 @@ class HipaApp {
       </div>
     `;
 
+    // Bind Online/Offline toggle
+    const btnToggleOnline = container.querySelector('#btnToggleOnlineStatus');
+    if (btnToggleOnline) {
+      btnToggleOnline.onclick = () => {
+        const nextStatus = user.isOnline === false ? true : false;
+        user.isOnline = nextStatus;
+        hipaApi.setUserOnlineStatus(nextStatus);
+        const dot = container.querySelector('#profileStatusDot');
+        const text = container.querySelector('#profileStatusText');
+        if (dot) dot.className = `status-dot-indicator ${nextStatus ? 'online' : 'offline'}`;
+        if (text) text.textContent = nextStatus ? '🟢 Online — Visible to calls & match' : '⚪ Offline — Hidden from live discovery';
+        btnToggleOnline.textContent = nextStatus ? 'Online 🟢' : 'Offline ⚪';
+        btnToggleOnline.style.background = nextStatus ? '#10b981' : '#6b7280';
+        
+        // Also update top bar
+        const topDot = document.getElementById('topBarOnlineDot');
+        const topText = document.getElementById('topBarOnlineText');
+        if (topDot) {
+          topDot.style.background = nextStatus ? '#10b981' : '#9ca3af';
+          topDot.style.boxShadow = nextStatus ? '0 0 8px #10b981' : 'none';
+        }
+        if (topText) topText.textContent = nextStatus ? 'Online' : 'Offline';
+      };
+    }
+
+    // Bind WhatsApp Group button
+    const btnProfileWhatsApp = container.querySelector('#btnProfileWhatsApp');
+    if (btnProfileWhatsApp) {
+      btnProfileWhatsApp.onclick = () => {
+        const cfg = hipaApi.getWhatsAppConfig();
+        window.open(cfg.inviteLink || 'https://chat.whatsapp.com/invite/peelins-official-18', '_blank');
+      };
+    }
+
     // Bind Quick Actions
     container.querySelector('#btnProfileWallet').onclick = () => this.showWalletModal();
     container.querySelector('#btnProfileTransactions').onclick = () => this.showTransactionsModal();
@@ -1251,7 +1735,7 @@ class HipaApp {
     };
 
     container.querySelector('#btnMenuLogout').onclick = () => {
-      if (confirm('Are you sure you want to log out from Hipa?')) {
+      if (confirm('Are you sure you want to log out from Peelin\'s?')) {
         hipaApi.logout();
         this.renderOnboardingStep1();
       }

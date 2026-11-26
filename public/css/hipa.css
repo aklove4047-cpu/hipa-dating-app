@@ -1750,3 +1750,125 @@ body {
   border: 2px solid #0c0814 !important;
   box-shadow: 0 0 10px rgba(255, 0, 127, 0.6) !important;
 }
+
+
+/* Female Verification Status Banners */
+.female-verif-badge {
+  width: 100%;
+  border-radius: 18px;
+  padding: 14px 16px;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+}
+
+.female-verif-badge.pending {
+  background: rgba(245, 158, 11, 0.14) !important;
+  border: 1.5px solid #f59e0b !important;
+  color: #fbbf24 !important;
+}
+
+.female-verif-badge.approved {
+  background: rgba(16, 185, 129, 0.14) !important;
+  border: 1.5px solid #10b981 !important;
+  color: #34d399 !important;
+}
+
+.female-verif-icon {
+  font-size: 1.6rem;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.female-verif-title {
+  font-size: 0.95rem;
+  font-weight: 900;
+  margin-bottom: 2px;
+}
+
+.female-verif-desc {
+  font-size: 0.78rem;
+  color: #d1c7e6;
+  line-height: 1.35;
+}
+
+/* WhatsApp Group Button & Card */
+.btn-whatsapp {
+  background: linear-gradient(135deg, #25D366 0%, #128C7E 100%) !important;
+  color: #ffffff !important;
+  padding: 14px 20px !important;
+  border-radius: 9999px !important;
+  font-size: 0.98rem !important;
+  font-weight: 900 !important;
+  text-decoration: none !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 10px !important;
+  box-shadow: 0 4px 20px rgba(37, 211, 102, 0.45) !important;
+  cursor: pointer !important;
+  border: none !important;
+  transition: all 0.2s ease !important;
+}
+
+.btn-whatsapp:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 6px 25px rgba(37, 211, 102, 0.6) !important;
+}
+
+.whatsapp-banner-card {
+  background: linear-gradient(135deg, rgba(37, 211, 102, 0.12), rgba(18, 140, 126, 0.15)) !important;
+  border: 1.5px solid rgba(37, 211, 102, 0.45) !important;
+  border-radius: 20px !important;
+  padding: 16px !important;
+  margin: 14px 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 12px !important;
+}
+
+/* Online / Offline Status Toggle Pill */
+.online-status-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1.5px solid rgba(255, 255, 255, 0.18);
+  padding: 6px 14px;
+  border-radius: 9999px;
+  cursor: pointer;
+  font-size: 0.82rem;
+  font-weight: 800;
+  transition: all 0.2s ease;
+}
+
+.online-status-toggle.is-online {
+  border-color: #10b981;
+  background: rgba(16, 185, 129, 0.15);
+  color: #34d399;
+  box-shadow: 0 0 15px rgba(16, 185, 129, 0.35);
+}
+
+.online-status-toggle.is-offline {
+  border-color: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.05);
+  color: #9ca3af;
+}
+
+.status-dot-indicator {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.status-dot-indicator.online {
+  background: #10b981;
+  box-shadow: 0 0 8px #10b981;
+}
+
+.status-dot-indicator.offline {
+  background: #9ca3af;
+}
