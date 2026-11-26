@@ -7,11 +7,13 @@
              Recent Calls Log, Friends Deck, User Profile & Settings.
    ========================================================= */
 
-import { hipaApi, HIPA_CREATORS, HIPA_COIN_PACKS, HIPA_LANGUAGES, HIPA_AVATARS } from './api.js?v=9.0';
+import { hipaApi, HIPA_CREATORS, HIPA_COIN_PACKS, HIPA_LANGUAGES, HIPA_AVATARS, HIPA_GIFTS, HIPA_STORIES, hipaAudio } from './api.js?v=10.0';
 
 class HipaApp {
   constructor() {
     this.currentTab = 'home';
+    this.discoveryMode = 'creators'; // 'creators' | 'swipe'
+    this.currentSwipeIndex = 0;
     this.selectedLanguage = 'Hindi';
     this.selectedGender = 'male';
     this.selectedAvatar = HIPA_AVATARS[0];
@@ -439,92 +441,286 @@ class HipaApp {
   }
 
   // ==========================================
-  // TAB 1: HOME (Creators List & Category Filters)
+  // TAB 1: HOME (Dual Mode: Live Directory & 3D Swipe Deck)
   // ==========================================
   renderHomeTab(container) {
-    const categories = ['Chats', 'All', 'New', 'Marathi', 'Bengali', 'Odia', 'Hindi', 'Tamil', 'Telugu', 'Punjabi'];
+    const categories = ['All', 'Trending 🔥', 'Video 📹', 'Audio 📞', 'Hindi', 'Punjabi', 'Marathi', 'Bengali', 'Tamil', 'Telugu'];
 
     let creators = HIPA_CREATORS;
-    if (this.activeCategory !== 'All' && this.activeCategory !== 'Chats' && this.activeCategory !== 'New') {
-      creators = HIPA_CREATORS.filter(c => c.language.toLowerCase() === this.activeCategory.toLowerCase());
+    if (this.activeCategory === 'Video 📹') {
+      creators = HIPA_CREATORS.filter(c => c.videoOnline);
+    } else if (this.activeCategory === 'Audio 📞') {
+      creators = HIPA_CREATORS.filter(c => c.voiceRate > 0);
+    } else if (this.activeCategory === 'Trending 🔥') {
+      creators = [...HIPA_CREATORS].sort((a, b) => b.callsCount - a.callsCount);
+    } else if (this.activeCategory !== 'All') {
+      creators = HIPA_CREATORS.filter(c => c.language.toLowerCase().includes(this.activeCategory.toLowerCase()));
     }
 
     container.innerHTML = `
-      <!-- Horizontal Category Pills -->
-      <div class="hima-categories" style="margin: -16px -16px 14px -16px;">
-        ${categories.map(cat => `
-          <button class="cat-pill ${this.activeCategory === cat ? 'active' : ''}" data-cat="${cat}">
-            ${cat === 'Chats' ? '💬 ' : (cat === 'All' ? '👥 ' : (cat === 'New' ? '✨ ' : ''))}${cat}
-          </button>
+      <!-- 1. Live Stories / Reels Carousel -->
+      <div class="stories-bar" style="margin: -14px -14px 10px -14px;">
+        ${HIPA_STORIES.map(st => `
+          <div class="story-item" data-id="${st.id}">
+            <div class="story-avatar-wrap ${st.isLive ? 'live' : ''}">
+              <img src="${st.avatar}" alt="${st.name}" />
+              ${st.isLive ? '<span class="story-badge-live">LIVE</span>' : ''}
+            </div>
+            <span class="story-name">${st.name}</span>
+          </div>
         `).join('')}
       </div>
 
-      <!-- Welcome Offer Banner Card -->
-      <div class="glass-card" id="bannerWelcomeOffer" style="background: var(--primary-gradient); color: #ffffff; padding: 14px 18px; border-radius: var(--radius-md); display: flex; align-items: center; justify-content: space-between; cursor: pointer; margin-bottom: 14px; box-shadow: var(--shadow-pink);">
-        <div style="display: flex; align-items: center; gap: 12px;">
-          <div style="font-size: 2rem;">🪙</div>
-          <div>
-            <div style="font-weight: 900; font-size: 1.05rem;">Get 60 Coins for only ₹14</div>
-            <div style="font-size: 0.75rem; opacity: 0.9;">Save 65% • Limited welcome offer</div>
-          </div>
-        </div>
-        <button class="btn-secondary" style="background: #ffffff; color: var(--primary-pink); font-size: 0.8rem; font-weight: 800; border: none; padding: 8px 14px; border-radius: var(--radius-full);">
-          Claim 🎁
+      <!-- 2. Discovery Mode Toggle Bar -->
+      <div class="discovery-toggle-bar">
+        <button class="discovery-tab-btn ${this.discoveryMode === 'creators' ? 'active' : ''}" data-mode="creators">
+          📹 Live Creators
+        </button>
+        <button class="discovery-tab-btn ${this.discoveryMode === 'swipe' ? 'active' : ''}" data-mode="swipe">
+          🔥 Vibe Swipe
         </button>
       </div>
 
-      <!-- Creators List -->
-      <div class="creators-list">
-        ${creators.map(c => `
-          <div class="creator-card" data-id="${c.id}">
-            <div class="creator-left">
-              <div class="creator-avatar-wrap">
-                <img src="${c.avatar}" alt="${c.name}" />
-                <span class="status-dot ${c.online ? 'online' : 'offline'}"></span>
+      <!-- Quick Feature Access Strip -->
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 12px 0 14px 0;">
+        <div id="btnOpenLuckyWheel" style="background: linear-gradient(135deg, rgba(255, 215, 0, 0.18), rgba(255, 0, 127, 0.18)); border: 1.5px solid rgba(255, 215, 0, 0.4); border-radius: 16px; padding: 10px 14px; display: flex; align-items: center; gap: 10px; cursor: pointer; box-shadow: 0 4px 15px rgba(0,0,0,0.3);">
+          <span style="font-size: 1.5rem;">🎁</span>
+          <div>
+            <div style="font-weight: 900; font-size: 0.82rem; color: #ffd700;">Daily Lucky Spin</div>
+            <div style="font-size: 0.68rem; color: #d1c7e6;">Win free coins daily</div>
+          </div>
+        </div>
+
+        <div id="btnOpenVIPClub" style="background: linear-gradient(135deg, rgba(168, 85, 247, 0.18), rgba(255, 0, 127, 0.18)); border: 1.5px solid rgba(168, 85, 247, 0.4); border-radius: 16px; padding: 10px 14px; display: flex; align-items: center; gap: 10px; cursor: pointer; box-shadow: 0 4px 15px rgba(0,0,0,0.3);">
+          <span style="font-size: 1.5rem;">👑</span>
+          <div>
+            <div style="font-weight: 900; font-size: 0.82rem; color: #ff85c0;">Hipa VIP Pass</div>
+            <div style="font-size: 0.68rem; color: #d1c7e6;">Free calls & perks</div>
+          </div>
+        </div>
+      </div>
+
+      ${this.discoveryMode === 'creators' ? `
+        <!-- FEATURED HERO CARD (Ashley - Exact Image 2 Representation) -->
+        <div class="featured-hero-card">
+          <img src="/images/avatar_female_ashley.jpg" class="featured-hero-img" alt="Ashley" />
+          <div class="featured-hero-overlay">
+            <div class="hero-creator-header">
+              <div class="hero-creator-name">
+                Ashley <span class="hero-verified-pill" title="18+ Verified">✓</span>
               </div>
-              <div>
-                <div class="creator-name">${c.name}</div>
-                <div style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600;">
-                  ${c.language} • ⭐ ${c.rating}
+              <button class="btn-send-gift-hero" data-id="1" style="background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.25); border-radius: 9999px; padding: 6px 14px; color: #fff; font-weight: 800; font-size: 0.78rem; cursor: pointer; display: flex; align-items: center; gap: 5px;">
+                🎁 Send Gift
+              </button>
+            </div>
+            <div class="hero-creator-bio">
+              Free spirited traveler exploring hidden gems, new cuisines, and unforgettable global experiences daily.
+            </div>
+            <div class="hero-tags-grid">
+              <span class="hero-tag-pill">photography 📷</span>
+              <span class="hero-tag-pill">politics 🏛️</span>
+              <span class="hero-tag-pill">travel ✈️</span>
+              <span class="hero-tag-pill">sports ⚽</span>
+            </div>
+            <!-- Dual Call Rate Buttons from Screenshot -->
+            <div class="hero-call-actions-row">
+              <button class="hero-call-btn-card btn-hero-voice" data-id="1" title="Start Audio Call with Ashley">
+                <div class="hero-call-btn-top audio">
+                  <span style="font-size: 1.6rem; color: #ffffff;">📞</span>
+                </div>
+                <div class="hero-call-btn-bottom">
+                  <span>🪙 10/min</span>
+                  <span>⏱️ 8 mins</span>
+                </div>
+              </button>
+              <button class="hero-call-btn-card btn-hero-video" data-id="1" title="Start Video Call with Ashley">
+                <div class="hero-call-btn-top video">
+                  <span style="font-size: 1.6rem; color: #ffffff;">📹</span>
+                </div>
+                <div class="hero-call-btn-bottom">
+                  <span>🪙 10/min</span>
+                  <span>⏱️ 8 mins</span>
+                </div>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Welcome Offer Banner Card -->
+        <div class="glass-card" id="bannerWelcomeOffer" style="background: linear-gradient(135deg, rgba(255, 0, 127, 0.85) 0%, rgba(121, 40, 202, 0.85) 100%); color: #ffffff; padding: 14px 18px; border-radius: var(--radius-md); display: flex; align-items: center; justify-content: space-between; cursor: pointer; margin-bottom: 14px; box-shadow: var(--shadow-pink); border: 1px solid rgba(255, 255, 255, 0.2);">
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <div style="font-size: 2rem;">🪙</div>
+            <div>
+              <div style="font-weight: 900; font-size: 1.05rem;">Get 60 Coins for only ₹14</div>
+              <div style="font-size: 0.75rem; opacity: 0.9;">Save 65% • Limited welcome offer</div>
+            </div>
+          </div>
+          <button class="btn-secondary" style="background: #ffffff; color: var(--primary-pink); font-size: 0.8rem; font-weight: 800; border: none; padding: 8px 14px; border-radius: var(--radius-full); box-shadow: 0 4px 12px rgba(0,0,0,0.2);">
+            Claim 🎁
+          </button>
+        </div>
+
+        <!-- Horizontal Category Pills -->
+        <div class="hima-categories" style="margin: 0 -14px 14px -14px;">
+          ${categories.map(cat => `
+            <button class="cat-pill ${this.activeCategory === cat ? 'active' : ''}" data-cat="${cat}">
+              ${cat}
+            </button>
+          `).join('')}
+        </div>
+
+        <!-- Creators Grid -->
+        <div class="creators-list">
+          ${creators.map(c => `
+            <div class="creator-card" data-id="${c.id}">
+              <div class="creator-left">
+                <div class="creator-avatar-wrap">
+                  <img src="${c.avatar}" alt="${c.name}" />
+                  <span class="status-dot ${c.online ? 'online' : 'offline'}"></span>
+                </div>
+                <div>
+                  <div class="creator-name" style="display: flex; align-items: center; gap: 6px;">
+                    ${c.name}
+                    ${c.verified ? '<span style="color: #0284c7; font-size: 0.85rem;" title="Verified">✓</span>' : ''}
+                  </div>
+                  <div style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600; margin-top: 2px;">
+                    ${c.language} • ⭐ ${c.rating} • ${c.callsCount}+ calls
+                  </div>
+                </div>
+              </div>
+
+              <div class="creator-actions">
+                <!-- Gift Button -->
+                <button class="btn-quick-gift" data-id="${c.id}" style="background: rgba(255,255,255,0.06); border: 1px solid rgba(255,0,127,0.25); border-radius: 50%; width: 38px; height: 38px; color: #ffd700; font-size: 1.1rem; cursor: pointer; display: flex; align-items: center; justify-content: center;" title="Send Gift">
+                  🎁
+                </button>
+
+                <!-- Voice Call Button -->
+                <button class="creator-call-action btn-voice-call" data-id="${c.id}" title="Start Voice Call">
+                  <div class="call-icon-round voice" style="width: 40px; height: 40px; font-size: 1.15rem;">📞</div>
+                  <span class="call-rate-tag" style="color: #d1c7e6; font-size: 0.68rem;">🪙 ${c.voiceRate}/m</span>
+                </button>
+
+                <!-- Video Call Button -->
+                <button class="creator-call-action btn-video-call" data-id="${c.id}" title="Start Video Call">
+                  <div class="call-icon-round video ${!c.videoOnline ? 'disabled' : ''}" style="width: 40px; height: 40px; font-size: 1.15rem;">📹</div>
+                  <span class="call-rate-tag ${!c.videoOnline ? 'offline-text' : ''}" style="color: #ff85c0; font-size: 0.68rem;">
+                    ${c.videoOnline ? '🪙 ' + c.videoRate + '/m' : 'Off'}
+                  </span>
+                </button>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      ` : `
+        <!-- 3D VIBE SWIPE DECK MODE -->
+        ${(() => {
+          const profile = HIPA_CREATORS[this.currentSwipeIndex % HIPA_CREATORS.length];
+          return `
+            <div class="swipe-deck-wrap">
+              <div class="swipe-card-3d">
+                <img src="${profile.avatar}" class="swipe-card-img" alt="${profile.name}" />
+                <div class="featured-hero-overlay">
+                  <div style="display: flex; align-items: center; justify-content: space-between;">
+                    <div style="font-size: 1.8rem; font-weight: 900; color: #fff;">
+                      ${profile.name}, ${profile.age} <span class="hero-verified-pill">✓</span>
+                    </div>
+                    <span class="glass-pill" style="font-size: 0.75rem; background: rgba(255,0,127,0.3); color: #fff;">${profile.language}</span>
+                  </div>
+                  <p style="font-size: 0.88rem; color: #e2d9f3; line-height: 1.4;">${profile.bio || "Looking to connect live on audio & video call! ✨"}</p>
+                  <div class="hero-tags-grid">
+                    ${(profile.tags || ['music 🎵', 'travel ✈️', 'chat 💬']).map(t => `<span class="hero-tag-pill">${t}</span>`).join('')}
+                  </div>
                 </div>
               </div>
             </div>
 
-            <div class="creator-actions">
-              <!-- Voice Call Button -->
-              <button class="creator-call-action btn-voice-call" data-id="${c.id}" title="Start Voice Call">
-                <div class="call-icon-round voice">📞</div>
-                <span class="call-rate-tag">🪙 ${c.voiceRate}/min</span>
-              </button>
-
-              <!-- Video Call Button -->
-              <button class="creator-call-action btn-video-call" data-id="${c.id}" title="Start Video Call">
-                <div class="call-icon-round video ${!c.videoOnline ? 'disabled' : ''}">📹</div>
-                <span class="call-rate-tag ${!c.videoOnline ? 'offline-text' : ''}">
-                  ${c.videoOnline ? '🪙 ' + c.videoRate + '/min' : 'Offline'}
-                </span>
-              </button>
+            <!-- Swipe Action Buttons Dock -->
+            <div class="swipe-controls-dock">
+              <button class="swipe-action-btn pass" id="btnSwipePass" title="Pass">✕</button>
+              <button class="swipe-action-btn superlike" id="btnSwipeSuperlike" title="Superlike">⭐</button>
+              <button class="swipe-action-btn like" id="btnSwipeLike" title="Like">💖</button>
+              <button class="swipe-action-btn call" id="btnSwipeCall" data-id="${profile.id}" title="Direct Live Call">📞</button>
             </div>
-          </div>
-        `).join('')}
-      </div>
+            <div style="text-align: center; color: var(--text-muted); font-size: 0.78rem; margin-top: 6px;">
+              Swipe or tap 💖 to match • 📞 to call live
+            </div>
+          `;
+        })()}
+      `}
     `;
 
-    // Category click
-    container.querySelectorAll('.cat-pill').forEach(btn => {
+    // 1. Stories Click
+    container.querySelectorAll('.story-item').forEach(el => {
+      el.onclick = () => {
+        const sid = Number(el.getAttribute('data-id'));
+        const story = HIPA_STORIES.find(s => s.id === sid);
+        if (story) this.showStoryModal(story);
+      };
+    });
+
+    // 2. Discovery Mode Switch
+    container.querySelectorAll('.discovery-tab-btn').forEach(btn => {
       btn.onclick = () => {
-        this.activeCategory = btn.getAttribute('data-cat');
+        this.discoveryMode = btn.getAttribute('data-mode');
+        hipaAudio.playPop();
         this.renderHomeTab(container);
       };
     });
 
-    // Banner click
-    const banner = container.querySelector('#bannerWelcomeOffer');
-    if (banner) {
-      banner.onclick = () => this.showWelcomeOfferModal();
+    // 3. Quick Hub Modals
+    const btnWheel = container.querySelector('#btnOpenLuckyWheel');
+    if (btnWheel) btnWheel.onclick = () => this.showLuckyWheelModal();
+
+    const btnVIP = container.querySelector('#btnOpenVIPClub');
+    if (btnVIP) btnVIP.onclick = () => this.showVIPMembershipModal();
+
+    // 4. Hero Ashley Call Buttons
+    const heroVoice = container.querySelector('.btn-hero-voice');
+    if (heroVoice) {
+      heroVoice.onclick = () => {
+        const ashley = HIPA_CREATORS[0];
+        this.startCall(ashley, 'voice');
+      };
+    }
+    const heroVideo = container.querySelector('.btn-hero-video');
+    if (heroVideo) {
+      heroVideo.onclick = () => {
+        const ashley = HIPA_CREATORS[0];
+        this.startCall(ashley, 'video');
+      };
+    }
+    const heroGift = container.querySelector('.btn-send-gift-hero');
+    if (heroGift) {
+      heroGift.onclick = () => {
+        const ashley = HIPA_CREATORS[0];
+        this.showGiftModal(ashley);
+      };
     }
 
-    // Call buttons
+    // 5. Category filter clicks
+    container.querySelectorAll('.cat-pill').forEach(btn => {
+      btn.onclick = () => {
+        this.activeCategory = btn.getAttribute('data-cat');
+        hipaAudio.playPop();
+        this.renderHomeTab(container);
+      };
+    });
+
+    // 6. Welcome Offer banner
+    const banner = container.querySelector('#bannerWelcomeOffer');
+    if (banner) banner.onclick = () => this.showWelcomeOfferModal();
+
+    // 7. Grid Call & Gift buttons
+    container.querySelectorAll('.btn-quick-gift').forEach(btn => {
+      btn.onclick = (e) => {
+        e.stopPropagation();
+        const cid = Number(btn.getAttribute('data-id'));
+        const creator = HIPA_CREATORS.find(c => c.id === cid);
+        if (creator) this.showGiftModal(creator);
+      };
+    });
+
     container.querySelectorAll('.btn-voice-call').forEach(btn => {
       btn.onclick = (e) => {
         e.stopPropagation();
@@ -546,6 +742,47 @@ class HipaApp {
         this.startCall(creator, 'video');
       };
     });
+
+    // 8. Swipe Controls
+    const btnPass = container.querySelector('#btnSwipePass');
+    if (btnPass) {
+      btnPass.onclick = () => {
+        hipaAudio.playPop();
+        this.currentSwipeIndex++;
+        this.renderHomeTab(container);
+      };
+    }
+
+    const btnSuperlike = container.querySelector('#btnSwipeSuperlike');
+    if (btnSuperlike) {
+      btnSuperlike.onclick = () => {
+        hipaAudio.playHeart();
+        alert(`⭐ Superliked! You stand out to ${HIPA_CREATORS[this.currentSwipeIndex % HIPA_CREATORS.length].name}!`);
+        this.currentSwipeIndex++;
+        this.renderHomeTab(container);
+      };
+    }
+
+    const btnLike = container.querySelector('#btnSwipeLike');
+    if (btnLike) {
+      btnLike.onclick = () => {
+        const creator = HIPA_CREATORS[this.currentSwipeIndex % HIPA_CREATORS.length];
+        hipaAudio.playHeart();
+        this.triggerFlyingGiftAnimation('💖');
+        alert(`🎉 It's a Vibe Match with ${creator.name}!\nConnect on video or audio call now.`);
+        this.currentSwipeIndex++;
+        this.renderHomeTab(container);
+      };
+    }
+
+    const btnCallSwipe = container.querySelector('#btnSwipeCall');
+    if (btnCallSwipe) {
+      btnCallSwipe.onclick = () => {
+        const cid = Number(btnCallSwipe.getAttribute('data-id'));
+        const creator = HIPA_CREATORS.find(c => c.id === cid);
+        if (creator) this.startCall(creator, 'video');
+      };
+    }
   }
 
   // ==========================================
@@ -1121,7 +1358,7 @@ class HipaApp {
   }
 
   // ==========================================
-  // LIVE WEBRTC CALLING SCREEN (18+ Mandatory Protected)
+  // LIVE WEBRTC CALLING SCREEN (Ultra-Realistic HUD & Safety)
   // ==========================================
   startCall(creator, type = 'voice') {
     // 18+ Mandatory Verification & Admin Approval Gate
@@ -1140,55 +1377,81 @@ class HipaApp {
       return;
     }
 
+    hipaAudio.playRing();
+
     const overlay = document.createElement('div');
-    overlay.className = 'offer-modal-overlay';
-    overlay.style.alignItems = 'center';
-    overlay.style.justifyContent = 'center';
+    overlay.className = 'call-fullscreen-hud';
 
     let secondsElapsed = 0;
+    let isFilterActive = false;
+    let isMuted = false;
 
     overlay.innerHTML = `
-      <div style="width: 100%; height: 100%; background: #0f0a1c; display: flex; flex-direction: column; align-items: center; justify-content: space-between; padding: 40px 20px; position: relative;">
-        <!-- Watermark & In-Call Safety Actions -->
-        <div class="watermark-overlay">
-          🛡️ Hipa 18+ Verified • End-to-End Encrypted Call • ID #${this.user?.id || 'User'}
+      <!-- Background Video Stream Simulation -->
+      <img id="callRemoteVideo" src="${creator.avatar}" class="call-remote-bg" style="filter: brightness(0.85);" />
+
+      <!-- Watermark & Top Safety Bar -->
+      <div class="call-top-hud">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <div style="width: 10px; height: 10px; border-radius: 50%; background: #10b981; box-shadow: 0 0 10px #10b981;"></div>
+          <span style="font-size: 0.82rem; font-weight: 800; color: #fff; letter-spacing: 0.5px;">LIVE ${type.toUpperCase()}</span>
+          <span style="font-size: 0.72rem; color: #ffd700; background: rgba(0,0,0,0.5); padding: 2px 8px; border-radius: 6px;">🪙 ${costPerMin}/min</span>
         </div>
-        <div style="position: absolute; top: 16px; right: 18px; z-index: 100;">
-          <button id="btnInCallReport" style="background: rgba(239, 68, 68, 0.25); border: 1px solid rgba(239, 68, 68, 0.6); color: #fca5a5; padding: 6px 12px; border-radius: 9999px; font-weight: 700; font-size: 0.75rem; display: flex; align-items: center; gap: 4px; cursor: pointer;">
-            🚨 Report & Block
+
+        <button id="btnInCallReport" style="background: rgba(239, 68, 68, 0.35); border: 1px solid rgba(239, 68, 68, 0.7); color: #fff; padding: 6px 14px; border-radius: 9999px; font-weight: 800; font-size: 0.75rem; display: flex; align-items: center; gap: 5px; cursor: pointer; backdrop-filter: blur(8px);">
+          🚨 Report & Block
+        </button>
+      </div>
+
+      <!-- Watermark -->
+      <div class="watermark-overlay" style="top: 80px; left: 20px;">
+        🛡️ Hipa 18+ Encrypted Call • Verified Creator #${creator.id}
+      </div>
+
+      <!-- Local PIP Camera (Picture-in-Picture) -->
+      ${type === 'video' ? `
+        <div class="call-local-pip" id="pipCamera">
+          <img src="${this.selectedAvatar || '/images/avatar_male_aryan.jpg'}" alt="You" />
+          <div style="position: absolute; bottom: 4px; left: 6px; font-size: 0.62rem; color: #fff; font-weight: 800; background: rgba(0,0,0,0.6); padding: 1px 4px; border-radius: 4px;">You</div>
+        </div>
+      ` : ''}
+
+      <!-- Center Creator Call Info -->
+      <div style="position: relative; z-index: 10; text-align: center; color: #ffffff; margin-top: auto; margin-bottom: 20px;">
+        <h2 style="font-size: 2rem; font-weight: 900; margin-bottom: 4px; text-shadow: 0 4px 15px rgba(0,0,0,0.8);">${creator.name}</h2>
+        <div style="font-size: 0.88rem; color: #ffd1e3; font-weight: 700;">${creator.language} • ${creator.bio || 'Connected live'}</div>
+        <div id="liveCallTimer" style="font-size: 1.6rem; font-weight: 900; color: #ffffff; margin-top: 8px; font-family: monospace; text-shadow: 0 2px 10px rgba(0,0,0,0.9);">00:00</div>
+      </div>
+
+      <!-- Bottom In-Call Controls Dock -->
+      <div class="call-bottom-hud">
+        <!-- Live Coin Balance Tracker -->
+        <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.6); backdrop-filter: blur(12px); border: 1px solid rgba(255,215,0,0.3); border-radius: var(--radius-full); padding: 8px 16px;">
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <span style="font-size: 1.1rem;">🪙</span>
+            <span style="font-size: 0.82rem; font-weight: 800; color: #ffd700;">Balance: <strong id="callLiveCoins">${hipaApi.getCoins()}</strong> coins</span>
+          </div>
+          <button id="btnInCallQuickGift" style="background: var(--primary-gradient); border: none; color: #fff; padding: 4px 12px; border-radius: 9999px; font-weight: 800; font-size: 0.75rem; cursor: pointer;">
+            🎁 Send Gift
           </button>
         </div>
 
-        <!-- Top Call Header -->
-        <div style="text-align: center; color: #ffffff; margin-top: 15px;">
-          <div class="glass-pill" style="background: rgba(255,255,255,0.15); color: #2ee6a6; margin-bottom: 12px; font-weight: 700;">
-            ● LIVE ${type.toUpperCase()} CALL
-          </div>
-          <h2 style="font-size: 1.8rem; font-weight: 800; margin-bottom: 4px;">${creator.name}</h2>
-          <div style="font-size: 0.88rem; color: var(--text-muted); font-weight: 600;">${creator.language} • Rate: 🪙 ${costPerMin}/min</div>
-          <div id="liveCallTimer" style="font-size: 1.4rem; font-weight: 900; color: #ffffff; margin-top: 10px;">00:00</div>
-        </div>
-
-        <!-- Central Avatar / Simulated Video -->
-        <div style="width: 180px; height: 180px; border-radius: 50%; padding: 4px; border: 3px solid var(--primary-pink); box-shadow: 0 0 40px rgba(255, 0, 127, 0.4); overflow: hidden;">
-          <img src="${creator.avatar}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;" />
-        </div>
-
-        <!-- Coin Balance live meter -->
-        <div class="glass-pill" style="background: rgba(255, 215, 0, 0.2); color: #ffd700; border: 1px solid rgba(255, 215, 0, 0.4); font-size: 0.85rem; font-weight: 800;">
-          Wallet Balance: <span id="callLiveCoins">${hipaApi.getCoins()}</span> coins
-        </div>
-
-        <!-- In-Call Control Buttons -->
-        <div style="display: flex; gap: 24px; align-items: center;">
-          <button class="call-icon-round" id="btnToggleMute" style="width: 54px; height: 54px; background: rgba(255,255,255,0.15); color: #ffffff; border: none;">
+        <!-- Controls Row -->
+        <div style="display: flex; gap: 18px; align-items: center; justify-content: center;">
+          <button class="call-icon-round" id="btnToggleMute" style="width: 52px; height: 52px; background: rgba(255,255,255,0.18); backdrop-filter: blur(10px); color: #ffffff; border: 1px solid rgba(255,255,255,0.3); font-size: 1.3rem;">
             🎤
           </button>
-          <button class="call-icon-round" id="btnEndCall" style="width: 68px; height: 68px; background: #ef4444; color: #ffffff; border: none; font-size: 1.8rem; box-shadow: 0 6px 20px rgba(239,68,68,0.4);">
+          
+          <button class="call-icon-round" id="btnToggleFilter" style="width: 52px; height: 52px; background: rgba(255,255,255,0.18); backdrop-filter: blur(10px); color: #ffd700; border: 1px solid rgba(255,215,0,0.4); font-size: 1.3rem;" title="Toggle Beauty Filter">
+            ✨
+          </button>
+
+          <button class="call-icon-round" id="btnEndCall" style="width: 68px; height: 68px; background: #ef4444; color: #ffffff; border: none; font-size: 1.9rem; box-shadow: 0 0 30px rgba(239, 68, 68, 0.7); cursor: pointer;">
             📞
           </button>
-          <button class="call-icon-round" id="btnToggleCam" style="width: 54px; height: 54px; background: rgba(255,255,255,0.15); color: #ffffff; border: none;">
-            📷
+
+          <button class="call-icon-round" id="btnToggleCam" style="width: 52px; height: 52px; background: rgba(255,255,255,0.18); backdrop-filter: blur(10px); color: #ffffff; border: 1px solid rgba(255,255,255,0.3); font-size: 1.3rem;" title="Switch Camera">
+            🔄
           </button>
         </div>
       </div>
@@ -1202,7 +1465,8 @@ class HipaApp {
       hipaApi.deductCoins(costPerMin, `Call with ${creator.name}`);
       hipaApi.recordCall(creator, type, secondsElapsed, coinsCharged);
       hipaApi.addFriend(creator);
-      document.getElementById('userCoinsCount').textContent = hipaApi.getCoins();
+      const coinEl = document.getElementById('userCoinsCount');
+      if (coinEl) coinEl.textContent = hipaApi.getCoins();
       overlay.remove();
     };
 
@@ -1220,16 +1484,39 @@ class HipaApp {
           alert('Coins exhausted! Call ended.');
           endCall();
         } else {
+          hipaAudio.playCoin();
           const liveCoinEl = overlay.querySelector('#callLiveCoins');
           if (liveCoinEl) liveCoinEl.textContent = hipaApi.getCoins();
-          document.getElementById('userCoinsCount').textContent = hipaApi.getCoins();
+          const coinEl = document.getElementById('userCoinsCount');
+          if (coinEl) coinEl.textContent = hipaApi.getCoins();
         }
       }
     }, 1000);
 
     overlay.querySelector('#btnEndCall').onclick = endCall;
-    overlay.querySelector('#btnToggleMute').onclick = () => alert('Microphone toggled');
-    overlay.querySelector('#btnToggleCam').onclick = () => alert('Camera switched');
+
+    overlay.querySelector('#btnToggleMute').onclick = () => {
+      isMuted = !isMuted;
+      overlay.querySelector('#btnToggleMute').style.background = isMuted ? '#ef4444' : 'rgba(255,255,255,0.18)';
+      overlay.querySelector('#btnToggleMute').textContent = isMuted ? '🔇' : '🎤';
+    };
+
+    overlay.querySelector('#btnToggleFilter').onclick = () => {
+      isFilterActive = !isFilterActive;
+      const remoteImg = overlay.querySelector('#callRemoteVideo');
+      if (remoteImg) {
+        remoteImg.style.filter = isFilterActive ? 'brightness(1.08) contrast(1.1) saturate(1.2)' : 'brightness(0.85)';
+      }
+      overlay.querySelector('#btnToggleFilter').style.boxShadow = isFilterActive ? '0 0 20px #ffd700' : 'none';
+    };
+
+    overlay.querySelector('#btnToggleCam').onclick = () => {
+      alert('Camera view switched.');
+    };
+
+    overlay.querySelector('#btnInCallQuickGift').onclick = () => {
+      this.showGiftModal(creator);
+    };
 
     // Report & Block button
     overlay.querySelector('#btnInCallReport').onclick = async () => {
@@ -1239,6 +1526,251 @@ class HipaApp {
         alert(`🚨 ${creator.name} has been reported and blocked immediately. Our Safety Team has been notified.`);
         endCall();
       }
+    };
+  }
+
+  // ==========================================
+  // MEGA FEATURE MODALS: Stories, Gifts, Wheel, VIP
+  // ==========================================
+
+  showStoryModal(story) {
+    const modal = document.createElement('div');
+    modal.className = 'offer-modal-overlay';
+    modal.style.alignItems = 'center';
+    modal.style.justifyContent = 'center';
+
+    modal.innerHTML = `
+      <div style="width: 100%; max-width: 440px; height: 85vh; border-radius: 26px; overflow: hidden; position: relative; background: #0c0814; box-shadow: 0 0 50px rgba(0,0,0,0.9); border: 1.5px solid rgba(255,0,127,0.4);">
+        <!-- Story Progress Bar -->
+        <div style="position: absolute; top: 14px; left: 16px; right: 16px; height: 3px; background: rgba(255,255,255,0.3); border-radius: 4px; z-index: 20; overflow: hidden;">
+          <div style="height: 100%; width: 100%; background: #ff007f; animation: storyProgress 5s linear forwards;"></div>
+        </div>
+        <style>@keyframes storyProgress { from { width: 0%; } to { width: 100%; } }</style>
+
+        <!-- Story Header -->
+        <div style="position: absolute; top: 26px; left: 16px; right: 16px; display: flex; align-items: center; justify-content: space-between; z-index: 20;">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <img src="${story.avatar}" style="width: 38px; height: 38px; border-radius: 50%; object-fit: cover; border: 2px solid #ff007f;" />
+            <div>
+              <div style="font-weight: 800; font-size: 0.95rem; color: #fff;">${story.name}</div>
+              <div style="font-size: 0.72rem; color: #ffd1e3;">${story.time}</div>
+            </div>
+          </div>
+          <button id="btnCloseStory" style="background: rgba(0,0,0,0.5); border: none; color: #fff; width: 32px; height: 32px; border-radius: 50%; font-size: 1rem; cursor: pointer;">✕</button>
+        </div>
+
+        <!-- Story Media -->
+        <img src="${story.preview}" style="width: 100%; height: 100%; object-fit: cover;" />
+
+        <!-- Bottom Actions -->
+        <div style="position: absolute; bottom: 0; left: 0; right: 0; padding: 24px 18px; background: linear-gradient(0deg, rgba(0,0,0,0.95) 0%, transparent 100%); z-index: 20; display: flex; flex-direction: column; gap: 12px;">
+          <div style="font-size: 1rem; font-weight: 700; color: #fff;">${story.caption}</div>
+          <div style="display: flex; gap: 10px;">
+            <button id="btnStoryQuickCall" style="flex: 2; padding: 14px; border-radius: 9999px; background: var(--primary-gradient); color: #fff; border: none; font-weight: 800; font-size: 0.92rem; cursor: pointer; box-shadow: 0 4px 20px rgba(255,0,127,0.5);">
+              📹 Call ${story.name} Now
+            </button>
+            <button id="btnStoryQuickGift" style="flex: 1; padding: 14px; border-radius: 9999px; background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); color: #ffd700; font-weight: 800; font-size: 0.88rem; cursor: pointer;">
+              🎁 Gift
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    const closeStory = () => modal.remove();
+    modal.querySelector('#btnCloseStory').onclick = closeStory;
+
+    const timer = setTimeout(closeStory, 5500);
+
+    modal.querySelector('#btnStoryQuickCall').onclick = () => {
+      clearTimeout(timer);
+      closeStory();
+      const creator = HIPA_CREATORS.find(c => c.id === story.creatorId) || HIPA_CREATORS[0];
+      this.startCall(creator, 'video');
+    };
+
+    modal.querySelector('#btnStoryQuickGift').onclick = () => {
+      clearTimeout(timer);
+      closeStory();
+      const creator = HIPA_CREATORS.find(c => c.id === story.creatorId) || HIPA_CREATORS[0];
+      this.showGiftModal(creator);
+    };
+  }
+
+  showGiftModal(creator) {
+    const modal = document.createElement('div');
+    modal.className = 'offer-modal-overlay';
+
+    modal.innerHTML = `
+      <div class="offer-card-sheet" style="background: #130a21; border-top: 2px solid #ff007f; padding: 22px 18px 30px 18px; color: #fff;">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;">
+          <div>
+            <h3 style="font-size: 1.25rem; font-weight: 900; color: #fff; margin: 0;">Send a Gift to ${creator.name}</h3>
+            <span style="font-size: 0.78rem; color: #c9bfdc;">Coins Left: <strong style="color: #ffd700;">${hipaApi.getCoins()} 🪙</strong></span>
+          </div>
+          <button id="btnCloseGiftModal" style="background: rgba(255,255,255,0.1); border: none; width: 32px; height: 32px; border-radius: 50%; color: #fff; cursor: pointer;">✕</button>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 20px;">
+          ${HIPA_GIFTS.map(g => `
+            <div class="gift-select-card" data-id="${g.id}" style="background: rgba(255,255,255,0.06); border: 1.5px solid rgba(255,0,127,0.25); border-radius: 18px; padding: 14px 8px; text-align: center; cursor: pointer; transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);">
+              <div style="font-size: 2.3rem; margin-bottom: 4px;">${g.icon}</div>
+              <div style="font-weight: 800; font-size: 0.82rem; color: #fff;">${g.name}</div>
+              <div style="font-size: 0.75rem; color: #ffd700; font-weight: 800; margin-top: 2px;">🪙 ${g.coins}</div>
+            </div>
+          `).join('')}
+        </div>
+
+        <button id="btnRechargeFromGifts" class="btn-pink-block" style="padding: 12px; font-size: 0.9rem;">
+          🪙 Get More Coins
+        </button>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    modal.querySelector('#btnCloseGiftModal').onclick = () => modal.remove();
+    modal.querySelector('#btnRechargeFromGifts').onclick = () => {
+      modal.remove();
+      this.showWalletModal();
+    };
+
+    modal.querySelectorAll('.gift-select-card').forEach(btn => {
+      btn.onclick = () => {
+        const gid = btn.getAttribute('data-id');
+        const res = hipaApi.sendGift(creator.id, gid);
+        if (res.ok) {
+          modal.remove();
+          this.triggerFlyingGiftAnimation(res.gift.icon);
+          const coinEl = document.getElementById('userCoinsCount');
+          if (coinEl) coinEl.textContent = hipaApi.getCoins();
+          alert(`💖 You sent a ${res.gift.name} (${res.gift.icon}) to ${creator.name}!`);
+        } else {
+          if (res.balanceNeeded) {
+            modal.remove();
+            this.showWelcomeOfferModal();
+          } else {
+            alert(res.error);
+          }
+        }
+      };
+    });
+  }
+
+  triggerFlyingGiftAnimation(giftIcon) {
+    const fx = document.createElement('div');
+    fx.className = 'flying-gift-fx';
+    fx.textContent = giftIcon;
+    fx.style.left = '50%';
+    fx.style.top = '50%';
+    document.body.appendChild(fx);
+    setTimeout(() => fx.remove(), 1500);
+  }
+
+  showLuckyWheelModal() {
+    const modal = document.createElement('div');
+    modal.className = 'offer-modal-overlay';
+    modal.style.alignItems = 'center';
+    modal.style.justifyContent = 'center';
+
+    const canSpin = hipaApi.canSpinDaily();
+
+    modal.innerHTML = `
+      <div style="width: 100%; max-width: 360px; background: #130a21; border: 2px solid #ffd700; border-radius: 28px; padding: 26px 20px; text-align: center; color: #fff; box-shadow: 0 0 50px rgba(255,215,0,0.4); position: relative;">
+        <button id="btnCloseWheel" style="position: absolute; top: 14px; right: 16px; background: rgba(255,255,255,0.1); border: none; width: 30px; height: 30px; border-radius: 50%; color: #fff; cursor: pointer;">✕</button>
+
+        <h2 style="font-size: 1.5rem; font-weight: 900; color: #ffd700; margin-bottom: 4px;">Daily Lucky Spin 🎡</h2>
+        <p style="font-size: 0.8rem; color: #d1c7e6; margin-bottom: 16px;">Spin the lucky wheel once every 24 hours to win up to 200 free coins!</p>
+
+        <!-- Wheel Visual -->
+        <div style="position: relative; width: 220px; height: 220px; margin: 0 auto 20px auto;">
+          <div class="wheel-pointer"></div>
+          <div id="wheelSpinner" class="lucky-wheel-container" style="width: 220px; height: 220px; background: conic-gradient(#ff007f 0deg 45deg, #7928ca 45deg 90deg, #ffd700 90deg 135deg, #10b981 135deg 180deg, #ff007f 180deg 225deg, #3b82f6 225deg 270deg, #f59e0b 270deg 315deg, #ec4899 315deg 360deg);">
+            <div style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 1.8rem; font-weight: 900; color: #fff; text-shadow: 0 2px 10px rgba(0,0,0,0.8);">
+              🪙
+            </div>
+          </div>
+        </div>
+
+        <button id="btnSpinWheelAction" class="btn-pink-block" style="padding: 14px; font-size: 1rem; ${!canSpin ? 'opacity: 0.6; pointer-events: none;' : ''}">
+          ${canSpin ? '🎰 Spin Now (Free)' : '⏳ Claimed Today (Come back tomorrow)'}
+        </button>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    modal.querySelector('#btnCloseWheel').onclick = () => modal.remove();
+
+    const spinBtn = modal.querySelector('#btnSpinWheelAction');
+    if (spinBtn && canSpin) {
+      spinBtn.onclick = () => {
+        spinBtn.disabled = true;
+        spinBtn.textContent = 'Spinning...';
+        const spinner = modal.querySelector('#wheelSpinner');
+        const randomDeg = 1440 + Math.floor(Math.random() * 360);
+        spinner.style.transform = `rotate(${randomDeg}deg)`;
+
+        setTimeout(() => {
+          const res = hipaApi.spinLuckyWheel();
+          if (res.ok) {
+            this.triggerFlyingGiftAnimation('🪙');
+            const coinEl = document.getElementById('userCoinsCount');
+            if (coinEl) coinEl.textContent = hipaApi.getCoins();
+            alert(`🎉 Congratulations! You won ${res.prizeWon} Free Hipa Coins!\nNew Balance: ${res.newBalance} coins`);
+            modal.remove();
+          } else {
+            alert(res.error);
+          }
+        }, 4200);
+      };
+    }
+  }
+
+  showVIPMembershipModal() {
+    const modal = document.createElement('div');
+    modal.className = 'offer-modal-overlay';
+
+    modal.innerHTML = `
+      <div class="offer-card-sheet" style="background: #11091d; border-top: 2px solid #ffd700; padding: 24px 20px 34px 20px; color: #fff;">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="font-size: 1.8rem;">👑</span>
+            <h3 style="font-size: 1.35rem; font-weight: 900; color: #ffd700; margin: 0;">Hipa VIP Club</h3>
+          </div>
+          <button id="btnCloseVIPModal" style="background: rgba(255,255,255,0.1); border: none; width: 32px; height: 32px; border-radius: 50%; color: #fff; cursor: pointer;">✕</button>
+        </div>
+
+        <div class="vip-pass-card">
+          <div style="font-size: 1.3rem; font-weight: 900; color: #ffd700; margin-bottom: 4px;">Gold Pass Exclusive</div>
+          <div style="font-size: 0.82rem; color: #e2d9f3; line-height: 1.4;">Enjoy unlimited priority matching, 200 free coins bonus, and verified gold border.</div>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 22px; font-size: 0.88rem; color: #d1c7e6;">
+          <div>✓ 200 Free Coins credited immediately</div>
+          <div>✓ 5x higher calling priority with verified creators</div>
+          <div>✓ Shimmering Gold Crown badge on profile</div>
+          <div>✓ Unlimited rewinds in Swipe Vibe</div>
+        </div>
+
+        <button id="btnUpgradeVIPGold" class="btn-pink-block" style="background: linear-gradient(135deg, #ffd700 0%, #f59e0b 50%, #ff007f 100%); color: #000; font-weight: 900; padding: 14px; font-size: 1.05rem;">
+          Upgrade to VIP Gold for ₹199
+        </button>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    modal.querySelector('#btnCloseVIPModal').onclick = () => modal.remove();
+    modal.querySelector('#btnUpgradeVIPGold').onclick = () => {
+      hipaApi.upgradeVIP('gold');
+      const coinEl = document.getElementById('userCoinsCount');
+      if (coinEl) coinEl.textContent = hipaApi.getCoins();
+      this.triggerFlyingGiftAnimation('👑');
+      alert('👑 Welcome to Hipa VIP Gold Club! 200 bonus coins added.');
+      modal.remove();
     };
   }
 

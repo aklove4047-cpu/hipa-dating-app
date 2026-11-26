@@ -230,6 +230,62 @@ export const HIPA_AVATARS = [
   "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=300&q=80"
 ];
 
+export const HIPA_GIFTS = [
+  { id: "rose", name: "Rose", icon: "🌹", coins: 5, animation: "fly-rose" },
+  { id: "heart", name: "Heart", icon: "💖", coins: 20, animation: "fly-heart" },
+  { id: "letter", name: "Love Note", icon: "💌", coins: 50, animation: "fly-letter" },
+  { id: "diamond", name: "Diamond", icon: "💎", coins: 100, animation: "fly-diamond" },
+  { id: "car", name: "Sports Car", icon: "🏎️", coins: 500, animation: "fly-car" },
+  { id: "crown", name: "Royal Crown", icon: "👑", coins: 1000, animation: "fly-crown" }
+];
+
+export const HIPA_STORIES = [
+  { id: 1, creatorId: 1, name: "Ashley", avatar: "/images/avatar_female_ashley.jpg", isLive: true, time: "Live Now", preview: "/images/avatar_female_ashley.jpg", caption: "Live in Mumbai! Join my video call 🌟" },
+  { id: 2, creatorId: 2, name: "Aryan", avatar: "/images/avatar_male_aryan.jpg", isLive: false, time: "12m ago", preview: "/images/avatar_male_aryan.jpg", caption: "Sunset vibes & jam session 🎸" },
+  { id: 3, creatorId: 5, name: "Simran", avatar: "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=400&q=80", isLive: true, time: "2m ago", preview: "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=400&q=80", caption: "Late night Punjabi chat ready! 📹" },
+  { id: 4, creatorId: 4, name: "Khushi", avatar: "https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=400&q=80", isLive: true, time: "5m ago", preview: "https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=400&q=80", caption: "Singing acoustic melodies today 🎵" },
+  { id: 5, creatorId: 3, name: "Jannat", avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80", isLive: false, time: "40m ago", preview: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80", caption: "Coffee first, feelings later ☕" }
+];
+
+export const hipaAudio = {
+  ctx: null,
+  init() {
+    if (!this.ctx && typeof window !== 'undefined' && (window.AudioContext || window.webkitAudioContext)) {
+      this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+  },
+  playTone(freq, type = 'sine', duration = 0.15, vol = 0.12) {
+    try {
+      this.init();
+      if (!this.ctx) return;
+      if (this.ctx.state === 'suspended') this.ctx.resume();
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = type;
+      osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+      gain.gain.setValueAtTime(vol, this.ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + duration);
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+      osc.start();
+      osc.stop(this.ctx.currentTime + duration);
+    } catch (e) {}
+  },
+  playPop() { this.playTone(600, 'sine', 0.08, 0.15); },
+  playCoin() { 
+    this.playTone(987, 'sine', 0.1, 0.12);
+    setTimeout(() => this.playTone(1318, 'sine', 0.2, 0.12), 60);
+  },
+  playHeart() {
+    this.playTone(523, 'triangle', 0.12, 0.15);
+    setTimeout(() => this.playTone(659, 'triangle', 0.18, 0.15), 80);
+  },
+  playRing() {
+    this.playTone(440, 'sine', 0.2, 0.1);
+    setTimeout(() => this.playTone(480, 'sine', 0.2, 0.1), 100);
+  }
+};
+
 class HipaApiService {
   constructor() {
     // Migration: read from hipa_* first, fallback to hima_*
@@ -609,6 +665,74 @@ class HipaApiService {
     } catch (e) {}
 
     return report;
+  }
+
+  sendGift(creatorId, giftId) {
+    const gift = HIPA_GIFTS.find(g => g.id === giftId);
+    if (!gift) return { ok: false, error: "Gift not found" };
+
+    const currentCoins = this.getCoins();
+    if (currentCoins < gift.coins) {
+      return { ok: false, error: `Need ${gift.coins} coins (Balance: ${currentCoins})`, balanceNeeded: true };
+    }
+
+    this.spendCoins(gift.coins);
+
+    let giftsSent = JSON.parse(localStorage.getItem('hipa_gifts_sent') || '[]');
+    giftsSent.unshift({
+      id: Date.now(),
+      creatorId,
+      giftId,
+      giftName: gift.name,
+      giftIcon: gift.icon,
+      coins: gift.coins,
+      timestamp: new Date().toLocaleTimeString()
+    });
+    localStorage.setItem('hipa_gifts_sent', JSON.stringify(giftsSent.slice(0, 50)));
+
+    hipaAudio.playCoin();
+
+    try {
+      const bc = new BroadcastChannel('hipa_users_sync');
+      bc.postMessage({ type: 'GIFT_SENT', creatorId, gift });
+      setTimeout(() => bc.close(), 1000);
+    } catch (e) {}
+
+    return { ok: true, gift, remainingCoins: this.getCoins() };
+  }
+
+  canSpinDaily() {
+    const lastSpin = localStorage.getItem('hipa_last_lucky_spin');
+    if (!lastSpin) return true;
+    const diffHours = (Date.now() - parseInt(lastSpin, 10)) / (1000 * 60 * 60);
+    return diffHours >= 24;
+  }
+
+  spinLuckyWheel() {
+    if (!this.canSpinDaily()) {
+      return { ok: false, error: "Daily spin already used today. Come back tomorrow!" };
+    }
+
+    const prizes = [5, 10, 15, 20, 25, 50, 100, 200];
+    const prizeWon = prizes[Math.floor(Math.random() * prizes.length)];
+
+    this.addCoins(prizeWon);
+    localStorage.setItem('hipa_last_lucky_spin', Date.now().toString());
+
+    hipaAudio.playCoin();
+
+    return { ok: true, prizeWon, newBalance: this.getCoins() };
+  }
+
+  getVIPStatus() {
+    return localStorage.getItem('hipa_vip_membership') || 'free';
+  }
+
+  upgradeVIP(tier = 'gold') {
+    localStorage.setItem('hipa_vip_membership', tier);
+    this.addCoins(tier === 'diamond' ? 500 : 200);
+    hipaAudio.playCoin();
+    return { ok: true, tier };
   }
 }
 

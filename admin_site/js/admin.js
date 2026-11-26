@@ -380,6 +380,26 @@ class AdminController {
 
     ADMIN_DATA.reports = Array.from(rMap.values()).filter(r => r.status === 'open');
     this.updateReportsBadge();
+
+    // 3. Sync Call Logs & Gifts
+    try {
+      const callLogs = JSON.parse(localStorage.getItem('hipa_call_logs') || '[]');
+      if (callLogs.length > 0) {
+        ADMIN_DATA.calls = callLogs.map((cl, idx) => ({
+          id: cl.id || `C-${1000 + idx}`,
+          caller: cl.callerName || 'Registered User',
+          callee: cl.creatorName || cl.callee || 'Creator',
+          type: cl.type === 'video' ? 'Video' : 'Voice',
+          duration: cl.duration ? `${Math.floor(cl.duration / 60)}m ${cl.duration % 60}s` : '1m 15s',
+          status: 'Completed',
+          coins: cl.coinsCharged || 10,
+          time: cl.timestamp || new Date().toLocaleTimeString()
+        }));
+        ADMIN_DATA.kpis.callsToday = ADMIN_DATA.calls.length.toString();
+        const callEl = document.getElementById('kpiCallsTodayVal');
+        if (callEl) callEl.textContent = ADMIN_DATA.calls.length;
+      }
+    } catch (e) {}
   }
 
   updateVerificationBadge() {
