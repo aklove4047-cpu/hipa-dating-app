@@ -40,6 +40,11 @@ class HipaApp {
   // Step 1: Get Started / Mobile Number & Instant Demo Login
   renderOnboardingStep1() {
     const root = document.getElementById('mainViewport');
+    // Ensure smooth full-page scrolling without layout locks
+    root.style.padding = '0';
+    root.style.overflowY = 'auto';
+    root.style.webkitOverflowScrolling = 'touch';
+
     const topBar = document.getElementById('hipaTopBar') || document.getElementById('himaTopBar');
     if (topBar) topBar.style.display = 'none';
     const bNav = document.getElementById('hipaBottomNav') || document.getElementById('himaBottomNav');
@@ -48,7 +53,7 @@ class HipaApp {
     if (btnR) btnR.style.display = 'none';
 
     root.innerHTML = `
-      <div class="onboarding-container" style="justify-content: space-between; padding-bottom: 24px;">
+      <div class="onboarding-container">
         <div class="onboarding-header-decor">
           <div style="width: 88px; height: 88px; border-radius: 24px; overflow: hidden; margin: 0 auto 12px auto; box-shadow: 0 0 35px rgba(255, 0, 127, 0.65); border: 2px solid rgba(255, 0, 127, 0.5);">
             <img src="/images/peelins_logo.jpg" style="width: 100%; height: 100%; object-fit: cover;" alt="Peelin's Logo" />
@@ -59,7 +64,7 @@ class HipaApp {
           </div>
           <p style="font-size: 0.95rem; color: #ff85c0; font-weight: 700; margin-top: 2px; text-shadow: 0 0 12px rgba(255,0,127,0.4);">Meet Live • Feel Real</p>
 
-          <div class="features-row" style="margin-top: 16px; margin-bottom: 8px;">
+          <div class="features-row" style="margin-top: 16px; margin-bottom: 12px;">
             <div class="feat-item">
               <div class="feat-icon-sq" style="background: linear-gradient(135deg, #ff007f, #ec4899); box-shadow: 0 0 16px rgba(255,0,127,0.45);">📹</div>
               <span style="color: #ffffff;">Video Call</span>
@@ -79,7 +84,7 @@ class HipaApp {
           </div>
         </div>
 
-        <div style="background: rgba(22, 14, 38, 0.88); border: 1.5px solid rgba(255, 0, 127, 0.35); border-radius: 24px; padding: 22px 18px; margin-top: auto; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.7); backdrop-filter: blur(20px);">
+        <div style="background: rgba(22, 14, 38, 0.88); border: 1.5px solid rgba(255, 0, 127, 0.35); border-radius: 24px; padding: 22px 18px; margin-top: 14px; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.7); backdrop-filter: blur(20px);">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
             <h2 style="font-size: 1.45rem; font-weight: 900; color: #ffffff; margin: 0;">Get Started</h2>
             <span style="font-size: 0.72rem; color: #10b981; background: rgba(16,185,129,0.15); border: 1px solid rgba(16,185,129,0.35); padding: 2px 8px; border-radius: 9999px; font-weight: 800;">🔒 Secure Login</span>
@@ -179,15 +184,17 @@ class HipaApp {
   // Step 2: Verify OTP
   renderOnboardingStep2(phone) {
     const root = document.getElementById('mainViewport');
+    root.style.padding = '0';
+    root.style.overflowY = 'auto';
 
     root.innerHTML = `
-      <div class="onboarding-container" style="justify-content: space-between; padding-bottom: 24px;">
-        <div style="display: flex; align-items: center; justify-content: space-between; padding-top: 10px;">
+      <div class="onboarding-container">
+        <div style="display: flex; align-items: center; justify-content: space-between; padding-top: 6px;">
           <button class="btn-secondary" id="btnBackToPhone" style="width: 42px; height: 42px; border-radius: 50%; padding: 0; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.2); color: #ffffff; font-size: 1.2rem; cursor: pointer;">←</button>
           <span style="font-size: 0.8rem; font-weight: 800; color: #ff85c0;">Step 2 of 4</span>
         </div>
 
-        <div class="onboarding-header-decor" style="padding: 10px 0;">
+        <div class="onboarding-header-decor" style="padding: 14px 0;">
           <div style="width: 72px; height: 72px; border-radius: 20px; overflow: hidden; margin: 0 auto 10px auto; box-shadow: 0 0 30px rgba(255, 0, 127, 0.6); border: 2px solid rgba(255, 0, 127, 0.4);">
             <img src="/images/peelins_logo.jpg" style="width: 100%; height: 100%; object-fit: cover;" alt="Peelin's Logo" />
           </div>
@@ -195,7 +202,7 @@ class HipaApp {
           <p style="font-size: 0.85rem; color: #c9bfdc; font-weight: 700;">Meet Live • Feel Real</p>
         </div>
 
-        <div style="background: rgba(22, 14, 38, 0.88); border: 1.5px solid rgba(255, 0, 127, 0.35); border-radius: 24px; padding: 22px 18px; margin-top: auto; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.7); backdrop-filter: blur(20px);">
+        <div style="background: rgba(22, 14, 38, 0.88); border: 1.5px solid rgba(255, 0, 127, 0.35); border-radius: 24px; padding: 22px 18px; margin-top: 10px; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.7); backdrop-filter: blur(20px);">
           <h2 style="font-size: 1.45rem; font-weight: 900; color: #ffffff; margin-bottom: 4px;">Verify OTP</h2>
           <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px;">
             <span style="font-size: 0.86rem; color: #c9bfdc;">
@@ -244,7 +251,6 @@ class HipaApp {
     const digits = root.querySelectorAll('.otp-box-digit');
     if (digits[0]) digits[0].focus();
 
-    // Auto-advance & backspace
     digits.forEach((el, idx) => {
       el.oninput = (e) => {
         e.target.value = e.target.value.replace(/\D/g, '').slice(-1);
@@ -287,35 +293,58 @@ class HipaApp {
     };
   }
 
-  // Step 3: Choose Your Language
+  // Step 3: Choose Your Language (Fully Scrollable Grid)
   renderOnboardingStep3() {
     const root = document.getElementById('mainViewport');
+    // Ensure smooth full-page scrolling without layout locks
+    root.style.padding = '0';
+    root.style.overflowY = 'auto';
+    root.style.webkitOverflowScrolling = 'touch';
+
+    // 10 Key Languages including English and Hindi
+    const languages = [
+      { code: "hi", name: "Hindi", native: "हिंदी", char: "ह" },
+      { code: "en", name: "English", native: "English", char: "E" },
+      { code: "pa", name: "Punjabi", native: "ਪੰਜਾਬੀ", char: "ਪ" },
+      { code: "mr", name: "Marathi", native: "मराठी", char: "म" },
+      { code: "bn", name: "Bengali", native: "বাংলা", char: "ব" },
+      { code: "te", name: "Telugu", native: "తెలుగు", char: "తె" },
+      { code: "ta", name: "Tamil", native: "தமிழ்", char: "த" },
+      { code: "gu", name: "Gujarati", native: "ગુજરાતી", char: "ગ" },
+      { code: "kn", name: "Kannada", native: "ಕನ್ನಡ", char: "ಕ" },
+      { code: "ml", name: "Malayalam", native: "മലയാളം", char: "മ" }
+    ];
 
     root.innerHTML = `
-      <div class="onboarding-container" style="justify-content: flex-start; position: relative; padding-bottom: 90px; overflow-y: auto;">
+      <div class="onboarding-container">
         <!-- Top Bar -->
-        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;">
           <button class="btn-secondary" id="btnBackToOtp" style="width: 42px; height: 42px; border-radius: 50%; padding: 0; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.2); color: #ffffff; font-size: 1.2rem; cursor: pointer;">←</button>
-          <span style="font-size: 0.8rem; font-weight: 800; color: #ff85c0;">Step 3 of 4</span>
+          <span style="font-size: 0.82rem; font-weight: 800; color: #ff85c0;">Step 3 of 4</span>
         </div>
 
         <h1 style="font-size: 1.75rem; font-weight: 900; color: #ffffff; margin-bottom: 4px;">Choose your language</h1>
-        <p style="font-size: 0.86rem; color: #c9bfdc; font-weight: 600; margin-bottom: 18px;">
+        <p style="font-size: 0.88rem; color: #c9bfdc; font-weight: 600; margin-bottom: 20px;">
           Select language to connect with creators who speak your mother tongue
         </p>
 
-        <!-- Languages 3x3 Grid -->
-        <div class="languages-grid" style="margin-bottom: 20px;">
-          ${HIPA_LANGUAGES.map((lang) => `
-            <div class="lang-card-item ${this.selectedLanguage === lang.name ? 'selected' : ''}" data-lang="${lang.name}" style="background: rgba(255,255,255,0.06); border: 1.5px solid ${this.selectedLanguage === lang.name ? 'var(--primary-pink)' : 'rgba(255,255,255,0.1)'}; border-radius: 16px; padding: 14px 10px; text-align: center; cursor: pointer; transition: all 0.2s ease;">
-              <div style="font-size: 1.35rem; font-weight: 900; color: #ffffff; margin-bottom: 4px;">${lang.native}</div>
-              <div style="font-size: 0.8rem; color: #ff85c0; font-weight: 700;">${lang.name}</div>
+        <!-- Languages Grid (All 10 Visible & Fully Scrollable) -->
+        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 24px;">
+          ${languages.map((lang) => `
+            <div class="lang-card-item ${this.selectedLanguage === lang.name ? 'selected' : ''}" data-lang="${lang.name}" style="background: rgba(255,255,255,0.06); border: 2px solid ${this.selectedLanguage === lang.name ? 'var(--primary-pink)' : 'rgba(255,255,255,0.12)'}; border-radius: 18px; padding: 14px 12px; display: flex; align-items: center; gap: 12px; cursor: pointer; transition: all 0.2s ease; box-shadow: ${this.selectedLanguage === lang.name ? '0 0 20px rgba(255,0,127,0.45)' : 'none'};">
+              <div style="width: 40px; height: 40px; border-radius: 12px; background: ${this.selectedLanguage === lang.name ? 'var(--primary-gradient)' : 'rgba(255,255,255,0.1)'}; color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 1.15rem; font-weight: 900; flex-shrink: 0;">
+                ${lang.char}
+              </div>
+              <div>
+                <div style="font-size: 1.05rem; font-weight: 900; color: #ffffff;">${lang.native}</div>
+                <div style="font-size: 0.78rem; color: #ff85c0; font-weight: 700;">${lang.name}</div>
+              </div>
             </div>
           `).join('')}
         </div>
 
-        <!-- Sticky Continue Button -->
-        <div style="position: absolute; bottom: 0; left: 0; right: 0; background: linear-gradient(to top, #0c0814 80%, transparent); padding: 16px 20px;">
+        <!-- Continue Button (In-Flow, Never Overlaps Content) -->
+        <div style="margin-top: 10px; padding-bottom: 20px;">
           <button class="btn-pink-block" id="btnContinueLanguage" style="font-size: 1.05rem; font-weight: 900; box-shadow: 0 0 25px rgba(255,0,127,0.5);">
             Continue ➔
           </button>
@@ -329,10 +358,16 @@ class HipaApp {
       card.onclick = () => {
         root.querySelectorAll('.lang-card-item').forEach(c => {
           c.classList.remove('selected');
-          c.style.borderColor = 'rgba(255,255,255,0.1)';
+          c.style.borderColor = 'rgba(255,255,255,0.12)';
+          c.style.boxShadow = 'none';
+          const icon = c.querySelector('div');
+          if (icon) icon.style.background = 'rgba(255,255,255,0.1)';
         });
         card.classList.add('selected');
         card.style.borderColor = 'var(--primary-pink)';
+        card.style.boxShadow = '0 0 20px rgba(255,0,127,0.45)';
+        const icon = card.querySelector('div');
+        if (icon) icon.style.background = 'var(--primary-gradient)';
         this.selectedLanguage = card.getAttribute('data-lang');
       };
     });
@@ -342,35 +377,50 @@ class HipaApp {
     };
   }
 
-  // Step 4: Who are you? (Gender & Avatar Wizard)
+  // Step 4: Who are you? (Gender & 8 3D Pixar Avatars Grid)
   renderOnboardingStep4() {
     const root = document.getElementById('mainViewport');
+    // Ensure smooth full-page scrolling without layout locks
+    root.style.padding = '0';
+    root.style.overflowY = 'auto';
+    root.style.webkitOverflowScrolling = 'touch';
+
+    const avatarCatalog = [
+      { id: "ashley", name: "Ashley", gender: "female", url: "/images/avatar_female_ashley.jpg", bio: "Free-spirited traveler" },
+      { id: "aryan", name: "Aryan", gender: "male", url: "/images/avatar_male_aryan.jpg", bio: "Chill conversationalist" },
+      { id: "riya", name: "Riya", gender: "female", url: "/images/avatar_female_riya.jpg", bio: "Classical dancer & artist" },
+      { id: "kabir", name: "Kabir", gender: "male", url: "/images/avatar_male_kabir.jpg", bio: "Indie guitarist" },
+      { id: "ananya", name: "Ananya", gender: "female", url: "/images/avatar_female_ananya.jpg", bio: "Fashion & coffee lover" },
+      { id: "rohan", name: "Rohan", gender: "male", url: "/images/avatar_male_rohan.jpg", bio: "Creative architect" },
+      { id: "tanya", name: "Tanya", gender: "female", url: "/images/avatar_female_tanya.jpg", bio: "Fitness influencer" },
+      { id: "dev", name: "Dev", gender: "male", url: "/images/avatar_male_dev.jpg", bio: "Tech & night-owl" }
+    ];
 
     root.innerHTML = `
-      <div class="onboarding-container" style="justify-content: flex-start; overflow-y: auto; padding-bottom: 24px;">
+      <div class="onboarding-container">
         <!-- Top Progress Bar -->
-        <div style="display: flex; align-items: center; gap: 14px; margin-bottom: 20px;">
+        <div style="display: flex; align-items: center; gap: 14px; margin-bottom: 16px;">
           <button class="btn-secondary" id="btnBackToLang" style="width: 42px; height: 42px; border-radius: 50%; padding: 0; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.2); color: #ffffff; font-size: 1.2rem; cursor: pointer;">←</button>
           <div style="flex: 1; height: 6px; background: rgba(255,255,255,0.12); border-radius: 10px; overflow: hidden;">
             <div style="width: 100%; height: 100%; background: var(--primary-gradient); box-shadow: 0 0 10px #ff007f;"></div>
           </div>
-          <span style="font-size: 0.8rem; font-weight: 800; color: #ff85c0;">Final Step</span>
+          <span style="font-size: 0.82rem; font-weight: 800; color: #ff85c0;">Final Step</span>
         </div>
 
-        <h1 style="font-size: 1.8rem; font-weight: 900; color: #ffffff; margin-bottom: 4px;">Who are you?</h1>
-        <p style="font-size: 0.88rem; color: #c9bfdc; font-weight: 600; margin-bottom: 18px;">
-          Choose your gender & 3D character avatar
+        <h1 style="font-size: 1.75rem; font-weight: 900; color: #ffffff; margin-bottom: 4px;">Who are you?</h1>
+        <p style="font-size: 0.88rem; color: #c9bfdc; font-weight: 600; margin-bottom: 16px;">
+          Choose your gender & character avatar
         </p>
 
         <!-- Gender Cards -->
         <div class="gender-cards-row" style="margin-bottom: 20px;">
-          <div class="gender-box ${this.selectedGender === 'male' ? 'selected' : ''}" data-gender="male" style="background: rgba(255,255,255,0.06); border: 2px solid ${this.selectedGender === 'male' ? 'var(--primary-pink)' : 'rgba(255,255,255,0.1)'}; border-radius: 20px; padding: 18px; text-align: center; cursor: pointer; transition: all 0.2s ease;">
+          <div class="gender-box ${this.selectedGender === 'male' ? 'selected' : ''}" data-gender="male" style="background: rgba(255,255,255,0.06); border: 2px solid ${this.selectedGender === 'male' ? 'var(--primary-pink)' : 'rgba(255,255,255,0.12)'}; border-radius: 20px; padding: 16px; text-align: center; cursor: pointer; transition: all 0.2s ease;">
             <div class="gender-circle-icon" style="font-size: 2.2rem; margin-bottom: 6px;">♂</div>
             <div style="font-size: 1.15rem; font-weight: 900; color: #ffffff; margin-bottom: 4px;">Male</div>
             <div style="font-size: 0.74rem; color: #ff85c0; font-weight: 700;">Connect with creators</div>
           </div>
 
-          <div class="gender-box ${this.selectedGender === 'female' ? 'selected' : ''}" data-gender="female" style="background: rgba(255,255,255,0.06); border: 2px solid ${this.selectedGender === 'female' ? 'var(--primary-pink)' : 'rgba(255,255,255,0.1)'}; border-radius: 20px; padding: 18px; text-align: center; cursor: pointer; transition: all 0.2s ease;">
+          <div class="gender-box ${this.selectedGender === 'female' ? 'selected' : ''}" data-gender="female" style="background: rgba(255,255,255,0.06); border: 2px solid ${this.selectedGender === 'female' ? 'var(--primary-pink)' : 'rgba(255,255,255,0.12)'}; border-radius: 20px; padding: 16px; text-align: center; cursor: pointer; transition: all 0.2s ease;">
             <div class="gender-circle-icon" style="font-size: 2.2rem; margin-bottom: 6px;">♀</div>
             <div style="font-size: 1.15rem; font-weight: 900; color: #ffffff; margin-bottom: 4px;">Female</div>
             <div style="font-size: 0.74rem; color: #ff85c0; font-weight: 700;">Become a creator</div>
@@ -378,25 +428,27 @@ class HipaApp {
         </div>
 
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-          <span style="font-size: 1rem; font-weight: 800; color: #ffffff;">Pick your 3D avatar</span>
-          <span style="font-size: 0.78rem; color: #ff85c0; font-weight: 700;">8 Animated Looks →</span>
+          <span style="font-size: 1rem; font-weight: 900; color: #ffffff;">Pick your 3D avatar</span>
+          <span style="font-size: 0.78rem; color: #ff85c0; font-weight: 800;">All 8 Characters</span>
         </div>
 
-        <!-- 3D Avatars Carousel -->
-        <div class="avatar-carousel" style="padding-bottom: 14px;">
-          ${HIPA_AVATARS.map((av, idx) => `
-            <div class="avatar-item-wrap ${this.selectedAvatar === av ? 'selected' : ''}" data-avatar="${av}" style="cursor: pointer; position: relative;">
-              <img src="${av}" alt="Avatar ${idx + 1}" style="width: 78px; height: 78px; border-radius: 22px; object-fit: cover; border: 2.5px solid ${this.selectedAvatar === av ? 'var(--primary-pink)' : 'rgba(255,255,255,0.15)'}; box-shadow: ${this.selectedAvatar === av ? '0 0 20px rgba(255,0,127,0.6)' : 'none'};" />
-              ${this.selectedAvatar === av ? '<div class="avatar-check-badge" style="position: absolute; bottom: 4px; right: 4px; background: #ff007f; color: #fff; width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: 900; border: 2px solid #000;">✓</div>' : ''}
+        <!-- 8-Avatar Responsive Grid (All 8 Characters Instantly Visible) -->
+        <div class="avatar-grid-8">
+          ${avatarCatalog.map((av) => `
+            <div class="avatar-card-tile ${this.selectedAvatar === av.url ? 'selected' : ''}" data-avatar="${av.url}">
+              <img src="${av.url}" alt="${av.name}" />
+              <div class="avatar-title">${av.name}</div>
+              <div class="avatar-gender">${av.gender === 'female' ? 'Female' : 'Male'}</div>
+              ${this.selectedAvatar === av.url ? '<div class="avatar-check-badge">✓</div>' : ''}
             </div>
           `).join('')}
         </div>
 
-        <div style="display: flex; align-items: center; gap: 8px; color: #ffd700; font-size: 0.82rem; font-weight: 700; margin-top: auto; margin-bottom: 16px; background: rgba(255,215,0,0.1); border: 1px solid rgba(255,215,0,0.3); border-radius: 12px; padding: 10px 14px;">
+        <div style="display: flex; align-items: center; gap: 8px; color: #ffd700; font-size: 0.82rem; font-weight: 700; margin-bottom: 18px; background: rgba(255,215,0,0.1); border: 1px solid rgba(255,215,0,0.3); border-radius: 14px; padding: 12px 14px;">
           <span>🎁</span> You will get <strong>60 Welcome Bonus Coins</strong> immediately!
         </div>
 
-        <button class="btn-pink-block" id="btnFinishOnboarding" style="font-size: 1.1rem; font-weight: 900; box-shadow: 0 0 30px rgba(255,0,127,0.55);">
+        <button class="btn-pink-block" id="btnFinishOnboarding" style="font-size: 1.1rem; font-weight: 900; box-shadow: 0 0 30px rgba(255,0,127,0.55); margin-bottom: 20px;">
           Start Exploring Peelin's ➔
         </button>
       </div>
@@ -404,50 +456,58 @@ class HipaApp {
 
     root.querySelector('#btnBackToLang').onclick = () => this.renderOnboardingStep3();
 
+    // Gender toggle
     root.querySelectorAll('.gender-box').forEach((box) => {
       box.onclick = () => {
         root.querySelectorAll('.gender-box').forEach(b => {
           b.classList.remove('selected');
-          b.style.borderColor = 'rgba(255,255,255,0.1)';
+          b.style.borderColor = 'rgba(255,255,255,0.12)';
         });
         box.classList.add('selected');
         box.style.borderColor = 'var(--primary-pink)';
         this.selectedGender = box.getAttribute('data-gender');
+
+        // Pre-select matching default avatar
+        const defaultMatch = this.selectedGender === 'female' ? '/images/avatar_female_ashley.jpg' : '/images/avatar_male_aryan.jpg';
+        this.selectedAvatar = defaultMatch;
+        root.querySelectorAll('.avatar-card-tile').forEach(tile => {
+          const isSel = tile.getAttribute('data-avatar') === defaultMatch;
+          tile.classList.toggle('selected', isSel);
+          const oldBadge = tile.querySelector('.avatar-check-badge');
+          if (oldBadge) oldBadge.remove();
+          if (isSel) {
+            const b = document.createElement('div');
+            b.className = 'avatar-check-badge';
+            b.textContent = '✓';
+            tile.appendChild(b);
+          }
+        });
       };
     });
 
-    root.querySelectorAll('.avatar-item-wrap').forEach((wrap) => {
-      wrap.onclick = () => {
-        root.querySelectorAll('.avatar-item-wrap').forEach(w => {
-          w.classList.remove('selected');
-          const img = w.querySelector('img');
-          if (img) {
-            img.style.borderColor = 'rgba(255,255,255,0.15)';
-            img.style.boxShadow = 'none';
-          }
-          const badge = w.querySelector('.avatar-check-badge');
+    // Avatar card click
+    root.querySelectorAll('.avatar-card-tile').forEach((tile) => {
+      tile.onclick = () => {
+        root.querySelectorAll('.avatar-card-tile').forEach(t => {
+          t.classList.remove('selected');
+          const badge = t.querySelector('.avatar-check-badge');
           if (badge) badge.remove();
         });
 
-        wrap.classList.add('selected');
-        const img = wrap.querySelector('img');
-        if (img) {
-          img.style.borderColor = 'var(--primary-pink)';
-          img.style.boxShadow = '0 0 20px rgba(255,0,127,0.6)';
-        }
+        tile.classList.add('selected');
         const badge = document.createElement('div');
         badge.className = 'avatar-check-badge';
-        badge.style.cssText = 'position: absolute; bottom: 4px; right: 4px; background: #ff007f; color: #fff; width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: 900; border: 2px solid #000;';
         badge.textContent = '✓';
-        wrap.appendChild(badge);
-        this.selectedAvatar = wrap.getAttribute('data-avatar');
+        tile.appendChild(badge);
+        this.selectedAvatar = tile.getAttribute('data-avatar');
       };
     });
 
     root.querySelector('#btnFinishOnboarding').onclick = () => {
       this.user = hipaApi.finishOnboarding(this.selectedLanguage, this.selectedGender, this.selectedAvatar);
+      // Reset padding for main app
+      root.style.padding = '';
       this.renderMainApp();
-      // Show Welcome Offer automatically on first entry!
       setTimeout(() => this.showWelcomeOfferModal(), 800);
     };
   }
