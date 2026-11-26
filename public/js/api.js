@@ -468,15 +468,16 @@ class HipaApiService {
     return { ok: true, pending };
   }
 
-  finishOnboarding(language, gender, avatar) {
+  finishOnboarding(language, gender, avatar, name = "") {
     const pending = JSON.parse(sessionStorage.getItem('hipa_pending_phone') || sessionStorage.getItem('hima_pending_phone') || 'null') || {};
-    const randomId = "Jgck" + Math.random().toString(36).substring(2, 5).toUpperCase() + Math.floor(100 + Math.random() * 900);
+    const enteredName = (name || '').trim();
+    const finalName = enteredName || ("User" + Math.floor(100 + Math.random() * 900));
 
     const newUser = {
       id: Date.now(),
       phone: pending.phone || "+919876543210",
-      username: randomId,
-      name: randomId,
+      username: finalName,
+      name: finalName,
       language: language || "Hindi",
       gender: gender || "male",
       avatar: avatar || HIPA_AVATARS[0],

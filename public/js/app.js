@@ -377,23 +377,22 @@ class HipaApp {
     };
   }
 
-  // Step 4: Who are you? (Gender & 8 3D Pixar Avatars Grid)
+  // Step 4: Who are you? (Name Input, Gender & 8 3D Pixar Avatars Grid without names)
   renderOnboardingStep4() {
     const root = document.getElementById('mainViewport');
-    // Ensure smooth full-page scrolling without layout locks
     root.style.padding = '0';
     root.style.overflowY = 'auto';
     root.style.webkitOverflowScrolling = 'touch';
 
     const avatarCatalog = [
-      { id: "ashley", name: "Ashley", gender: "female", url: "/images/avatar_female_ashley.jpg", bio: "Free-spirited traveler" },
-      { id: "aryan", name: "Aryan", gender: "male", url: "/images/avatar_male_aryan.jpg", bio: "Chill conversationalist" },
-      { id: "riya", name: "Riya", gender: "female", url: "/images/avatar_female_riya.jpg", bio: "Classical dancer & artist" },
-      { id: "kabir", name: "Kabir", gender: "male", url: "/images/avatar_male_kabir.jpg", bio: "Indie guitarist" },
-      { id: "ananya", name: "Ananya", gender: "female", url: "/images/avatar_female_ananya.jpg", bio: "Fashion & coffee lover" },
-      { id: "rohan", name: "Rohan", gender: "male", url: "/images/avatar_male_rohan.jpg", bio: "Creative architect" },
-      { id: "tanya", name: "Tanya", gender: "female", url: "/images/avatar_female_tanya.jpg", bio: "Fitness influencer" },
-      { id: "dev", name: "Dev", gender: "male", url: "/images/avatar_male_dev.jpg", bio: "Tech & night-owl" }
+      "/images/avatar_female_ashley.jpg",
+      "/images/avatar_male_aryan.jpg",
+      "/images/avatar_female_riya.jpg",
+      "/images/avatar_male_kabir.jpg",
+      "/images/avatar_female_ananya.jpg",
+      "/images/avatar_male_rohan.jpg",
+      "/images/avatar_female_tanya.jpg",
+      "/images/avatar_male_dev.jpg"
     ];
 
     root.innerHTML = `
@@ -407,49 +406,58 @@ class HipaApp {
           <span style="font-size: 0.82rem; font-weight: 800; color: #ff85c0;">Final Step</span>
         </div>
 
-        <h1 style="font-size: 1.75rem; font-weight: 900; color: #ffffff; margin-bottom: 4px;">Who are you?</h1>
-        <p style="font-size: 0.88rem; color: #c9bfdc; font-weight: 600; margin-bottom: 16px;">
-          Choose your gender & character avatar
+        <h1 style="font-size: 1.75rem; font-weight: 900; color: #ffffff; margin-bottom: 4px;">Profile Setup</h1>
+        <p style="font-size: 0.88rem; color: #c9bfdc; font-weight: 600; margin-bottom: 18px;">
+          Enter your name, choose your gender & pick your avatar
         </p>
 
-        <!-- Gender Cards -->
+        <!-- 1. Custom Name Input -->
+        <div style="margin-bottom: 18px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,0,127,0.3); border-radius: 18px; padding: 14px 16px;">
+          <label style="display: block; font-size: 0.74rem; font-weight: 800; color: #ff85c0; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 8px;">
+            Your Name / Nickname
+          </label>
+          <input type="text" id="inputUserName" class="glass-input" placeholder="Enter your name (e.g. Rahul, Priya)" maxlength="24" autocomplete="name" value="" style="padding: 12px 16px; font-size: 1.1rem; font-weight: 700; color: #ffffff !important; background: rgba(255,255,255,0.08); border: 1.5px solid rgba(255,0,127,0.4); border-radius: 14px; width: 100%; outline: none;" />
+        </div>
+
+        <!-- 2. Gender Selection -->
+        <label style="display: block; font-size: 0.74rem; font-weight: 800; color: #ff85c0; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 8px;">
+          Select Gender
+        </label>
         <div class="gender-cards-row" style="margin-bottom: 20px;">
-          <div class="gender-box ${this.selectedGender === 'male' ? 'selected' : ''}" data-gender="male" style="background: rgba(255,255,255,0.06); border: 2px solid ${this.selectedGender === 'male' ? 'var(--primary-pink)' : 'rgba(255,255,255,0.12)'}; border-radius: 20px; padding: 16px; text-align: center; cursor: pointer; transition: all 0.2s ease;">
-            <div class="gender-circle-icon" style="font-size: 2.2rem; margin-bottom: 6px;">♂</div>
-            <div style="font-size: 1.15rem; font-weight: 900; color: #ffffff; margin-bottom: 4px;">Male</div>
-            <div style="font-size: 0.74rem; color: #ff85c0; font-weight: 700;">Connect with creators</div>
+          <div class="gender-box ${this.selectedGender === 'male' ? 'selected' : ''}" data-gender="male" style="background: rgba(255,255,255,0.06); border: 2px solid ${this.selectedGender === 'male' ? 'var(--primary-pink)' : 'rgba(255,255,255,0.12)'}; border-radius: 20px; padding: 14px; text-align: center; cursor: pointer; transition: all 0.2s ease;">
+            <div class="gender-circle-icon" style="font-size: 2rem; margin-bottom: 4px;">♂</div>
+            <div style="font-size: 1.1rem; font-weight: 900; color: #ffffff; margin-bottom: 2px;">Male</div>
+            <div style="font-size: 0.72rem; color: #ff85c0; font-weight: 700;">Connect with creators</div>
           </div>
 
-          <div class="gender-box ${this.selectedGender === 'female' ? 'selected' : ''}" data-gender="female" style="background: rgba(255,255,255,0.06); border: 2px solid ${this.selectedGender === 'female' ? 'var(--primary-pink)' : 'rgba(255,255,255,0.12)'}; border-radius: 20px; padding: 16px; text-align: center; cursor: pointer; transition: all 0.2s ease;">
-            <div class="gender-circle-icon" style="font-size: 2.2rem; margin-bottom: 6px;">♀</div>
-            <div style="font-size: 1.15rem; font-weight: 900; color: #ffffff; margin-bottom: 4px;">Female</div>
-            <div style="font-size: 0.74rem; color: #ff85c0; font-weight: 700;">Become a creator</div>
+          <div class="gender-box ${this.selectedGender === 'female' ? 'selected' : ''}" data-gender="female" style="background: rgba(255,255,255,0.06); border: 2px solid ${this.selectedGender === 'female' ? 'var(--primary-pink)' : 'rgba(255,255,255,0.12)'}; border-radius: 20px; padding: 14px; text-align: center; cursor: pointer; transition: all 0.2s ease;">
+            <div class="gender-circle-icon" style="font-size: 2rem; margin-bottom: 4px;">♀</div>
+            <div style="font-size: 1.1rem; font-weight: 900; color: #ffffff; margin-bottom: 2px;">Female</div>
+            <div style="font-size: 0.72rem; color: #ff85c0; font-weight: 700;">Become a creator</div>
           </div>
         </div>
 
+        <!-- 3. Avatar Picker (Photos Only, NO Names on Avatars) -->
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-          <span style="font-size: 1rem; font-weight: 900; color: #ffffff;">Pick your 3D avatar</span>
-          <span style="font-size: 0.78rem; color: #ff85c0; font-weight: 800;">All 8 Characters</span>
+          <span style="font-size: 0.95rem; font-weight: 900; color: #ffffff;">Pick your avatar</span>
+          <span style="font-size: 0.76rem; color: #ff85c0; font-weight: 700;">Tap to select</span>
         </div>
 
-        <!-- 8-Avatar Responsive Grid (All 8 Characters Instantly Visible) -->
-        <div class="avatar-grid-8">
+        <div class="avatar-grid-8" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 22px;">
           ${avatarCatalog.map((av) => `
-            <div class="avatar-card-tile ${this.selectedAvatar === av.url ? 'selected' : ''}" data-avatar="${av.url}">
-              <img src="${av.url}" alt="${av.name}" />
-              <div class="avatar-title">${av.name}</div>
-              <div class="avatar-gender">${av.gender === 'female' ? 'Female' : 'Male'}</div>
-              ${this.selectedAvatar === av.url ? '<div class="avatar-check-badge">✓</div>' : ''}
+            <div class="avatar-card-tile ${this.selectedAvatar === av ? 'selected' : ''}" data-avatar="${av}" style="padding: 6px; border-radius: 20px; background: rgba(255,255,255,0.06); border: 2.5px solid ${this.selectedAvatar === av ? 'var(--primary-pink)' : 'rgba(255,255,255,0.12)'}; display: flex; align-items: center; justify-content: center; cursor: pointer; position: relative; transition: all 0.2s ease; box-shadow: ${this.selectedAvatar === av ? '0 0 20px rgba(255,0,127,0.5)' : 'none'};">
+              <img src="${av}" alt="Avatar" style="width: 100%; aspect-ratio: 1/1; border-radius: 16px; object-fit: cover; display: block;" />
+              ${this.selectedAvatar === av ? '<div class="avatar-check-badge" style="position: absolute; top: -5px; right: -5px; width: 22px; height: 22px; border-radius: 50%; background: #ff007f; color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 900; border: 2px solid #0c0814; box-shadow: 0 0 10px rgba(255,0,127,0.7);">✓</div>' : ''}
             </div>
           `).join('')}
         </div>
 
         <div style="display: flex; align-items: center; gap: 8px; color: #ffd700; font-size: 0.82rem; font-weight: 700; margin-bottom: 18px; background: rgba(255,215,0,0.1); border: 1px solid rgba(255,215,0,0.3); border-radius: 14px; padding: 12px 14px;">
-          <span>🎁</span> You will get <strong>60 Welcome Bonus Coins</strong> immediately!
+          <span>🎁</span> Welcome Bonus: <strong>60 Free Coins</strong> will be added to your wallet!
         </div>
 
-        <button class="btn-pink-block" id="btnFinishOnboarding" style="font-size: 1.1rem; font-weight: 900; box-shadow: 0 0 30px rgba(255,0,127,0.55); margin-bottom: 20px;">
-          Start Exploring Peelin's ➔
+        <button class="btn-pink-block" id="btnFinishOnboarding" style="font-size: 1.1rem; font-weight: 900; box-shadow: 0 0 30px rgba(255,0,127,0.55); margin-bottom: 24px;">
+          Complete Setup & Enter Peelin's ➔
         </button>
       </div>
     `;
@@ -473,11 +481,14 @@ class HipaApp {
         root.querySelectorAll('.avatar-card-tile').forEach(tile => {
           const isSel = tile.getAttribute('data-avatar') === defaultMatch;
           tile.classList.toggle('selected', isSel);
+          tile.style.borderColor = isSel ? 'var(--primary-pink)' : 'rgba(255,255,255,0.12)';
+          tile.style.boxShadow = isSel ? '0 0 20px rgba(255,0,127,0.5)' : 'none';
           const oldBadge = tile.querySelector('.avatar-check-badge');
           if (oldBadge) oldBadge.remove();
           if (isSel) {
             const b = document.createElement('div');
             b.className = 'avatar-check-badge';
+            b.style.cssText = 'position: absolute; top: -5px; right: -5px; width: 22px; height: 22px; border-radius: 50%; background: #ff007f; color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 900; border: 2px solid #0c0814; box-shadow: 0 0 10px rgba(255,0,127,0.7);';
             b.textContent = '✓';
             tile.appendChild(b);
           }
@@ -485,18 +496,23 @@ class HipaApp {
       };
     });
 
-    // Avatar card click
+    // Avatar selection
     root.querySelectorAll('.avatar-card-tile').forEach((tile) => {
       tile.onclick = () => {
         root.querySelectorAll('.avatar-card-tile').forEach(t => {
           t.classList.remove('selected');
+          t.style.borderColor = 'rgba(255,255,255,0.12)';
+          t.style.boxShadow = 'none';
           const badge = t.querySelector('.avatar-check-badge');
           if (badge) badge.remove();
         });
 
         tile.classList.add('selected');
+        tile.style.borderColor = 'var(--primary-pink)';
+        tile.style.boxShadow = '0 0 20px rgba(255,0,127,0.5)';
         const badge = document.createElement('div');
         badge.className = 'avatar-check-badge';
+        badge.style.cssText = 'position: absolute; top: -5px; right: -5px; width: 22px; height: 22px; border-radius: 50%; background: #ff007f; color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 900; border: 2px solid #0c0814; box-shadow: 0 0 10px rgba(255,0,127,0.7);';
         badge.textContent = '✓';
         tile.appendChild(badge);
         this.selectedAvatar = tile.getAttribute('data-avatar');
@@ -504,8 +520,15 @@ class HipaApp {
     });
 
     root.querySelector('#btnFinishOnboarding').onclick = () => {
-      this.user = hipaApi.finishOnboarding(this.selectedLanguage, this.selectedGender, this.selectedAvatar);
-      // Reset padding for main app
+      const nameInput = root.querySelector('#inputUserName');
+      const enteredName = (nameInput?.value || '').trim();
+      if (!enteredName) {
+        alert('⚠️ Please enter your name to complete your profile.');
+        nameInput?.focus();
+        return;
+      }
+
+      this.user = hipaApi.finishOnboarding(this.selectedLanguage, this.selectedGender, this.selectedAvatar, enteredName);
       root.style.padding = '';
       this.renderMainApp();
       setTimeout(() => this.showWelcomeOfferModal(), 800);
