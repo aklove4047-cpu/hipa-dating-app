@@ -34,12 +34,72 @@ class HipaApp {
     }
   }
 
+  applyGlobalSettings(customSettings) {
+    const s = customSettings || hipaApi.getSettings();
+    
+    // 1. Announcement Banner
+    const banner = document.getElementById('hipaGlobalAnnouncement');
+    const bannerText = document.getElementById('hipaGlobalAnnouncementText');
+    if (banner && bannerText) {
+      if (s.announcementEnabled && s.announcementText) {
+        banner.style.display = 'block';
+        bannerText.textContent = s.announcementText;
+      } else {
+        banner.style.display = 'none';
+      }
+    }
+
+    // 2. Feature Visibility in Home Tab
+    const luckyWheel = document.getElementById('btnOpenLuckyWheel');
+    if (luckyWheel) {
+      luckyWheel.style.display = s.enableLuckyWheel !== false ? 'flex' : 'none';
+    }
+    const vipClub = document.getElementById('btnOpenVIPClub');
+    if (vipClub) {
+      vipClub.style.display = s.enableVipPass !== false ? 'flex' : 'none';
+    }
+    const randBtn = document.getElementById('btnFloatingRandom');
+    if (randBtn && s.enableRandomMatching === false) {
+      randBtn.style.display = 'none';
+    }
+
+    // 3. Maintenance Mode Screen
+    if (s.maintenanceMode) {
+      const root = document.getElementById('mainViewport');
+      if (root) {
+        root.innerHTML = `
+          <div style="min-height: 80vh; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 32px 20px;">
+            <div style="width: 80px; height: 80px; border-radius: 24px; background: rgba(255,0,127,0.15); border: 2px solid #ff007f; display: flex; align-items: center; justify-content: center; font-size: 2.5rem; margin-bottom: 20px;">
+              🛠️
+            </div>
+            <h1 style="font-size: 1.6rem; font-weight: 900; color: #ffffff; margin-bottom: 8px;">Under Maintenance</h1>
+            <p style="font-size: 0.92rem; color: #c9bfdc; max-width: 380px; line-height: 1.5; margin-bottom: 20px;">
+              ${s.maintenanceMessage || "Peelin's is currently under scheduled maintenance. We will be back online shortly!"}
+            </p>
+            <button onclick="location.reload()" class="btn-primary" style="padding: 12px 24px; font-weight: 800; border-radius: 12px;">
+              🔄 Check Again
+            </button>
+          </div>
+        `;
+      }
+    }
+  }
+
   setupBroadcastSync() {
+    this.applyGlobalSettings();
     try {
       this.syncChannel = new BroadcastChannel('hipa_users_sync');
       this.syncChannel.onmessage = (ev) => {
         if (!ev.data) return;
-        if (ev.data.type === 'VERIFICATION_APPROVED') {
+        if (ev.data.type === 'SYSTEM_SETTINGS_UPDATED') {
+          this.applyGlobalSettings(ev.data.settings);
+        } else if (ev.data.type === 'AVATARS_UPDATED') {
+          // If on onboarding step 4, refresh avatars
+          const avatarGrid = document.querySelector('.avatars-grid-3x2');
+          if (avatarGrid) {
+            this.renderOnboardingStep4();
+          }
+        } else if (ev.data.type === 'VERIFICATION_APPROVED') {
           const curUser = hipaApi.getUser();
           if (curUser && (String(curUser.id) === String(ev.data.userId) || curUser.phone === ev.data.phone)) {
             curUser.verified = true;
@@ -481,13 +541,16 @@ class HipaApp {
           <span style="font-size: 0.76rem; color: #ff85c0; font-weight: 700;">Select character</span>
         </div>
 
-        <div class="avatar-grid-8" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px;">
-          ${avatarCatalog.map((av) => `
-            <div class="avatar-card-tile ${this.selectedAvatar === av ? 'selected' : ''}" data-avatar="${av}" style="padding: 6px; border-radius: 20px; background: rgba(255,255,255,0.06); border: 2.5px solid ${this.selectedAvatar === av ? 'var(--primary-pink)' : 'rgba(255,255,255,0.12)'}; display: flex; align-items: center; justify-content: center; cursor: pointer; position: relative; transition: all 0.2s ease; box-shadow: ${this.selectedAvatar === av ? '0 0 20px rgba(255,0,127,0.5)' : 'none'};">
-              <img src="${av}" alt="Avatar" style="width: 100%; aspect-ratio: 1/1; border-radius: 16px; object-fit: cover; display: block;" />
-              ${this.selectedAvatar === av ? '<div class="avatar-check-badge" style="position: absolute; top: -5px; right: -5px; width: 22px; height: 22px; border-radius: 50%; background: #ff007f; color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 900; border: 2px solid #0c0814; box-shadow: 0 0 10px rgba(255,0,127,0.7);">✓</div>' : ''}
+        <div class="avatar-grid-8" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(75px, 1fr)); gap: 12px; margin-bottom: 20px;">
+          ${avatarCatalog.map((av) => {
+            const avUrl = typeof av === 'string' ? av : av.url;
+            return `
+            <div class="avatar-card-tile ${this.selectedAvatar === avUrl ? 'selected' : ''}" data-avatar="${avUrl}" style="padding: 6px; border-radius: 20px; background: rgba(255,255,255,0.06); border: 2.5px solid ${this.selectedAvatar === avUrl ? 'var(--primary-pink)' : 'rgba(255,255,255,0.12)'}; display: flex; align-items: center; justify-content: center; cursor: pointer; position: relative; transition: all 0.2s ease; box-shadow: ${this.selectedAvatar === avUrl ? '0 0 20px rgba(255,0,127,0.5)' : 'none'};">
+              <img src="${avUrl}" alt="Avatar" style="width: 100%; aspect-ratio: 1/1; border-radius: 16px; object-fit: cover; display: block;" />
+              ${this.selectedAvatar === avUrl ? '<div class="avatar-check-badge" style="position: absolute; top: -5px; right: -5px; width: 22px; height: 22px; border-radius: 50%; background: #ff007f; color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 900; border: 2px solid #0c0814; box-shadow: 0 0 10px rgba(255,0,127,0.7);">✓</div>' : ''}
             </div>
-          `).join('')}
+            `;
+          }).join('')}
         </div>
 
         <!-- Female Verification Notice -->

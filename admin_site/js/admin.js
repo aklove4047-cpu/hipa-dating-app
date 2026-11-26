@@ -439,21 +439,50 @@ class AdminController {
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed.map((item, idx) => {
+            if (typeof item === 'string') {
+              const isFemale = item.toLowerCase().includes('female') || idx % 2 === 0;
+              return {
+                id: 'av_' + idx + '_' + Math.abs(item.split('').reduce((a, b) => ((a << 5) - a) + b.charCodeAt(0), 0)),
+                url: item,
+                name: 'Avatar ' + (idx + 1),
+                gender: isFemale ? 'female' : 'male'
+              };
+            }
+            return {
+              id: item.id || ('av_' + idx),
+              url: item.url,
+              name: item.name || ('Avatar ' + (idx + 1)),
+              gender: item.gender || 'female'
+            };
+          });
+        }
       } catch (e) {}
     }
     return [
-      "/images/avatar_female_riya.jpg",
-      "/images/avatar_male_kabir.jpg",
-      "/images/avatar_female_ananya.jpg",
-      "/images/avatar_male_rohan.jpg",
-      "/images/avatar_female_tanya.jpg",
-      "/images/avatar_male_dev.jpg"
+      { id: "av_f1", url: "/images/avatar_female_riya.jpg", name: "Riya", gender: "female" },
+      { id: "av_m1", url: "/images/avatar_male_kabir.jpg", name: "Kabir", gender: "male" },
+      { id: "av_f2", url: "/images/avatar_female_ananya.jpg", name: "Ananya", gender: "female" },
+      { id: "av_m2", url: "/images/avatar_male_rohan.jpg", name: "Rohan", gender: "male" },
+      { id: "av_f3", url: "/images/avatar_female_tanya.jpg", name: "Tanya", gender: "female" },
+      { id: "av_m3", url: "/images/avatar_male_dev.jpg", name: "Dev", gender: "male" }
     ];
   }
 
   saveAvatars(list) {
     localStorage.setItem('peelins_custom_avatars', JSON.stringify(list));
+    // Asynchronously sync to Cloudflare endpoint
+    const endpoints = ['/api/v1/avatars', 'https://hipa-admin.pages.dev/api/v1/avatars'];
+    for (const ep of endpoints) {
+      try {
+        fetch(ep, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ avatars: list })
+        }).catch(() => {});
+      } catch (e) {}
+    }
     try {
       const bc = new BroadcastChannel('hipa_users_sync');
       bc.postMessage({ type: 'AVATARS_UPDATED', avatars: list });
@@ -462,25 +491,94 @@ class AdminController {
     this.updateAvatarBadge();
   }
 
-  addAvatar(url) {
-    const list = [...this.getAvatars()];
-    if (!list.includes(url)) {
-      list.unshift(url);
-      this.saveAvatars(list);
-    }
+  addAvatar(url, name = "Avatar", gender = "female") {
+    let list = this.getAvatars();
+    list = list.filter(a => a.url !== url);
+    const newAv = {
+      id: 'av_' + Date.now(),
+      url: url,
+      name: name || ('Avatar ' + (list.length + 1)),
+      gender: gender || 'female'
+    };
+    list.unshift(newAv);
+    this.saveAvatars(list);
     return list;
   }
 
-  deleteAvatar(url) {
-    let list = this.getAvatars().filter(u => u !== url);
-    if (list.length === 0) {
-      list = [
-        "/images/avatar_female_riya.jpg",
-        "/images/avatar_male_kabir.jpg"
-      ];
-    }
+  deleteAvatar(idOrUrl) {
+    let list = this.getAvatars().filter(a => a.id !== idOrUrl && a.url !== idOrUrl);
     this.saveAvatars(list);
     return list;
+  }
+
+  getSettings() {
+    const saved = localStorage.getItem('peelins_global_settings');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {}
+    }
+    return {
+      appName: "Peelin's",
+      appTagline: "Meet Live • Feel Real",
+      ageBadge: "18+",
+      announcementEnabled: true,
+      announcementText: "🔥 Welcome to Peelin's! Top creators are live now. Join VIP for special perks!",
+      welcomeCoins: 60,
+      dailyFreeSwipes: 25,
+      dailyFreeCallMinutes: 30,
+      minRechargePrice: 14,
+      enableVideoCalling: true,
+      enableAudioCalling: true,
+      enableLuckyWheel: true,
+      enableVipPass: true,
+      enableRandomMatching: true,
+      enableFemaleVerification: true,
+      whatsappGroupName: "Peelin's Official VIP Community",
+      whatsappInviteLink: "https://chat.whatsapp.com/invite/peelins-official-18",
+      whatsappSupportNumber: "+919511088531",
+      enableWhatsappPopup: true,
+      upiVpa: "peelins@upi",
+      upiPayeeName: "Peelin's Dating App",
+      maintenanceMode: false,
+      maintenanceMessage: "Peelin's is currently under scheduled maintenance. We will be back online shortly!"
+    };
+  }
+
+  saveSettings(settings) {
+    const current = this.getSettings();
+    const merged = { ...current, ...settings };
+    localStorage.setItem('peelins_global_settings', JSON.stringify(merged));
+    
+    // Also keep peelins_whatsapp_config in sync
+    const waCfg = {
+      enabled: merged.enableWhatsappPopup,
+      groupName: merged.whatsappGroupName,
+      inviteLink: merged.whatsappInviteLink,
+      supportNumber: merged.whatsappSupportNumber
+    };
+    localStorage.setItem('peelins_whatsapp_config', JSON.stringify(waCfg));
+
+    // Cloudflare endpoint sync
+    const endpoints = ['/api/v1/settings', 'https://hipa-admin.pages.dev/api/v1/settings'];
+    for (const ep of endpoints) {
+      try {
+        fetch(ep, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(merged)
+        }).catch(() => {});
+      } catch (e) {}
+    }
+
+    try {
+      const bc = new BroadcastChannel('hipa_users_sync');
+      bc.postMessage({ type: 'SYSTEM_SETTINGS_UPDATED', settings: merged });
+      bc.postMessage({ type: 'WHATSAPP_CONFIG_UPDATED', config: waCfg });
+      setTimeout(() => bc.close(), 1000);
+    } catch (e) {}
+
+    return merged;
   }
 
   updateAvatarBadge() {
@@ -3556,31 +3654,39 @@ class AdminController {
 
     renderAvatars(container) {
       const avatars = this.getAvatars();
+      const femaleCount = avatars.filter(a => a.gender === 'female').length;
+      const maleCount = avatars.filter(a => a.gender === 'male').length;
+
       container.innerHTML = `
         <div class="admin-topbar">
           <div>
             <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 4px;">
-              <h1 style="font-size: 1.8rem; font-weight: 900; background: linear-gradient(135deg, #ffffff 50%, #ff8bb8 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Avatar Library Management</h1>
-              <span style="background: #ff007f; color: #fff; font-size: 0.75rem; font-weight: 800; padding: 4px 10px; border-radius: 999px;">${avatars.length} Active Avatars</span>
+              <h1 style="font-size: 1.8rem; font-weight: 900; background: linear-gradient(135deg, #ffffff 50%, #ff8bb8 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Avatar Library & Photo Management</h1>
+              <span style="background: #ff007f; color: #fff; font-size: 0.75rem; font-weight: 800; padding: 4px 10px; border-radius: 999px;">${avatars.length} Total Avatars</span>
             </div>
-            <p style="color: var(--text-muted); font-size: 0.9rem;">Manage profile avatar photos available for users in the Website & Android APK. Add new photos via URL or direct file upload, or remove obsolete ones.</p>
+            <p style="color: var(--text-muted); font-size: 0.9rem;">Add new avatar photos via Image URL or Direct File Upload, or permanently delete any old avatar. All updates sync instantly to the Android APK and Website.</p>
           </div>
-          <button id="btnResetAvatars" class="btn-secondary" style="padding: 10px 18px; font-size: 0.85rem; border-color: rgba(255,255,255,0.25);">
+          <button id="btnResetAvatars" class="btn-secondary" style="padding: 10px 18px; font-size: 0.85rem; border-color: rgba(255,255,255,0.25); cursor: pointer;">
             🔄 Reset to Defaults
           </button>
         </div>
 
         <!-- Add New Avatar Form Card -->
-        <div class="glass-panel" style="padding: 24px; margin-bottom: 24px; border-color: rgba(255, 0, 127, 0.4); box-shadow: 0 10px 30px rgba(0,0,0,0.35);">
-          <h3 style="font-size: 1.2rem; font-weight: 900; color: #ffffff; margin-bottom: 14px; display: flex; align-items: center; gap: 8px;">
-            <span>➕</span> Add New Avatar Photo
-          </h3>
+        <div class="glass-panel" style="padding: 24px; margin-bottom: 24px; border-color: rgba(255, 0, 127, 0.45); box-shadow: 0 10px 30px rgba(0,0,0,0.35);">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+            <h3 style="font-size: 1.25rem; font-weight: 900; color: #ffffff; margin: 0; display: flex; align-items: center; gap: 8px;">
+              <span>➕</span> Add New Profile Avatar
+            </h3>
+            <span style="font-size: 0.75rem; background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16,185,129,0.3); padding: 3px 10px; border-radius: 999px; font-weight: 800;">
+              Live Across Web & Android APK
+            </span>
+          </div>
 
-          <div style="display: grid; grid-template-columns: 1fr auto; gap: 20px; align-items: start;">
+          <div style="display: grid; grid-template-columns: 1fr auto; gap: 24px; align-items: start;">
             <div style="display: flex; flex-direction: column; gap: 14px;">
               <div>
-                <label style="font-size: 0.82rem; font-weight: 800; color: #ff85c0; text-transform: uppercase;">Option 1: Image URL</label>
-                <input type="url" id="inputAvatarUrl" class="glass-input" placeholder="https://example.com/avatar.jpg" style="margin-top: 6px; width: 100%;" />
+                <label style="font-size: 0.82rem; font-weight: 800; color: #ff85c0; text-transform: uppercase;">Option 1: Paste Image URL</label>
+                <input type="url" id="inputAvatarUrl" class="glass-input" placeholder="https://example.com/avatar_photo.jpg" style="margin-top: 6px; width: 100%;" />
               </div>
 
               <div>
@@ -3588,13 +3694,13 @@ class AdminController {
                 <input type="file" id="inputAvatarFile" accept="image/*" class="glass-input" style="margin-top: 6px; width: 100%; padding: 8px 12px; cursor: pointer;" />
               </div>
 
-              <div style="display: flex; gap: 12px;">
+              <div style="display: flex; gap: 14px;">
                 <div style="flex: 1;">
                   <label style="font-size: 0.82rem; font-weight: 800; color: #c9bfdc; text-transform: uppercase;">Avatar Label / Name</label>
-                  <input type="text" id="inputAvatarName" class="glass-input" placeholder="e.g. Simran, Pooja, Aryan" style="margin-top: 6px; width: 100%;" />
+                  <input type="text" id="inputAvatarName" class="glass-input" placeholder="e.g. Simran, Pooja, Aryan, Rahul" style="margin-top: 6px; width: 100%;" />
                 </div>
-                <div style="width: 140px;">
-                  <label style="font-size: 0.82rem; font-weight: 800; color: #c9bfdc; text-transform: uppercase;">Gender Tag</label>
+                <div style="width: 160px;">
+                  <label style="font-size: 0.82rem; font-weight: 800; color: #c9bfdc; text-transform: uppercase;">Gender Category</label>
                   <select id="selectAvatarGender" class="glass-input" style="margin-top: 6px; width: 100%; cursor: pointer;">
                     <option value="female" selected>♀ Female</option>
                     <option value="male">♂ Male</option>
@@ -3602,40 +3708,66 @@ class AdminController {
                 </div>
               </div>
 
-              <button id="btnAddAvatarSubmit" class="btn-primary" style="align-self: flex-start; padding: 12px 24px; font-weight: 800; font-size: 0.92rem; background: linear-gradient(135deg, #ff007f, #7928ca); border: none; border-radius: 12px; box-shadow: 0 4px 20px rgba(255, 0, 127, 0.45); cursor: pointer;">
+              <button id="btnAddAvatarSubmit" class="btn-primary" style="align-self: flex-start; padding: 13px 26px; font-weight: 800; font-size: 0.95rem; background: linear-gradient(135deg, #ff007f, #7928ca); border: none; border-radius: 12px; box-shadow: 0 4px 20px rgba(255, 0, 127, 0.45); cursor: pointer;">
                 🚀 Publish Avatar to App & Web
               </button>
             </div>
 
             <!-- Live Thumbnail Preview -->
-            <div style="text-align: center; background: rgba(0,0,0,0.3); border: 1.5px dashed rgba(255,255,255,0.25); border-radius: 16px; padding: 18px 24px;">
-              <div style="font-size: 0.75rem; font-weight: 800; color: #d1c7e6; margin-bottom: 8px;">LIVE PREVIEW</div>
-              <div style="width: 110px; height: 110px; border-radius: 50%; border: 3px solid #ff007f; overflow: hidden; margin: 0 auto; box-shadow: 0 0 20px rgba(255,0,127,0.5);">
-                <img id="imgAvatarPreview" src="${avatars[0] || '/images/avatar_female_ashley.jpg'}" style="width: 100%; height: 100%; object-fit: cover;" />
+            <div style="text-align: center; background: rgba(0,0,0,0.35); border: 1.5px dashed rgba(255,255,255,0.25); border-radius: 18px; padding: 20px 24px; min-width: 170px;">
+              <div style="font-size: 0.75rem; font-weight: 800; color: #d1c7e6; margin-bottom: 10px;">LIVE PREVIEW</div>
+              <div style="width: 110px; height: 110px; border-radius: 50%; border: 3px solid #ff007f; overflow: hidden; margin: 0 auto; box-shadow: 0 0 25px rgba(255,0,127,0.5);">
+                <img id="imgAvatarPreview" src="${avatars[0] ? avatars[0].url : '/images/avatar_female_ashley.jpg'}" style="width: 100%; height: 100%; object-fit: cover;" />
               </div>
-              <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 8px;">Square or 1:1 ratio recommended</div>
+              <div id="lblPreviewGender" style="display: inline-block; margin-top: 8px; font-size: 0.72rem; font-weight: 800; padding: 2px 8px; border-radius: 999px; background: rgba(255,0,127,0.2); color: #ff85c0;">
+                ♀ Female
+              </div>
             </div>
           </div>
         </div>
 
-        <!-- Avatars Gallery Grid -->
-        <h3 style="font-size: 1.15rem; font-weight: 800; color: #ffffff; margin-bottom: 14px;">
-          Available User Avatars (${avatars.length})
-        </h3>
+        <!-- Avatars Gallery Section with Filter Tabs -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 10px;">
+          <h3 style="font-size: 1.25rem; font-weight: 800; color: #ffffff; margin: 0;">
+            Active Avatars in App (${avatars.length})
+          </h3>
+          <div style="display: flex; gap: 8px;">
+            <button class="btn-avatar-filter glass-pill ${this.avatarFilter !== 'female' && this.avatarFilter !== 'male' ? 'active' : ''}" data-filter="all" style="cursor: pointer; padding: 5px 14px; font-size: 0.78rem;">
+              All (${avatars.length})
+            </button>
+            <button class="btn-avatar-filter glass-pill ${this.avatarFilter === 'female' ? 'active' : ''}" data-filter="female" style="cursor: pointer; padding: 5px 14px; font-size: 0.78rem; border-color: #ff007f;">
+              ♀ Female (${femaleCount})
+            </button>
+            <button class="btn-avatar-filter glass-pill ${this.avatarFilter === 'male' ? 'active' : ''}" data-filter="male" style="cursor: pointer; padding: 5px 14px; font-size: 0.78rem; border-color: #3b82f6;">
+              ♂ Male (${maleCount})
+            </button>
+          </div>
+        </div>
 
-        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 16px;">
-          ${avatars.map((url, idx) => `
-            <div class="glass-panel" style="padding: 14px; text-align: center; border-color: rgba(255,255,255,0.12); position: relative; border-radius: 16px; transition: transform 0.2s ease;">
-              <div style="position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.6); color: #fff; font-size: 0.7rem; font-weight: 800; padding: 2px 7px; border-radius: 6px;">
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 18px;">
+          ${avatars
+            .filter(a => !this.avatarFilter || this.avatarFilter === 'all' || a.gender === this.avatarFilter)
+            .map((av, idx) => `
+            <div class="glass-panel" style="padding: 16px; text-align: center; border-color: rgba(255,255,255,0.12); position: relative; border-radius: 18px; transition: transform 0.2s ease; background: rgba(22, 14, 38, 0.75);">
+              <div style="position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.65); color: #fff; font-size: 0.7rem; font-weight: 800; padding: 2px 7px; border-radius: 6px;">
                 #${idx + 1}
               </div>
-              <div style="width: 100px; height: 100px; border-radius: 50%; overflow: hidden; margin: 10px auto 12px auto; border: 2.5px solid #ff007f; box-shadow: 0 4px 15px rgba(255,0,127,0.3);">
-                <img src="${url}" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.src='/images/avatar_female_ashley.jpg'" />
+              <div style="position: absolute; top: 10px; right: 10px; font-size: 0.7rem; font-weight: 800; padding: 2px 8px; border-radius: 999px; background: ${av.gender === 'female' ? 'rgba(255,0,127,0.2)' : 'rgba(59,130,246,0.2)'}; color: ${av.gender === 'female' ? '#ff85c0' : '#60a5fa'}; border: 1px solid ${av.gender === 'female' ? 'rgba(255,0,127,0.35)' : 'rgba(59,130,246,0.35)'};">
+                ${av.gender === 'female' ? '♀ Female' : '♂ Male'}
               </div>
-              <div style="font-size: 0.72rem; color: var(--text-muted); font-family: monospace; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-bottom: 10px;">
-                ${url.startsWith('data:') ? 'Local Upload' : url.split('/').pop()}
+
+              <div style="width: 100px; height: 100px; border-radius: 50%; overflow: hidden; margin: 12px auto 10px auto; border: 2.5px solid ${av.gender === 'female' ? '#ff007f' : '#3b82f6'}; box-shadow: 0 4px 18px rgba(0,0,0,0.4);">
+                <img src="${av.url}" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.src='/images/avatar_female_ashley.jpg'" />
               </div>
-              <button class="btn-delete-avatar btn-secondary" data-url="${url}" style="width: 100%; padding: 8px; font-size: 0.78rem; font-weight: 700; color: #ef4444; border-color: rgba(239,68,68,0.4); cursor: pointer;">
+
+              <div style="font-weight: 800; font-size: 0.88rem; color: #fff; margin-bottom: 2px;">
+                ${av.name || 'Avatar'}
+              </div>
+              <div style="font-size: 0.7rem; color: var(--text-muted); font-family: monospace; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-bottom: 12px;">
+                ${av.url.startsWith('data:') ? 'Local Device Upload' : av.url.split('/').pop()}
+              </div>
+
+              <button class="btn-delete-avatar btn-secondary" data-id="${av.id}" data-url="${av.url}" style="width: 100%; padding: 8px; font-size: 0.8rem; font-weight: 800; color: #ef4444; border-color: rgba(239,68,68,0.45); cursor: pointer; border-radius: 10px;">
                 🗑️ Delete Avatar
               </button>
             </div>
@@ -3643,10 +3775,20 @@ class AdminController {
         </div>
       `;
 
-      // Live preview URL input
+      // Live preview URL input & file input
       const urlInput = container.querySelector('#inputAvatarUrl');
       const fileInput = container.querySelector('#inputAvatarFile');
+      const genderSelect = container.querySelector('#selectAvatarGender');
+      const nameInput = container.querySelector('#inputAvatarName');
       const imgPrev = container.querySelector('#imgAvatarPreview');
+      const lblPrevGender = container.querySelector('#lblPreviewGender');
+
+      if (genderSelect && lblPrevGender) {
+        genderSelect.onchange = () => {
+          lblPrevGender.textContent = genderSelect.value === 'female' ? '♀ Female' : '♂ Male';
+          lblPrevGender.style.color = genderSelect.value === 'female' ? '#ff85c0' : '#60a5fa';
+        };
+      }
 
       if (urlInput && imgPrev) {
         urlInput.oninput = () => {
@@ -3681,21 +3823,34 @@ class AdminController {
             alert('Please enter an image URL or choose an image file to upload.');
             return;
           }
-          this.addAvatar(chosenUrl);
+          const avName = (nameInput ? nameInput.value.trim() : '') || 'Avatar';
+          const avGender = (genderSelect ? genderSelect.value : 'female');
+
+          this.addAvatar(chosenUrl, avName, avGender);
+          this.playNotificationChime();
           this.showToast('✅ New avatar added! Live across Web & Android APK.');
           this.renderAvatars(container);
         };
       }
 
-      // Delete Avatar buttons
+      // Delete Avatar buttons (Deletes ANY avatar)
       container.querySelectorAll('.btn-delete-avatar').forEach(btn => {
         btn.onclick = () => {
-          const u = btn.getAttribute('data-url');
-          if (confirm('Delete this avatar from the user library?')) {
-            this.deleteAvatar(u);
-            this.showToast('🗑️ Avatar deleted successfully');
+          const id = btn.getAttribute('data-id');
+          const url = btn.getAttribute('data-url');
+          if (confirm('Are you sure you want to delete this avatar from the app & website?')) {
+            this.deleteAvatar(id || url);
+            this.showToast('🗑️ Avatar deleted successfully from all devices');
             this.renderAvatars(container);
           }
+        };
+      });
+
+      // Filter tabs click
+      container.querySelectorAll('.btn-avatar-filter').forEach(btn => {
+        btn.onclick = () => {
+          this.avatarFilter = btn.getAttribute('data-filter');
+          this.renderAvatars(container);
         };
       });
 
@@ -3703,9 +3858,8 @@ class AdminController {
       const btnReset = container.querySelector('#btnResetAvatars');
       if (btnReset) {
         btnReset.onclick = () => {
-          if (confirm('Reset avatar library to the default factory set?')) {
-            localStorage.removeItem('peelins_custom_avatars');
-            this.saveAvatars(this.getAvatars());
+          if (confirm('Reset avatar library to the default factory collection?')) {
+            this.resetAvatars();
             this.showToast('🔄 Avatars reset to default factory collection');
             this.renderAvatars(container);
           }
@@ -3714,121 +3868,267 @@ class AdminController {
     }
 
     renderSettings(container) {
-      let waCfg = {
-        enabled: true,
-        groupName: "Peelin's Official VIP Community",
-        inviteLink: "https://chat.whatsapp.com/invite/peelins-official-18",
-        supportNumber: "+919511088531"
-      };
-      const savedWa = localStorage.getItem('peelins_whatsapp_config');
-      if (savedWa) {
-        try { waCfg = Object.assign(waCfg, JSON.parse(savedWa)); } catch (e) {}
-      }
+      const s = this.getSettings();
 
       container.innerHTML = `
         <div class="admin-topbar">
           <div>
-            <h1 style="font-size: 1.8rem; font-weight: 800;">App & System Settings</h1>
-            <p style="color: var(--text-muted); font-size: 0.9rem;">Global app configuration, official WhatsApp links, calling rates & safety limits</p>
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 4px;">
+              <h1 style="font-size: 1.8rem; font-weight: 900; background: linear-gradient(135deg, #ffffff 50%, #ff8bb8 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Global Platform Settings Hub</h1>
+              <span style="background: linear-gradient(135deg, #10b981, #059669); color: #fff; font-size: 0.75rem; font-weight: 800; padding: 4px 10px; border-radius: 999px;">Live Sync Active ⚡</span>
+            </div>
+            <p style="color: var(--text-muted); font-size: 0.9rem;">Complete control center to manage website and APK features, announcement banner, welcome rewards, official WhatsApp community, and maintenance mode.</p>
           </div>
+          <button id="btnSaveTopSettings" class="btn-primary" style="padding: 12px 24px; font-weight: 800; font-size: 0.95rem; background: linear-gradient(135deg, #10b981, #059669); border: none; box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4); cursor: pointer;">
+            💾 Save All Settings ✓
+          </button>
         </div>
 
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 20px;">
-          <!-- Official WhatsApp Group Settings -->
-          <div class="glass-panel" style="padding: 24px; border-color: rgba(37, 211, 102, 0.4); box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
-            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 16px;">
-              <div style="width: 40px; height: 40px; border-radius: 10px; background: #25D366; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; color: #fff;">
-                💬
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 24px;">
+          <!-- 1. Top Announcement Banner & Branding -->
+          <div class="glass-panel" style="padding: 24px; border-color: rgba(255, 0, 127, 0.45); box-shadow: 0 10px 30px rgba(0,0,0,0.35);">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;">
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <div style="width: 40px; height: 40px; border-radius: 10px; background: #ff007f; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; color: #fff;">
+                  📢
+                </div>
+                <div>
+                  <h3 style="font-size: 1.15rem; font-weight: 800; color: #fff; margin: 0;">Top Announcement & Branding</h3>
+                  <p style="font-size: 0.75rem; color: #ff85c0; margin: 0;">Notice banner & app header titles</p>
+                </div>
               </div>
-              <div>
-                <h3 style="font-size: 1.15rem; font-weight: 800; color: #fff; margin: 0;">Official WhatsApp Community</h3>
-                <p style="font-size: 0.75rem; color: #86efac; margin: 0;">Invite links shown after registration and in profile</p>
-              </div>
+              <label class="switch-toggle">
+                <input type="checkbox" id="chkAnnouncementEnabled" ${s.announcementEnabled ? 'checked' : ''} />
+                <span class="switch-slider"></span>
+              </label>
             </div>
 
             <div style="display: flex; flex-direction: column; gap: 14px;">
               <div>
-                <label style="font-size: 0.8rem; font-weight: 700; color: #d1d5db;">Community Group Name</label>
-                <input type="text" id="settingWaGroupName" class="glass-input" value="${waCfg.groupName}" style="margin-top: 5px; width: 100%;" />
+                <label style="font-size: 0.8rem; font-weight: 700; color: #d1d5db;">Notice Banner Text (Shown at Top of App)</label>
+                <textarea id="txtAnnouncement" class="glass-input" rows="2" style="margin-top: 5px; width: 100%; font-size: 0.85rem;">${s.announcementText || ''}</textarea>
+              </div>
+
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                <div>
+                  <label style="font-size: 0.8rem; font-weight: 700; color: #d1d5db;">App Title</label>
+                  <input type="text" id="txtAppName" class="glass-input" value="${s.appName || "Peelin's"}" style="margin-top: 5px; width: 100%;" />
+                </div>
+                <div>
+                  <label style="font-size: 0.8rem; font-weight: 700; color: #d1d5db;">App Tagline</label>
+                  <input type="text" id="txtAppTagline" class="glass-input" value="${s.appTagline || "Meet Live • Feel Real"}" style="margin-top: 5px; width: 100%;" />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 2. Coins & Free Limits -->
+          <div class="glass-panel" style="padding: 24px; border-color: rgba(255, 215, 0, 0.45); box-shadow: 0 10px 30px rgba(0,0,0,0.35);">
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 16px;">
+              <div style="width: 40px; height: 40px; border-radius: 10px; background: linear-gradient(135deg, #f59e0b, #d97706); display: flex; align-items: center; justify-content: center; font-size: 1.3rem; color: #fff;">
+                🪙
+              </div>
+              <div>
+                <h3 style="font-size: 1.15rem; font-weight: 800; color: #fff; margin: 0;">Coins & Free Calling Limits</h3>
+                <p style="font-size: 0.75rem; color: #fde68a; margin: 0;">Welcome bonus and daily quotas</p>
+              </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+              <div>
+                <label style="font-size: 0.8rem; font-weight: 700; color: #d1d5db;">Welcome Bonus Coins</label>
+                <input type="number" id="numWelcomeCoins" class="glass-input" value="${s.welcomeCoins || 60}" style="margin-top: 5px; width: 100%; font-weight: 800; color: #ffd700;" />
+              </div>
+              <div>
+                <label style="font-size: 0.8rem; font-weight: 700; color: #d1d5db;">Min Recharge Price (₹)</label>
+                <input type="number" id="numMinRecharge" class="glass-input" value="${s.minRechargePrice || 14}" style="margin-top: 5px; width: 100%;" />
+              </div>
+              <div>
+                <label style="font-size: 0.8rem; font-weight: 700; color: #d1d5db;">Daily Free Swipes</label>
+                <input type="number" id="numDailySwipes" class="glass-input" value="${s.dailyFreeSwipes || 25}" style="margin-top: 5px; width: 100%;" />
+              </div>
+              <div>
+                <label style="font-size: 0.8rem; font-weight: 700; color: #d1d5db;">Daily Free Call Minutes</label>
+                <input type="number" id="numFreeCallMins" class="glass-input" value="${s.dailyFreeCallMinutes || 30}" style="margin-top: 5px; width: 100%;" />
+              </div>
+            </div>
+          </div>
+
+          <!-- 3. Official WhatsApp Community -->
+          <div class="glass-panel" style="padding: 24px; border-color: rgba(37, 211, 102, 0.45); box-shadow: 0 10px 30px rgba(0,0,0,0.35);">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;">
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <div style="width: 40px; height: 40px; border-radius: 10px; background: #25D366; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; color: #fff;">
+                  💬
+                </div>
+                <div>
+                  <h3 style="font-size: 1.15rem; font-weight: 800; color: #fff; margin: 0;">Official WhatsApp Community</h3>
+                  <p style="font-size: 0.75rem; color: #86efac; margin: 0;">Community link & support phone</p>
+                </div>
+              </div>
+              <label class="switch-toggle">
+                <input type="checkbox" id="chkWaPopup" ${s.enableWhatsappPopup !== false ? 'checked' : ''} />
+                <span class="switch-slider"></span>
+              </label>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 14px;">
+              <div>
+                <label style="font-size: 0.8rem; font-weight: 700; color: #d1d5db;">WhatsApp Group Name</label>
+                <input type="text" id="txtWaGroupName" class="glass-input" value="${s.whatsappGroupName || "Peelin's Official VIP Community"}" style="margin-top: 5px; width: 100%;" />
               </div>
 
               <div>
                 <label style="font-size: 0.8rem; font-weight: 700; color: #d1d5db;">Official Invite Link URL</label>
-                <input type="url" id="settingWaInviteLink" class="glass-input" value="${waCfg.inviteLink}" style="margin-top: 5px; width: 100%; font-family: monospace;" />
+                <input type="url" id="txtWaInviteLink" class="glass-input" value="${s.whatsappInviteLink || "https://chat.whatsapp.com/invite/peelins-official-18"}" style="margin-top: 5px; width: 100%; font-family: monospace;" />
               </div>
 
               <div>
                 <label style="font-size: 0.8rem; font-weight: 700; color: #d1d5db;">Official Support Mobile Number</label>
-                <input type="tel" id="settingWaSupportNum" class="glass-input" value="${waCfg.supportNumber}" style="margin-top: 5px; width: 100%;" />
+                <input type="tel" id="txtWaSupportNum" class="glass-input" value="${s.whatsappSupportNumber || "+919511088531"}" style="margin-top: 5px; width: 100%;" />
               </div>
-
-              <button id="btnSaveWhatsAppSettings" class="btn-primary" style="margin-top: 6px; padding: 11px; font-weight: 800; background: linear-gradient(135deg, #10b981, #059669); border: none;">
-                Save WhatsApp Settings ✓
-              </button>
             </div>
           </div>
 
-          <!-- General App Settings -->
-          <div class="glass-panel" style="padding: 24px; border-color: rgba(255, 0, 127, 0.35);">
+          <!-- 4. Feature Flags (Turn Sections On/Off) -->
+          <div class="glass-panel" style="padding: 24px; border-color: rgba(139, 92, 246, 0.45); box-shadow: 0 10px 30px rgba(0,0,0,0.35);">
             <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 16px;">
-              <div style="width: 40px; height: 40px; border-radius: 10px; background: #ff007f; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; color: #fff;">
-                ⚙️
+              <div style="width: 40px; height: 40px; border-radius: 10px; background: #8b5cf6; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; color: #fff;">
+                ⚡
               </div>
               <div>
-                <h3 style="font-size: 1.15rem; font-weight: 800; color: #fff; margin: 0;">General Platform Rules</h3>
-                <p style="font-size: 0.75rem; color: #ff85c0; margin: 0;">Controls user call quotas & payment details</p>
+                <h3 style="font-size: 1.15rem; font-weight: 800; color: #fff; margin: 0;">Feature Flags & Toggles</h3>
+                <p style="font-size: 0.75rem; color: #c4b5fd; margin: 0;">Enable or disable sections on website & APK</p>
+              </div>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 12px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; background: rgba(255,255,255,0.04); border-radius: 10px;">
+                <span style="font-size: 0.88rem; font-weight: 700;">📹 Live Video Calling</span>
+                <input type="checkbox" id="chkVideoCall" ${s.enableVideoCalling !== false ? 'checked' : ''} style="width: 20px; height: 20px; accent-color: #ff007f;" />
+              </div>
+
+              <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; background: rgba(255,255,255,0.04); border-radius: 10px;">
+                <span style="font-size: 0.88rem; font-weight: 700;">📞 Live Audio Calling</span>
+                <input type="checkbox" id="chkAudioCall" ${s.enableAudioCalling !== false ? 'checked' : ''} style="width: 20px; height: 20px; accent-color: #ff007f;" />
+              </div>
+
+              <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; background: rgba(255,255,255,0.04); border-radius: 10px;">
+                <span style="font-size: 0.88rem; font-weight: 700;">🎁 Daily Lucky Spin Wheel</span>
+                <input type="checkbox" id="chkLuckyWheel" ${s.enableLuckyWheel !== false ? 'checked' : ''} style="width: 20px; height: 20px; accent-color: #ff007f;" />
+              </div>
+
+              <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; background: rgba(255,255,255,0.04); border-radius: 10px;">
+                <span style="font-size: 0.88rem; font-weight: 700;">👑 Peelin's VIP Club Pass</span>
+                <input type="checkbox" id="chkVipPass" ${s.enableVipPass !== false ? 'checked' : ''} style="width: 20px; height: 20px; accent-color: #ff007f;" />
+              </div>
+
+              <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; background: rgba(255,255,255,0.04); border-radius: 10px;">
+                <span style="font-size: 0.88rem; font-weight: 700;">🎲 Floating Random Match Button</span>
+                <input type="checkbox" id="chkRandomMatch" ${s.enableRandomMatching !== false ? 'checked' : ''} style="width: 20px; height: 20px; accent-color: #ff007f;" />
+              </div>
+
+              <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; background: rgba(255,255,255,0.04); border-radius: 10px;">
+                <span style="font-size: 0.88rem; font-weight: 700;">🛡️ Female Voice+Video Identity Verification</span>
+                <input type="checkbox" id="chkFemaleVerif" ${s.enableFemaleVerification !== false ? 'checked' : ''} style="width: 20px; height: 20px; accent-color: #ff007f;" />
+              </div>
+            </div>
+          </div>
+
+          <!-- 5. Payment & UPI Configuration -->
+          <div class="glass-panel" style="padding: 24px; border-color: rgba(59, 130, 246, 0.45); box-shadow: 0 10px 30px rgba(0,0,0,0.35);">
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 16px;">
+              <div style="width: 40px; height: 40px; border-radius: 10px; background: #3b82f6; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; color: #fff;">
+                💳
+              </div>
+              <div>
+                <h3 style="font-size: 1.15rem; font-weight: 800; color: #fff; margin: 0;">UPI & Payment Direct Hub</h3>
+                <p style="font-size: 0.75rem; color: #93c5fd; margin: 0;">UPI IDs for automatic & manual coin orders</p>
               </div>
             </div>
 
             <div style="display: flex; flex-direction: column; gap: 14px;">
               <div>
-                <label style="font-size: 0.8rem; font-weight: 700; color: #d1d5db;">Free Daily Swipes Limit</label>
-                <input type="number" id="settingDailySwipes" class="glass-input" value="25" style="margin-top: 5px; width: 100%;" />
+                <label style="font-size: 0.8rem; font-weight: 700; color: #d1d5db;">Official Merchant UPI VPA</label>
+                <input type="text" id="txtUpiVpa" class="glass-input" value="${s.upiVpa || 'peelins@upi'}" style="margin-top: 5px; width: 100%; font-family: monospace;" />
               </div>
 
               <div>
-                <label style="font-size: 0.8rem; font-weight: 700; color: #d1d5db;">Daily Free Call Bonus (Minutes)</label>
-                <input type="number" id="settingFreeCallMins" class="glass-input" value="30" style="margin-top: 5px; width: 100%;" />
+                <label style="font-size: 0.8rem; font-weight: 700; color: #d1d5db;">Payee Business Display Name</label>
+                <input type="text" id="txtUpiPayee" class="glass-input" value="${s.upiPayeeName || "Peelin's Dating App"}" style="margin-top: 5px; width: 100%;" />
               </div>
+            </div>
+          </div>
 
-              <div>
-                <label style="font-size: 0.8rem; font-weight: 700; color: #d1d5db;">UPI ID for Direct Payments</label>
-                <input type="text" id="settingUpiId" class="glass-input" value="peelins@upi" style="margin-top: 5px; width: 100%; font-family: monospace;" />
+          <!-- 6. System Maintenance Mode -->
+          <div class="glass-panel" style="padding: 24px; border-color: rgba(239, 68, 68, 0.45); box-shadow: 0 10px 30px rgba(0,0,0,0.35);">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;">
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <div style="width: 40px; height: 40px; border-radius: 10px; background: #ef4444; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; color: #fff;">
+                  🛑
+                </div>
+                <div>
+                  <h3 style="font-size: 1.15rem; font-weight: 800; color: #fff; margin: 0;">Maintenance Mode</h3>
+                  <p style="font-size: 0.75rem; color: #fca5a5; margin: 0;">Temporarily pause user access for maintenance</p>
+                </div>
               </div>
+              <label class="switch-toggle">
+                <input type="checkbox" id="chkMaintenance" ${s.maintenanceMode ? 'checked' : ''} />
+                <span class="switch-slider" style="background: #ef4444;"></span>
+              </label>
+            </div>
 
-              <button id="btnSaveGeneralSettings" class="btn-primary" style="margin-top: 6px; padding: 11px; font-weight: 800;">
-                Save Configuration ✓
-              </button>
+            <div>
+              <label style="font-size: 0.8rem; font-weight: 700; color: #d1d5db;">Maintenance Notice Message</label>
+              <textarea id="txtMaintenanceMsg" class="glass-input" rows="3" style="margin-top: 5px; width: 100%; font-size: 0.85rem;">${s.maintenanceMessage || "Peelin's is currently under scheduled maintenance. We will be back online shortly!"}</textarea>
             </div>
           </div>
         </div>
+
+        <div style="margin-top: 24px; text-align: center;">
+          <button id="btnSaveBottomSettings" class="btn-primary" style="padding: 14px 38px; font-weight: 900; font-size: 1.05rem; background: linear-gradient(135deg, #10b981, #059669); border: none; border-radius: 14px; box-shadow: 0 4px 20px rgba(16, 185, 129, 0.5); cursor: pointer;">
+            💾 Save & Apply All Settings Globally ✓
+          </button>
+        </div>
       `;
 
-      // Bind WhatsApp save
-      const btnSaveWa = container.querySelector('#btnSaveWhatsAppSettings');
-      if (btnSaveWa) {
-        btnSaveWa.onclick = () => {
-          const name = container.querySelector('#settingWaGroupName').value.trim();
-          const link = container.querySelector('#settingWaInviteLink').value.trim();
-          const phone = container.querySelector('#settingWaSupportNum').value.trim();
-          const cfg = { enabled: true, groupName: name, inviteLink: link, supportNumber: phone };
-          localStorage.setItem('peelins_whatsapp_config', JSON.stringify(cfg));
-          try {
-            const bc = new BroadcastChannel('hipa_users_sync');
-            bc.postMessage({ type: 'WHATSAPP_CONFIG_UPDATED', config: cfg });
-            setTimeout(() => bc.close(), 1000);
-          } catch (e) {}
-          this.showToast('✅ WhatsApp community settings saved & broadcasted!');
+      // Save handler function
+      const saveAllSettings = () => {
+        const payload = {
+          announcementEnabled: container.querySelector('#chkAnnouncementEnabled').checked,
+          announcementText: container.querySelector('#txtAnnouncement').value.trim(),
+          appName: container.querySelector('#txtAppName').value.trim() || "Peelin's",
+          appTagline: container.querySelector('#txtAppTagline').value.trim() || "Meet Live • Feel Real",
+          welcomeCoins: parseInt(container.querySelector('#numWelcomeCoins').value) || 60,
+          minRechargePrice: parseInt(container.querySelector('#numMinRecharge').value) || 14,
+          dailyFreeSwipes: parseInt(container.querySelector('#numDailySwipes').value) || 25,
+          dailyFreeCallMinutes: parseInt(container.querySelector('#numFreeCallMins').value) || 30,
+          enableWhatsappPopup: container.querySelector('#chkWaPopup').checked,
+          whatsappGroupName: container.querySelector('#txtWaGroupName').value.trim(),
+          whatsappInviteLink: container.querySelector('#txtWaInviteLink').value.trim(),
+          whatsappSupportNumber: container.querySelector('#txtWaSupportNum').value.trim(),
+          enableVideoCalling: container.querySelector('#chkVideoCall').checked,
+          enableAudioCalling: container.querySelector('#chkAudioCall').checked,
+          enableLuckyWheel: container.querySelector('#chkLuckyWheel').checked,
+          enableVipPass: container.querySelector('#chkVipPass').checked,
+          enableRandomMatching: container.querySelector('#chkRandomMatch').checked,
+          enableFemaleVerification: container.querySelector('#chkFemaleVerif').checked,
+          upiVpa: container.querySelector('#txtUpiVpa').value.trim(),
+          upiPayeeName: container.querySelector('#txtUpiPayee').value.trim(),
+          maintenanceMode: container.querySelector('#chkMaintenance').checked,
+          maintenanceMessage: container.querySelector('#txtMaintenanceMsg').value.trim()
         };
-      }
 
-      // Bind General save
-      const btnSaveGen = container.querySelector('#btnSaveGeneralSettings');
-      if (btnSaveGen) {
-        btnSaveGen.onclick = () => {
-          this.showToast('✅ Platform configuration updated successfully!');
-        };
-      }
+        this.saveSettings(payload);
+        this.playNotificationChime();
+        this.showToast('✅ Global App Settings Updated & Broadcasted to All Users!');
+      };
+
+      const btnTop = container.querySelector('#btnSaveTopSettings');
+      if (btnTop) btnTop.onclick = saveAllSettings;
+
+      const btnBottom = container.querySelector('#btnSaveBottomSettings');
+      if (btnBottom) btnBottom.onclick = saveAllSettings;
     }
   }
 

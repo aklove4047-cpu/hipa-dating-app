@@ -354,6 +354,65 @@ export async function onRequest(context) {
     }), { headers: corsHeaders });
   }
 
+  // Dynamic Global Settings Endpoint
+  if (path.includes('/api/v1/settings')) {
+    const kv = context.env?.HIPA_DATA;
+    if (request.method === 'POST' || request.method === 'PUT') {
+      try {
+        const body = await request.json();
+        if (kv) {
+          await kv.put('peelins_global_settings', JSON.stringify(body));
+        } else {
+          globalThis.__PEELINS_SETTINGS__ = body;
+        }
+        return new Response(JSON.stringify({ ok: true, message: "Settings saved successfully", settings: body }), { headers: corsHeaders });
+      } catch (e) {
+        return new Response(JSON.stringify({ ok: false, error: e.message }), { status: 500, headers: corsHeaders });
+      }
+    }
+
+    let settings = null;
+    if (kv) {
+      try {
+        const raw = await kv.get('peelins_global_settings');
+        if (raw) settings = JSON.parse(raw);
+      } catch (e) {}
+    } else {
+      settings = globalThis.__PEELINS_SETTINGS__;
+    }
+    return new Response(JSON.stringify({ ok: true, settings: settings || null }), { headers: corsHeaders });
+  }
+
+  // Dynamic Avatars Library Endpoint
+  if (path.includes('/api/v1/avatars')) {
+    const kv = context.env?.HIPA_DATA;
+    if (request.method === 'POST' || request.method === 'PUT') {
+      try {
+        const body = await request.json();
+        const list = Array.isArray(body) ? body : (body.avatars || []);
+        if (kv) {
+          await kv.put('peelins_custom_avatars', JSON.stringify(list));
+        } else {
+          globalThis.__PEELINS_AVATARS__ = list;
+        }
+        return new Response(JSON.stringify({ ok: true, message: "Avatars saved successfully", avatars: list }), { headers: corsHeaders });
+      } catch (e) {
+        return new Response(JSON.stringify({ ok: false, error: e.message }), { status: 500, headers: corsHeaders });
+      }
+    }
+
+    let avatars = null;
+    if (kv) {
+      try {
+        const raw = await kv.get('peelins_custom_avatars');
+        if (raw) avatars = JSON.parse(raw);
+      } catch (e) {}
+    } else {
+      avatars = globalThis.__PEELINS_AVATARS__;
+    }
+    return new Response(JSON.stringify({ ok: true, avatars: avatars || null }), { headers: corsHeaders });
+  }
+
   // App Config
   if (path.includes('/api/v1/app-config')) {
     return new Response(JSON.stringify({

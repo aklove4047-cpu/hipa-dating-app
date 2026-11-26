@@ -1,3 +1,38 @@
+export const DEFAULT_APP_SETTINGS = {
+  appName: "Peelin's",
+  appTagline: "Meet Live • Feel Real",
+  ageBadge: "18+",
+  announcementEnabled: true,
+  announcementText: "🔥 Welcome to Peelin's! Top creators are live now. Join VIP for special perks!",
+  welcomeCoins: 60,
+  dailyFreeSwipes: 25,
+  dailyFreeCallMinutes: 30,
+  minRechargePrice: 14,
+  enableVideoCalling: true,
+  enableAudioCalling: true,
+  enableLuckyWheel: true,
+  enableVipPass: true,
+  enableRandomMatching: true,
+  enableFemaleVerification: true,
+  whatsappGroupName: "Peelin's Official VIP Community",
+  whatsappInviteLink: "https://chat.whatsapp.com/invite/peelins-official-18",
+  whatsappSupportNumber: "+919511088531",
+  enableWhatsappPopup: true,
+  upiVpa: "peelins@upi",
+  upiPayeeName: "Peelin's Dating App",
+  maintenanceMode: false,
+  maintenanceMessage: "Peelin's is currently under scheduled maintenance. We will be back online shortly!"
+};
+
+export const DEFAULT_AVATAR_OBJECTS = [
+  { id: "av_f1", url: "/images/avatar_female_riya.jpg", name: "Riya", gender: "female" },
+  { id: "av_m1", url: "/images/avatar_male_kabir.jpg", name: "Kabir", gender: "male" },
+  { id: "av_f2", url: "/images/avatar_female_ananya.jpg", name: "Ananya", gender: "female" },
+  { id: "av_m2", url: "/images/avatar_male_rohan.jpg", name: "Rohan", gender: "male" },
+  { id: "av_f3", url: "/images/avatar_female_tanya.jpg", name: "Tanya", gender: "female" },
+  { id: "av_m3", url: "/images/avatar_male_dev.jpg", name: "Dev", gender: "male" }
+];
+
 /* =========================================================
    Peelin's Dating App — API & Data Layer
    Brand: Peelin's — Meet Live • Feel Real (18+ Verified)
@@ -257,19 +292,56 @@ class HipaApiService {
   // ==========================================
   // DYNAMIC AVATAR LIBRARY (Admin Controlled)
   // ==========================================
+  // ==========================================
+  // DYNAMIC AVATARS LIBRARY (Add & Delete Anywhere)
+  // ==========================================
   getAvatars() {
     const saved = localStorage.getItem('peelins_custom_avatars');
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          // Normalize to objects
+          return parsed.map((item, idx) => {
+            if (typeof item === 'string') {
+              const isFemale = item.toLowerCase().includes('female') || idx % 2 === 0;
+              return {
+                id: 'av_' + idx + '_' + Math.abs(item.split('').reduce((a, b) => ((a << 5) - a) + b.charCodeAt(0), 0)),
+                url: item,
+                name: 'Avatar ' + (idx + 1),
+                gender: isFemale ? 'female' : 'male'
+              };
+            }
+            return {
+              id: item.id || ('av_' + idx),
+              url: item.url,
+              name: item.name || ('Avatar ' + (idx + 1)),
+              gender: item.gender || 'female'
+            };
+          });
+        }
       } catch (e) {}
     }
-    return HIPA_AVATARS;
+    return [...DEFAULT_AVATAR_OBJECTS];
+  }
+
+  getAvatarUrls() {
+    return this.getAvatars().map(a => a.url);
   }
 
   saveAvatars(list) {
     localStorage.setItem('peelins_custom_avatars', JSON.stringify(list));
+    // Asynchronously sync to Cloudflare endpoint
+    const endpoints = ['/api/v1/avatars', 'https://hipa-admin.pages.dev/api/v1/avatars'];
+    for (const ep of endpoints) {
+      try {
+        fetch(ep, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ avatars: list })
+        }).catch(() => {});
+      } catch (e) {}
+    }
     try {
       const bc = new BroadcastChannel('hipa_users_sync');
       bc.postMessage({ type: 'AVATARS_UPDATED', avatars: list });
@@ -278,44 +350,100 @@ class HipaApiService {
   }
 
   addAvatar(url, name = "Avatar", gender = "female") {
-    const list = [...this.getAvatars()];
-    if (!list.includes(url)) {
-      list.unshift(url);
-      this.saveAvatars(list);
-    }
-    return list;
-  }
-
-  deleteAvatar(url) {
-    let list = this.getAvatars().filter(u => u !== url);
-    if (list.length === 0) list = [...HIPA_AVATARS];
+    let list = this.getAvatars();
+    // Remove if already exists with same URL
+    list = list.filter(a => a.url !== url);
+    const newAv = {
+      id: 'av_' + Date.now(),
+      url: url,
+      name: name || ('Avatar ' + (list.length + 1)),
+      gender: gender || 'female'
+    };
+    list.unshift(newAv);
     this.saveAvatars(list);
     return list;
   }
 
+  deleteAvatar(identifier) {
+    let list = this.getAvatars().filter(a => a.id !== identifier && a.url !== identifier);
+    this.saveAvatars(list);
+    return list;
+  }
+
+  resetAvatars() {
+    localStorage.removeItem('peelins_custom_avatars');
+    const defaults = [...DEFAULT_AVATAR_OBJECTS];
+    this.saveAvatars(defaults);
+    return defaults;
+  }
+
   // ==========================================
-  // WHATSAPP GROUP CONFIGURATION
+  // DYNAMIC GLOBAL APP SETTINGS
   // ==========================================
-  getWhatsAppConfig() {
-    const saved = localStorage.getItem('peelins_whatsapp_config');
+  getSettings() {
+    const saved = localStorage.getItem('peelins_global_settings');
     if (saved) {
-      try { return JSON.parse(saved); } catch (e) {}
+      try {
+        const parsed = JSON.parse(saved);
+        return { ...DEFAULT_APP_SETTINGS, ...parsed };
+      } catch (e) {}
     }
+    return { ...DEFAULT_APP_SETTINGS };
+  }
+
+  saveSettings(settings) {
+    const current = this.getSettings();
+    const merged = { ...current, ...settings };
+    localStorage.setItem('peelins_global_settings', JSON.stringify(merged));
+    
+    // Also keep peelins_whatsapp_config in sync
+    const waCfg = {
+      enabled: merged.enableWhatsappPopup,
+      groupName: merged.whatsappGroupName,
+      inviteLink: merged.whatsappInviteLink,
+      supportNumber: merged.whatsappSupportNumber
+    };
+    localStorage.setItem('peelins_whatsapp_config', JSON.stringify(waCfg));
+
+    // Async sync to Cloudflare endpoint
+    const endpoints = ['/api/v1/settings', 'https://hipa-admin.pages.dev/api/v1/settings'];
+    for (const ep of endpoints) {
+      try {
+        fetch(ep, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(merged)
+        }).catch(() => {});
+      } catch (e) {}
+    }
+
+    try {
+      const bc = new BroadcastChannel('hipa_users_sync');
+      bc.postMessage({ type: 'SYSTEM_SETTINGS_UPDATED', settings: merged });
+      bc.postMessage({ type: 'WHATSAPP_CONFIG_UPDATED', config: waCfg });
+      setTimeout(() => bc.close(), 1000);
+    } catch (e) {}
+
+    return merged;
+  }
+
+  getWhatsAppConfig() {
+    const s = this.getSettings();
     return {
-      enabled: true,
-      groupName: "Peelin's Official VIP Community",
-      inviteLink: "https://chat.whatsapp.com/invite/peelins-official-18",
-      supportNumber: "+919511088531"
+      enabled: s.enableWhatsappPopup !== false,
+      groupName: s.whatsappGroupName || "Peelin's Official VIP Community",
+      inviteLink: s.whatsappInviteLink || "https://chat.whatsapp.com/invite/peelins-official-18",
+      supportNumber: s.whatsappSupportNumber || "+919511088531"
     };
   }
 
   saveWhatsAppConfig(cfg) {
-    localStorage.setItem('peelins_whatsapp_config', JSON.stringify(cfg));
-    try {
-      const bc = new BroadcastChannel('hipa_users_sync');
-      bc.postMessage({ type: 'WHATSAPP_CONFIG_UPDATED', config: cfg });
-      setTimeout(() => bc.close(), 1000);
-    } catch (e) {}
+    return this.saveSettings({
+      whatsappGroupName: cfg.groupName,
+      whatsappInviteLink: cfg.inviteLink,
+      whatsappSupportNumber: cfg.supportNumber,
+      enableWhatsappPopup: cfg.enabled !== false
+    });
   }
 
   // ==========================================
@@ -568,6 +696,8 @@ class HipaApiService {
     const enteredName = (name || '').trim();
     const finalName = enteredName || ("User" + Math.floor(100 + Math.random() * 900));
     const isFemale = (gender === 'female');
+    const settings = this.getSettings();
+    const reqFemaleVerif = isFemale && (settings.enableFemaleVerification !== false);
 
     const newUser = {
       id: Date.now(),
@@ -577,12 +707,12 @@ class HipaApiService {
       language: language || "Hindi",
       gender: gender || "male",
       avatar: avatar || HIPA_AVATARS[0],
-      coins: 60, // Welcome bonus!
+      coins: settings.welcomeCoins || 60, // Configured dynamically from Admin Panel!
       referralCode: pending.referralCode || "",
       isDnd: false,
       notifications: true,
-      verified: !isFemale, // Male is auto-verified; Female requires video & voice note admin approval!
-      verificationStatus: isFemale ? 'pending_approval' : 'approved',
+      verified: !reqFemaleVerif, // Dependent on admin female verification setting
+      verificationStatus: reqFemaleVerif ? 'pending_approval' : 'approved',
       isOnline: true,
       isPremium: false,
       status: "active",
