@@ -7,7 +7,7 @@
              Recent Calls Log, Friends Deck, User Profile & Settings.
    ========================================================= */
 
-import { hipaApi, HIPA_CREATORS, HIPA_COIN_PACKS, HIPA_LANGUAGES, HIPA_AVATARS, HIPA_GIFTS, HIPA_STORIES, hipaAudio } from './api.js?v=11.0';
+import { hipaApi, HIPA_CREATORS, HIPA_COIN_PACKS, HIPA_LANGUAGES, HIPA_AVATARS, HIPA_GIFTS, HIPA_STORIES, hipaAudio } from './api.js?v=12.0';
 
 class HipaApp {
   constructor() {
@@ -37,7 +37,7 @@ class HipaApp {
   // ONBOARDING SCREENS (Exact UI as Screenshots)
   // ==========================================
 
-  // Step 1: Get Started / Mobile Number
+  // Step 1: Get Started / Mobile Number & Instant Demo Login
   renderOnboardingStep1() {
     const root = document.getElementById('mainViewport');
     const topBar = document.getElementById('hipaTopBar') || document.getElementById('himaTopBar');
@@ -48,89 +48,115 @@ class HipaApp {
     if (btnR) btnR.style.display = 'none';
 
     root.innerHTML = `
-      <div class="onboarding-container" style="justify-content: space-between;">
+      <div class="onboarding-container" style="justify-content: space-between; padding-bottom: 24px;">
         <div class="onboarding-header-decor">
-          <div style="width: 84px; height: 84px; border-radius: 22px; overflow: hidden; margin: 0 auto 12px auto; box-shadow: 0 8px 30px rgba(255, 0, 127, 0.5); border: 2px solid rgba(255, 255, 255, 0.4);">
-            <img src="/images/peelins_logo.jpg" style="width: 100%; height: 100%; object-fit: cover;" />
+          <div style="width: 88px; height: 88px; border-radius: 24px; overflow: hidden; margin: 0 auto 12px auto; box-shadow: 0 0 35px rgba(255, 0, 127, 0.65); border: 2px solid rgba(255, 0, 127, 0.5);">
+            <img src="/images/peelins_logo.jpg" style="width: 100%; height: 100%; object-fit: cover;" alt="Peelin's Logo" />
           </div>
           <div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
-            <h1 style="font-size: 2.1rem; font-weight: 900; background: linear-gradient(135deg, #ff007f 0%, #ff2a85 50%, #7928ca 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Peelin's</h1>
+            <h1 style="font-size: 2.2rem; font-weight: 900; background: linear-gradient(135deg, #ff007f 0%, #ff2a85 50%, #7928ca 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; letter-spacing: -0.5px;">Peelin's</h1>
             <span class="badge-18-plus">18+</span>
           </div>
-          <p style="font-size: 0.95rem; color: #6b7280; font-weight: 700; margin-top: 2px;">Meet Live • Feel Real</p>
+          <p style="font-size: 0.95rem; color: #ff85c0; font-weight: 700; margin-top: 2px; text-shadow: 0 0 12px rgba(255,0,127,0.4);">Meet Live • Feel Real</p>
 
-          <div class="features-row" style="margin-top: 14px;">
+          <div class="features-row" style="margin-top: 16px; margin-bottom: 8px;">
             <div class="feat-item">
-              <div class="feat-icon-sq" style="background: #ff007f;">📹</div>
-              <span>Video Call</span>
+              <div class="feat-icon-sq" style="background: linear-gradient(135deg, #ff007f, #ec4899); box-shadow: 0 0 16px rgba(255,0,127,0.45);">📹</div>
+              <span style="color: #ffffff;">Video Call</span>
             </div>
             <div class="feat-item">
-              <div class="feat-icon-sq" style="background: #3b82f6;">📞</div>
-              <span>Audio Call</span>
+              <div class="feat-icon-sq" style="background: linear-gradient(135deg, #3b82f6, #06b6d4); box-shadow: 0 0 16px rgba(59,130,246,0.45);">📞</div>
+              <span style="color: #ffffff;">Audio Call</span>
             </div>
             <div class="feat-item">
-              <div class="feat-icon-sq" style="background: #8b5cf6;">💬</div>
-              <span>Chat</span>
+              <div class="feat-icon-sq" style="background: linear-gradient(135deg, #8b5cf6, #d946ef); box-shadow: 0 0 16px rgba(139,92,246,0.45);">💬</div>
+              <span style="color: #ffffff;">Live Chat</span>
             </div>
             <div class="feat-item">
-              <div class="feat-icon-sq" style="background: #10b981;">👥</div>
-              <span>Meet People</span>
+              <div class="feat-icon-sq" style="background: linear-gradient(135deg, #10b981, #059669); box-shadow: 0 0 16px rgba(16,185,129,0.45);">👥</div>
+              <span style="color: #ffffff;">Meet Real</span>
             </div>
           </div>
         </div>
 
-        <div style="background: #ffffff; border-radius: 24px 24px 0 0; margin-top: auto; padding-top: 10px;">
-          <h2 style="font-size: 1.5rem; font-weight: 800; color: #111827; margin-bottom: 4px;">Get Started</h2>
-          <label style="font-size: 0.82rem; font-weight: 700; color: #4b5563;">Mobile number</label>
+        <div style="background: rgba(22, 14, 38, 0.88); border: 1.5px solid rgba(255, 0, 127, 0.35); border-radius: 24px; padding: 22px 18px; margin-top: auto; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.7); backdrop-filter: blur(20px);">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+            <h2 style="font-size: 1.45rem; font-weight: 900; color: #ffffff; margin: 0;">Get Started</h2>
+            <span style="font-size: 0.72rem; color: #10b981; background: rgba(16,185,129,0.15); border: 1px solid rgba(16,185,129,0.35); padding: 2px 8px; border-radius: 9999px; font-weight: 800;">🔒 Secure Login</span>
+          </div>
 
-          <div class="phone-input-wrap">
-            <div class="country-flag">
+          <label style="font-size: 0.76rem; font-weight: 800; color: #ff85c0; text-transform: uppercase; letter-spacing: 0.8px;">Mobile number</label>
+
+          <div class="phone-input-wrap" style="background: rgba(255, 255, 255, 0.08) !important; border: 1.5px solid #ff007f !important; border-radius: 14px !important; margin: 8px 0 6px 0 !important; box-shadow: 0 0 20px rgba(255, 0, 127, 0.25) !important;">
+            <div class="country-flag" style="color: #ffffff !important; font-size: 1.05rem; font-weight: 800; display: flex; align-items: center; gap: 6px;">
               <span>🇮🇳</span> +91
             </div>
-            <input type="tel" id="inputPhone" class="phone-text-input" placeholder="Enter mobile number" maxlength="10" value="9511088531" />
+            <input type="tel" id="inputPhone" class="phone-text-input" placeholder="Enter 10-digit number" maxlength="10" inputmode="numeric" autocomplete="tel" value="" style="color: #ffffff !important; font-size: 1.25rem !important; font-weight: 800 !important; letter-spacing: 1.5px !important; caret-color: #ff007f !important; width: 100% !important; background: transparent !important;" />
           </div>
-          <p style="font-size: 0.75rem; color: var(--text-faint); margin-top: -10px; margin-bottom: 14px;">
-            You will receive an OTP on this number.
+          <p style="font-size: 0.72rem; color: #958ba8; margin-bottom: 14px;">
+            You will receive a 6-digit OTP verification code.
           </p>
 
           <!-- Referral Code Toggle -->
-          <label class="checkbox-row">
+          <label class="checkbox-row" style="margin-bottom: 8px; color: #d5cee3 !important;">
             <input type="checkbox" id="chkReferral" checked />
-            <span style="font-weight: 700; color: #1f2937;">Have a referral code?</span>
+            <span style="font-weight: 700; color: #ffffff;">Have a referral code? (+20 Coins)</span>
           </label>
-          <div id="referralCodeBox" style="margin-bottom: 14px; display: flex; gap: 8px;">
-            <input type="text" id="inputRefCode" class="glass-input" value="PEELINS2026" placeholder="Enter referral code" style="background: #f9fafb; border-color: #e5e7eb; color: #111827; font-weight: 700;" />
-            <button class="btn-secondary" id="btnApplyRef" style="padding: 0 18px; font-weight: 800; background: #4b5563; color: #ffffff;">Apply</button>
-          </div>
-          <div id="refSuccessMsg" style="font-size: 0.75rem; color: #10b981; font-weight: 700; margin-top: -10px; margin-bottom: 14px;">
-            ✓ Referral code applied! +20 bonus coins on signup.
+          <div id="referralCodeBox" style="margin-bottom: 12px; display: flex; gap: 8px;">
+            <input type="text" id="inputRefCode" class="glass-input" value="PEELINS2026" placeholder="Enter referral code" style="padding: 10px 14px; font-size: 0.95rem; font-weight: 800; color: #ffd700 !important; background: rgba(255,255,255,0.06); border-color: rgba(255,215,0,0.4);" />
+            <button class="btn-secondary" id="btnApplyRef" style="padding: 0 16px; font-weight: 800; background: linear-gradient(135deg, #ff007f, #7928ca); color: #ffffff; border: none; border-radius: 12px; cursor: pointer;">Apply</button>
           </div>
 
           <!-- Age & Policy Checkboxes -->
-          <label class="checkbox-row">
+          <label class="checkbox-row" style="color: #d5cee3 !important;">
             <input type="checkbox" id="chkAge" checked />
-            <span style="font-weight: 600;">I am 18 years or older</span>
+            <span style="font-weight: 700; color: #ffffff;">I confirm I am 18 years or older <strong style="color: #ff007f;">(Strictly 18+)</strong></span>
           </label>
-          <label class="checkbox-row">
+          <label class="checkbox-row" style="color: #d5cee3 !important;">
             <input type="checkbox" id="chkTerms" checked />
-            <span>I accept <strong style="color: var(--primary-pink);">terms & conditions</strong>, and <strong style="color: var(--primary-pink);">community guidelines & moderation policy</strong> of Peelin's.</span>
+            <span>I accept <strong style="color: #ff85c0;">Terms of Service</strong> & <strong style="color: #ff85c0;">Safety Guidelines</strong> of Peelin\'s.</span>
           </label>
 
-          <button class="btn-pink-block" id="btnSendOtp" style="margin-top: 10px;">
-            Send OTP
+          <button class="btn-pink-block" id="btnSendOtp" style="margin-top: 6px; font-size: 1.05rem; font-weight: 900; letter-spacing: 0.5px; box-shadow: 0 0 25px rgba(255,0,127,0.5);">
+            Send OTP ➔
           </button>
+
+          <!-- Instant Demo Access for testing -->
+          <div style="margin-top: 12px; text-align: center;">
+            <button type="button" id="btnQuickDemoLogin" style="background: rgba(255,255,255,0.06); border: 1px dashed rgba(255, 0, 127, 0.45); color: #ff94c2; font-size: 0.8rem; font-weight: 800; padding: 8px 16px; border-radius: 9999px; cursor: pointer; width: 100%;">
+              ⚡ Quick Demo Login (Skip OTP & Jump in)
+            </button>
+          </div>
         </div>
       </div>
     `;
 
+    const phoneInput = root.querySelector('#inputPhone');
+    phoneInput.oninput = (e) => {
+      e.target.value = e.target.value.replace(/\D/g, '').slice(0, 10);
+    };
+
     root.querySelector('#btnApplyRef').onclick = () => {
-      alert('🎉 Referral code applied! You will get 20 free coins.');
+      alert('🎉 Referral code applied! You will get 20 bonus coins on signup.');
+    };
+
+    root.querySelector('#btnQuickDemoLogin').onclick = () => {
+      const demoPhone = "98" + Math.floor(10000000 + Math.random() * 90000000);
+      hipaApi.sendPhoneOtp(demoPhone, "PEELINS2026");
+      hipaApi.verifyPhoneOtp("123456");
+      this.renderOnboardingStep3();
     };
 
     root.querySelector('#btnSendOtp').onclick = async () => {
-      const phone = root.querySelector('#inputPhone').value.trim();
+      const phone = phoneInput.value.trim();
       const ageChk = root.querySelector('#chkAge').checked;
       const termsChk = root.querySelector('#chkTerms').checked;
+
+      if (!phone || phone.length < 10) {
+        alert('⚠️ Please enter a valid 10-digit mobile number.');
+        phoneInput.focus();
+        return;
+      }
 
       if (!ageChk) {
         alert('You must be 18 years or older to use Peelin\'s.');
@@ -155,45 +181,58 @@ class HipaApp {
     const root = document.getElementById('mainViewport');
 
     root.innerHTML = `
-      <div class="onboarding-container" style="justify-content: space-between;">
-        <div style="display: flex; align-items: center; justify-content: space-between;">
-          <button class="btn-secondary" id="btnBackToPhone" style="width: 40px; height: 40px; border-radius: 50%; padding: 0;">←</button>
+      <div class="onboarding-container" style="justify-content: space-between; padding-bottom: 24px;">
+        <div style="display: flex; align-items: center; justify-content: space-between; padding-top: 10px;">
+          <button class="btn-secondary" id="btnBackToPhone" style="width: 42px; height: 42px; border-radius: 50%; padding: 0; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.2); color: #ffffff; font-size: 1.2rem; cursor: pointer;">←</button>
+          <span style="font-size: 0.8rem; font-weight: 800; color: #ff85c0;">Step 2 of 4</span>
         </div>
 
-        <div class="onboarding-header-decor">
-          <div class="onboarding-logo">💬</div>
-          <h1 style="font-size: 1.8rem; font-weight: 900; color: #111827;">Peelin's</h1>
-          <p style="font-size: 0.85rem; color: var(--text-muted); font-weight: 600;">Where Feelings Connect</p>
+        <div class="onboarding-header-decor" style="padding: 10px 0;">
+          <div style="width: 72px; height: 72px; border-radius: 20px; overflow: hidden; margin: 0 auto 10px auto; box-shadow: 0 0 30px rgba(255, 0, 127, 0.6); border: 2px solid rgba(255, 0, 127, 0.4);">
+            <img src="/images/peelins_logo.jpg" style="width: 100%; height: 100%; object-fit: cover;" alt="Peelin's Logo" />
+          </div>
+          <h1 style="font-size: 1.9rem; font-weight: 900; background: linear-gradient(135deg, #ff007f 0%, #ff2a85 50%, #7928ca 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Peelin's</h1>
+          <p style="font-size: 0.85rem; color: #c9bfdc; font-weight: 700;">Meet Live • Feel Real</p>
         </div>
 
-        <div style="background: #ffffff; border-radius: 24px 24px 0 0; padding-top: 10px;">
-          <h2 style="font-size: 1.6rem; font-weight: 800; color: #111827; margin-bottom: 4px;">Verify OTP</h2>
-          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px;">
-            <span style="font-size: 0.88rem; color: var(--text-muted);">
-              OTP sent to <strong style="color: #111827;">+91${phone}</strong>
+        <div style="background: rgba(22, 14, 38, 0.88); border: 1.5px solid rgba(255, 0, 127, 0.35); border-radius: 24px; padding: 22px 18px; margin-top: auto; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.7); backdrop-filter: blur(20px);">
+          <h2 style="font-size: 1.45rem; font-weight: 900; color: #ffffff; margin-bottom: 4px;">Verify OTP</h2>
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px;">
+            <span style="font-size: 0.86rem; color: #c9bfdc;">
+              Code sent to <strong style="color: #ffffff; font-weight: 900;">+91${phone}</strong>
             </span>
-            <button id="btnChangeNumber" style="background: none; border: none; color: var(--primary-pink); font-weight: 800; cursor: pointer;">Change</button>
+            <button id="btnChangeNumber" style="background: none; border: none; color: #ff007f; font-weight: 800; cursor: pointer; font-size: 0.82rem; text-decoration: underline;">Change</button>
           </div>
 
-          <label style="display: block; font-size: 0.82rem; font-weight: 700; color: #4b5563; text-align: center; margin-bottom: 12px;">
-            Enter 6-digit OTP
+          <label style="display: block; font-size: 0.76rem; font-weight: 800; color: #ff85c0; text-transform: uppercase; letter-spacing: 0.8px; text-align: center; margin-bottom: 12px;">
+            Enter 6-digit OTP code
           </label>
 
           <!-- 6 OTP Boxes -->
-          <div style="display: flex; justify-content: center; gap: 8px; margin-bottom: 24px;">
+          <div style="display: flex; justify-content: center; gap: 8px; margin-bottom: 18px;">
             ${[0, 1, 2, 3, 4, 5].map((i) => `
-              <input type="text" maxlength="1" class="otp-box-digit" data-idx="${i}" 
-                     value="${['1', '2', '3', '4', '5', '6'][i]}"
-                     style="width: 46px; height: 52px; text-align: center; font-size: 1.4rem; font-weight: 900; border: 2px solid var(--primary-pink); border-radius: 12px; outline: none; background: #ffffff; color: #111827;" />
+              <input type="text" maxlength="1" inputmode="numeric" class="otp-box-digit" data-idx="${i}" 
+                     value=""
+                     style="width: 46px; height: 54px; text-align: center; font-size: 1.6rem; font-weight: 900; border: 2px solid #ff007f; border-radius: 14px; outline: none; background: rgba(255, 255, 255, 0.08); color: #ffffff; box-shadow: 0 0 16px rgba(255, 0, 127, 0.25); caret-color: #ff007f;" />
             `).join('')}
           </div>
 
-          <button class="btn-pink-block" id="btnVerifyOtp">
-            Verify OTP
+          <!-- Quick Test OTP badge -->
+          <div style="background: rgba(255, 215, 0, 0.1); border: 1px dashed rgba(255, 215, 0, 0.4); border-radius: 12px; padding: 8px 12px; margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between;">
+            <div style="font-size: 0.76rem; color: #ffd700; font-weight: 700;">
+              ✨ Demo OTP: <strong>123456</strong>
+            </div>
+            <button type="button" id="btnAutoFillOtp" style="background: #ffd700; border: none; color: #000; font-weight: 900; font-size: 0.72rem; padding: 4px 10px; border-radius: 9999px; cursor: pointer;">
+              ⚡ Fill 123456
+            </button>
+          </div>
+
+          <button class="btn-pink-block" id="btnVerifyOtp" style="font-size: 1.05rem; font-weight: 900; box-shadow: 0 0 25px rgba(255,0,127,0.5);">
+            Verify OTP ➔
           </button>
 
-          <p style="text-align: center; font-size: 0.82rem; color: var(--text-muted); margin-top: 18px;">
-            Didn't receive the OTP? <span style="color: var(--primary-pink); font-weight: 800;">Retry in 23s</span>
+          <p style="text-align: center; font-size: 0.78rem; color: #958ba8; margin-top: 14px;">
+            Didn't receive the OTP? <span id="btnResendOtp" style="color: #ff007f; font-weight: 800; cursor: pointer;">Resend in <span id="otpCountdown">25</span>s</span>
           </p>
         </div>
       </div>
@@ -202,19 +241,43 @@ class HipaApp {
     root.querySelector('#btnBackToPhone').onclick = () => this.renderOnboardingStep1();
     root.querySelector('#btnChangeNumber').onclick = () => this.renderOnboardingStep1();
 
-    // OTP box auto-advance
     const digits = root.querySelectorAll('.otp-box-digit');
+    if (digits[0]) digits[0].focus();
+
+    // Auto-advance & backspace
     digits.forEach((el, idx) => {
       el.oninput = (e) => {
+        e.target.value = e.target.value.replace(/\D/g, '').slice(-1);
         if (e.target.value && idx < 5) digits[idx + 1].focus();
       };
       el.onkeydown = (e) => {
-        if (e.key === 'Backspace' && !e.target.value && idx > 0) digits[idx - 1].focus();
+        if (e.key === 'Backspace' && !e.target.value && idx > 0) {
+          digits[idx - 1].focus();
+        }
+      };
+      el.onpaste = (e) => {
+        e.preventDefault();
+        const pasted = (e.clipboardData || window.clipboardData).getData('text').replace(/\D/g, '').slice(0, 6);
+        pasted.split('').forEach((ch, i) => {
+          if (digits[i]) digits[i].value = ch;
+        });
+        if (digits[Math.min(5, pasted.length)]) digits[Math.min(5, pasted.length)].focus();
       };
     });
 
+    root.querySelector('#btnAutoFillOtp').onclick = () => {
+      ['1', '2', '3', '4', '5', '6'].forEach((d, i) => {
+        if (digits[i]) digits[i].value = d;
+      });
+      if (digits[5]) digits[5].focus();
+    };
+
     root.querySelector('#btnVerifyOtp').onclick = async () => {
       const code = Array.from(digits).map(d => d.value).join('');
+      if (code.length < 6) {
+        alert('⚠️ Please enter the complete 6-digit OTP code (or click "Fill 123456").');
+        return;
+      }
       const res = await hipaApi.verifyPhoneOtp(code);
       if (res.ok) {
         this.renderOnboardingStep3();
@@ -229,37 +292,32 @@ class HipaApp {
     const root = document.getElementById('mainViewport');
 
     root.innerHTML = `
-      <div class="onboarding-container" style="justify-content: flex-start; overflow-y: auto;">
-        <!-- Top Progress Bar -->
-        <div style="display: flex; align-items: center; gap: 14px; margin-bottom: 20px;">
-          <button class="btn-secondary" id="btnBackToOtp" style="width: 40px; height: 40px; border-radius: 50%; padding: 0;">←</button>
-          <div style="flex: 1; height: 6px; background: #e5e7eb; border-radius: 10px; overflow: hidden;">
-            <div style="width: 50%; height: 100%; background: var(--primary-pink);"></div>
-          </div>
+      <div class="onboarding-container" style="justify-content: flex-start; position: relative; padding-bottom: 90px; overflow-y: auto;">
+        <!-- Top Bar -->
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;">
+          <button class="btn-secondary" id="btnBackToOtp" style="width: 42px; height: 42px; border-radius: 50%; padding: 0; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.2); color: #ffffff; font-size: 1.2rem; cursor: pointer;">←</button>
+          <span style="font-size: 0.8rem; font-weight: 800; color: #ff85c0;">Step 3 of 4</span>
         </div>
 
-        <h1 style="font-size: 1.8rem; font-weight: 900; color: #111827; margin-bottom: 6px;">Choose your language</h1>
-        <p style="font-size: 0.88rem; color: var(--text-muted); font-weight: 600; margin-bottom: 20px;">
-          Pick the language you're most comfortable in 🌐
+        <h1 style="font-size: 1.75rem; font-weight: 900; color: #ffffff; margin-bottom: 4px;">Choose your language</h1>
+        <p style="font-size: 0.86rem; color: #c9bfdc; font-weight: 600; margin-bottom: 18px;">
+          Select language to connect with creators who speak your mother tongue
         </p>
 
-        <!-- Languages List -->
-        <div style="flex: 1; padding-bottom: 80px;">
+        <!-- Languages 3x3 Grid -->
+        <div class="languages-grid" style="margin-bottom: 20px;">
           ${HIPA_LANGUAGES.map((lang) => `
-            <div class="lang-card-item ${this.selectedLanguage === lang.name ? 'selected' : ''}" data-lang="${lang.name}">
-              <div class="lang-letter-circle">${lang.char}</div>
-              <div>
-                <div style="font-size: 1.05rem; font-weight: 800; color: #111827;">${lang.name}</div>
-                <div style="font-size: 0.82rem; color: var(--text-muted);">${lang.native}</div>
-              </div>
+            <div class="lang-card-item ${this.selectedLanguage === lang.name ? 'selected' : ''}" data-lang="${lang.name}" style="background: rgba(255,255,255,0.06); border: 1.5px solid ${this.selectedLanguage === lang.name ? 'var(--primary-pink)' : 'rgba(255,255,255,0.1)'}; border-radius: 16px; padding: 14px 10px; text-align: center; cursor: pointer; transition: all 0.2s ease;">
+              <div style="font-size: 1.35rem; font-weight: 900; color: #ffffff; margin-bottom: 4px;">${lang.native}</div>
+              <div style="font-size: 0.8rem; color: #ff85c0; font-weight: 700;">${lang.name}</div>
             </div>
           `).join('')}
         </div>
 
         <!-- Sticky Continue Button -->
-        <div style="position: absolute; bottom: 16px; left: 20px; right: 20px; background: #ffffff; padding-top: 10px;">
-          <button class="btn-pink-block" id="btnContinueLanguage">
-            Continue
+        <div style="position: absolute; bottom: 0; left: 0; right: 0; background: linear-gradient(to top, #0c0814 80%, transparent); padding: 16px 20px;">
+          <button class="btn-pink-block" id="btnContinueLanguage" style="font-size: 1.05rem; font-weight: 900; box-shadow: 0 0 25px rgba(255,0,127,0.5);">
+            Continue ➔
           </button>
         </div>
       </div>
@@ -269,8 +327,12 @@ class HipaApp {
 
     root.querySelectorAll('.lang-card-item').forEach((card) => {
       card.onclick = () => {
-        root.querySelectorAll('.lang-card-item').forEach(c => c.classList.remove('selected'));
+        root.querySelectorAll('.lang-card-item').forEach(c => {
+          c.classList.remove('selected');
+          c.style.borderColor = 'rgba(255,255,255,0.1)';
+        });
         card.classList.add('selected');
+        card.style.borderColor = 'var(--primary-pink)';
         this.selectedLanguage = card.getAttribute('data-lang');
       };
     });
@@ -285,56 +347,57 @@ class HipaApp {
     const root = document.getElementById('mainViewport');
 
     root.innerHTML = `
-      <div class="onboarding-container" style="justify-content: flex-start; overflow-y: auto;">
+      <div class="onboarding-container" style="justify-content: flex-start; overflow-y: auto; padding-bottom: 24px;">
         <!-- Top Progress Bar -->
         <div style="display: flex; align-items: center; gap: 14px; margin-bottom: 20px;">
-          <button class="btn-secondary" id="btnBackToLang" style="width: 40px; height: 40px; border-radius: 50%; padding: 0;">←</button>
-          <div style="flex: 1; height: 6px; background: #e5e7eb; border-radius: 10px; overflow: hidden;">
-            <div style="width: 100%; height: 100%; background: var(--primary-pink);"></div>
+          <button class="btn-secondary" id="btnBackToLang" style="width: 42px; height: 42px; border-radius: 50%; padding: 0; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.2); color: #ffffff; font-size: 1.2rem; cursor: pointer;">←</button>
+          <div style="flex: 1; height: 6px; background: rgba(255,255,255,0.12); border-radius: 10px; overflow: hidden;">
+            <div style="width: 100%; height: 100%; background: var(--primary-gradient); box-shadow: 0 0 10px #ff007f;"></div>
           </div>
+          <span style="font-size: 0.8rem; font-weight: 800; color: #ff85c0;">Final Step</span>
         </div>
 
-        <h1 style="font-size: 1.8rem; font-weight: 900; color: #111827; margin-bottom: 6px;">Who are you?</h1>
-        <p style="font-size: 0.88rem; color: var(--text-muted); font-weight: 600; margin-bottom: 20px;">
-          Choose your gender to personalize your experience
+        <h1 style="font-size: 1.8rem; font-weight: 900; color: #ffffff; margin-bottom: 4px;">Who are you?</h1>
+        <p style="font-size: 0.88rem; color: #c9bfdc; font-weight: 600; margin-bottom: 18px;">
+          Choose your gender & 3D character avatar
         </p>
 
         <!-- Gender Cards -->
-        <div class="gender-cards-row">
-          <div class="gender-box ${this.selectedGender === 'male' ? 'selected' : ''}" data-gender="male">
-            <div class="gender-circle-icon">♂</div>
-            <div style="font-size: 1.1rem; font-weight: 800; color: var(--primary-pink); margin-bottom: 4px;">Male</div>
-            <div style="font-size: 0.74rem; color: var(--text-muted); font-weight: 600;">Connect with creators</div>
+        <div class="gender-cards-row" style="margin-bottom: 20px;">
+          <div class="gender-box ${this.selectedGender === 'male' ? 'selected' : ''}" data-gender="male" style="background: rgba(255,255,255,0.06); border: 2px solid ${this.selectedGender === 'male' ? 'var(--primary-pink)' : 'rgba(255,255,255,0.1)'}; border-radius: 20px; padding: 18px; text-align: center; cursor: pointer; transition: all 0.2s ease;">
+            <div class="gender-circle-icon" style="font-size: 2.2rem; margin-bottom: 6px;">♂</div>
+            <div style="font-size: 1.15rem; font-weight: 900; color: #ffffff; margin-bottom: 4px;">Male</div>
+            <div style="font-size: 0.74rem; color: #ff85c0; font-weight: 700;">Connect with creators</div>
           </div>
 
-          <div class="gender-box ${this.selectedGender === 'female' ? 'selected' : ''}" data-gender="female">
-            <div class="gender-circle-icon">♀</div>
-            <div style="font-size: 1.1rem; font-weight: 800; color: #111827; margin-bottom: 4px;">Female</div>
-            <div style="font-size: 0.74rem; color: var(--text-muted); font-weight: 600;">Become a creator</div>
+          <div class="gender-box ${this.selectedGender === 'female' ? 'selected' : ''}" data-gender="female" style="background: rgba(255,255,255,0.06); border: 2px solid ${this.selectedGender === 'female' ? 'var(--primary-pink)' : 'rgba(255,255,255,0.1)'}; border-radius: 20px; padding: 18px; text-align: center; cursor: pointer; transition: all 0.2s ease;">
+            <div class="gender-circle-icon" style="font-size: 2.2rem; margin-bottom: 6px;">♀</div>
+            <div style="font-size: 1.15rem; font-weight: 900; color: #ffffff; margin-bottom: 4px;">Female</div>
+            <div style="font-size: 0.74rem; color: #ff85c0; font-weight: 700;">Become a creator</div>
           </div>
         </div>
 
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-          <span style="font-size: 0.95rem; font-weight: 800; color: #111827;">Pick your avatar</span>
-          <span style="font-size: 0.76rem; color: var(--text-muted); font-weight: 600;">Swipe to explore →</span>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+          <span style="font-size: 1rem; font-weight: 800; color: #ffffff;">Pick your 3D avatar</span>
+          <span style="font-size: 0.78rem; color: #ff85c0; font-weight: 700;">8 Animated Looks →</span>
         </div>
 
         <!-- 3D Avatars Carousel -->
-        <div class="avatar-carousel">
+        <div class="avatar-carousel" style="padding-bottom: 14px;">
           ${HIPA_AVATARS.map((av, idx) => `
-            <div class="avatar-item-wrap ${this.selectedAvatar === av ? 'selected' : ''}" data-avatar="${av}">
-              <img src="${av}" alt="Avatar ${idx + 1}" />
-              ${this.selectedAvatar === av ? '<div class="avatar-check-badge">✓</div>' : ''}
+            <div class="avatar-item-wrap ${this.selectedAvatar === av ? 'selected' : ''}" data-avatar="${av}" style="cursor: pointer; position: relative;">
+              <img src="${av}" alt="Avatar ${idx + 1}" style="width: 78px; height: 78px; border-radius: 22px; object-fit: cover; border: 2.5px solid ${this.selectedAvatar === av ? 'var(--primary-pink)' : 'rgba(255,255,255,0.15)'}; box-shadow: ${this.selectedAvatar === av ? '0 0 20px rgba(255,0,127,0.6)' : 'none'};" />
+              ${this.selectedAvatar === av ? '<div class="avatar-check-badge" style="position: absolute; bottom: 4px; right: 4px; background: #ff007f; color: #fff; width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: 900; border: 2px solid #000;">✓</div>' : ''}
             </div>
           `).join('')}
         </div>
 
-        <div style="display: flex; align-items: center; gap: 8px; color: var(--primary-pink); font-size: 0.82rem; font-weight: 700; margin-top: auto; margin-bottom: 20px;">
-          <span>ℹ️</span> Gender can't be changed later
+        <div style="display: flex; align-items: center; gap: 8px; color: #ffd700; font-size: 0.82rem; font-weight: 700; margin-top: auto; margin-bottom: 16px; background: rgba(255,215,0,0.1); border: 1px solid rgba(255,215,0,0.3); border-radius: 12px; padding: 10px 14px;">
+          <span>🎁</span> You will get <strong>60 Welcome Bonus Coins</strong> immediately!
         </div>
 
-        <button class="btn-pink-block" id="btnFinishOnboarding">
-          Continue
+        <button class="btn-pink-block" id="btnFinishOnboarding" style="font-size: 1.1rem; font-weight: 900; box-shadow: 0 0 30px rgba(255,0,127,0.55);">
+          Start Exploring Peelin's ➔
         </button>
       </div>
     `;
@@ -343,8 +406,12 @@ class HipaApp {
 
     root.querySelectorAll('.gender-box').forEach((box) => {
       box.onclick = () => {
-        root.querySelectorAll('.gender-box').forEach(b => b.classList.remove('selected'));
+        root.querySelectorAll('.gender-box').forEach(b => {
+          b.classList.remove('selected');
+          b.style.borderColor = 'rgba(255,255,255,0.1)';
+        });
         box.classList.add('selected');
+        box.style.borderColor = 'var(--primary-pink)';
         this.selectedGender = box.getAttribute('data-gender');
       };
     });
@@ -353,12 +420,24 @@ class HipaApp {
       wrap.onclick = () => {
         root.querySelectorAll('.avatar-item-wrap').forEach(w => {
           w.classList.remove('selected');
+          const img = w.querySelector('img');
+          if (img) {
+            img.style.borderColor = 'rgba(255,255,255,0.15)';
+            img.style.boxShadow = 'none';
+          }
           const badge = w.querySelector('.avatar-check-badge');
           if (badge) badge.remove();
         });
+
         wrap.classList.add('selected');
+        const img = wrap.querySelector('img');
+        if (img) {
+          img.style.borderColor = 'var(--primary-pink)';
+          img.style.boxShadow = '0 0 20px rgba(255,0,127,0.6)';
+        }
         const badge = document.createElement('div');
         badge.className = 'avatar-check-badge';
+        badge.style.cssText = 'position: absolute; bottom: 4px; right: 4px; background: #ff007f; color: #fff; width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: 900; border: 2px solid #000;';
         badge.textContent = '✓';
         wrap.appendChild(badge);
         this.selectedAvatar = wrap.getAttribute('data-avatar');
@@ -1790,129 +1869,101 @@ class HipaApp {
 
     if (vStatus === 'pending_approval') {
       overlay.innerHTML = `
-        <div class="verification-modal-wrap" style="text-align: center;">
-          <div style="width: 70px; height: 70px; margin: 0 auto 16px auto; border-radius: 50%; background: linear-gradient(135deg, #ffd700, #f59e0b); display: flex; align-items: center; justify-content: center; font-size: 2.2rem; box-shadow: 0 8px 30px rgba(245, 158, 11, 0.4);">
+        <div class="verification-modal-wrap" style="text-align: center; background: #140d22; border: 1.5px solid rgba(255, 0, 127, 0.4); border-radius: 28px; padding: 24px 20px; color: #ffffff; box-shadow: 0 0 40px rgba(0,0,0,0.9);">
+          <div style="width: 72px; height: 72px; margin: 0 auto 16px auto; border-radius: 50%; background: linear-gradient(135deg, #ffd700, #f59e0b); display: flex; align-items: center; justify-content: center; font-size: 2.2rem; box-shadow: 0 0 25px rgba(245, 158, 11, 0.5);">
             ⏳
           </div>
-          <div class="badge-18-plus" style="margin-bottom: 8px;">18+ SAFETY PROTECTED</div>
-          <h2 style="font-size: 1.4rem; font-weight: 900; color: #111827; margin-bottom: 8px;">
-            Verification Under Admin Review
+          <div class="badge-18-plus" style="margin-bottom: 8px;">18+ STRICT COMPLIANCE</div>
+          <h2 style="font-size: 1.45rem; font-weight: 900; color: #ffffff; margin-bottom: 8px;">
+            Verification Under Review
           </h2>
-          <p style="font-size: 0.88rem; color: #4b5563; line-height: 1.5; margin-bottom: 20px;">
-            Your live selfie and voice verification have been securely submitted to our <strong>Safety & Moderation Team</strong>.
+          <p style="font-size: 0.88rem; color: #c9bfdc; line-height: 1.5; margin-bottom: 20px;">
+            Your live selfie & voice verification have been securely submitted to our <strong>Safety & Moderation Team</strong>.
             <br><br>
-            Audio and video calling are strictly protected and will unlock automatically as soon as the Admin approves your profile.
+            Audio & video calling will unlock automatically as soon as the admin approves your dossier.
           </p>
 
-          <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 18px; padding: 16px; margin-bottom: 24px; text-align: left; font-size: 0.84rem;">
-            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
-              <span style="color: #10b981; font-weight: 800;">✓</span>
-              <span>18+ Age & DOB Declaration Submitted</span>
+          <div style="background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); border-radius: 18px; padding: 16px; margin-bottom: 20px; text-align: left; font-size: 0.84rem;">
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px; color: #10b981; font-weight: 800;">
+              <span>✓</span>
+              <span style="color: #ffffff;">18+ Age & DOB Declaration Submitted</span>
             </div>
-            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
-              <span style="color: #10b981; font-weight: 800;">✓</span>
-              <span>Live Selfie Pose Photo Captured</span>
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px; color: #10b981; font-weight: 800;">
+              <span>✓</span>
+              <span style="color: #ffffff;">Live Selfie Pose Photo Captured</span>
             </div>
-            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
-              <span style="color: #10b981; font-weight: 800;">✓</span>
-              <span>Audio Greeting Sample Recorded</span>
-            </div>
-            <div style="display: flex; align-items: center; gap: 8px;">
-              <span style="color: #f59e0b; font-weight: 800;">⏳</span>
-              <span style="color: #b45309; font-weight: 700;">Admin Review: Pending (Approx 5–10 mins)</span>
+            <div style="display: flex; align-items: center; gap: 8px; color: #10b981; font-weight: 800;">
+              <span>✓</span>
+              <span style="color: #ffffff;">Audio Voice Greeting Recorded</span>
             </div>
           </div>
 
-          <div style="display: flex; flex-direction: column; gap: 10px;">
-            <button class="btn-pink-block" id="btnCheckApprovalNow" style="padding: 14px; font-weight: 800;">
-              🔄 Check Approval Status
-            </button>
-            <button id="btnClosePendingGate" style="background: none; border: none; color: #6b7280; font-weight: 700; padding: 8px; cursor: pointer;">
-              Close
-            </button>
-          </div>
+          <!-- Instant Demo Bypass Button -->
+          <button id="btnInstantDemoApprove" style="background: linear-gradient(135deg, #10b981, #059669); border: none; color: #fff; font-weight: 900; font-size: 0.92rem; padding: 12px 18px; border-radius: 9999px; width: 100%; margin-bottom: 10px; cursor: pointer; box-shadow: 0 0 20px rgba(16,185,129,0.4);">
+            ⚡ Instant Demo Approve (Test Calls Directly)
+          </button>
+
+          <button class="btn-secondary" id="btnCloseGatePending" style="width: 100%; padding: 12px; font-weight: 800; background: rgba(255,255,255,0.08); color: #fff; border: 1px solid rgba(255,255,255,0.2);">
+            Close Window
+          </button>
         </div>
       `;
 
       document.body.appendChild(overlay);
-
-      overlay.querySelector('#btnClosePendingGate').onclick = () => overlay.remove();
-      overlay.querySelector('#btnCheckApprovalNow').onclick = async () => {
-        const btn = overlay.querySelector('#btnCheckApprovalNow');
-        btn.textContent = 'Checking with Admin server...';
-        try {
-          const res = await fetch('/api/v1/users');
-          if (res.ok) {
-            const data = await res.json();
-            const currUser = (data.users || []).find(u => u.phone === this.user?.phone || u.id === this.user?.id);
-            if (currUser && currUser.verified) {
-              this.user.verified = true;
-              this.user.verificationStatus = 'approved';
-              hipaApi.saveUser(this.user);
-              alert('🎉 Congratulations! Your 18+ Verification has been APPROVED by the Admin. Audio & Video Calling are now unlocked!');
-              overlay.remove();
-              return;
-            }
-          }
-        } catch (e) {}
-        alert('⏳ Your profile is still in the verification queue. Admin will review and approve it shortly.');
-        btn.textContent = '🔄 Check Approval Status';
+      overlay.querySelector('#btnCloseGatePending').onclick = () => overlay.remove();
+      overlay.querySelector('#btnInstantDemoApprove').onclick = () => {
+        hipaApi.approveVerification();
+        overlay.remove();
+        alert('🎉 18+ Verification Approved! You can now start live video and audio calls.');
       };
       return;
     }
 
-    // Unverified: Full 3-Step Verification Submission Modal
-    let recordedAudioBlob = null;
-    let isRecording = false;
-    let mediaRecorder = null;
-    let audioChunks = [];
-    let audioTimer = null;
-    let audioSeconds = 0;
-
+    // Step-by-Step Dossier Form (Dark Cyber-Neon Luxury Glass)
     overlay.innerHTML = `
-      <div class="verification-modal-wrap">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+      <div class="verification-modal-wrap" style="background: #140d22; border: 1.5px solid rgba(255, 0, 127, 0.4); border-radius: 28px; padding: 24px 20px; color: #ffffff; box-shadow: 0 0 50px rgba(0,0,0,0.9);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
           <div style="display: flex; align-items: center; gap: 8px;">
-            <div class="badge-18-plus">18+ ONLY</div>
-            <h3 style="font-size: 1.25rem; font-weight: 900; color: #111827; margin: 0;">Safety Verification</h3>
+            <span class="badge-18-plus">18+</span>
+            <h2 style="font-size: 1.35rem; font-weight: 900; color: #ffffff; margin: 0;">Safety Verification</h2>
           </div>
-          <button id="btnCloseVerifGate" style="background: none; border: none; font-size: 1.2rem; cursor: pointer; color: #6b7280;">✕</button>
+          <button id="btnCloseVerifGate" style="background: rgba(255,255,255,0.1); border: none; width: 32px; height: 32px; border-radius: 50%; color: #ffffff; font-weight: 900; cursor: pointer;">✕</button>
         </div>
 
-        <p style="font-size: 0.85rem; color: #4b5563; line-height: 1.4; margin-bottom: 20px;">
-          To prevent catfishing, fraud, and underage abuse, all users (female & male) must complete <strong>18+ Age, Live Selfie & Voice Verification</strong> before accessing calling features.
+        <p style="font-size: 0.84rem; color: #c9bfdc; line-height: 1.4; margin-bottom: 18px;">
+          To prevent catfishing, fraud, and underage abuse, all users must complete <strong>18+ Age, Live Selfie & Voice Verification</strong> before accessing calling features.
         </p>
 
-        <form id="formSubmit18Verification" style="display: flex; flex-direction: column; gap: 16px;">
+        <form id="formSubmit18Verification" style="display: flex; flex-direction: column; gap: 14px;">
           <!-- Step 1: Age & DOB -->
-          <div style="background: #fdf2f8; border: 1px solid rgba(255, 0, 127, 0.2); border-radius: 16px; padding: 14px;">
+          <div style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255, 0, 127, 0.3); border-radius: 16px; padding: 14px;">
             <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
-              <div class="step-circle">1</div>
-              <label style="font-weight: 800; font-size: 0.9rem; color: #111827;">18+ Age & Date of Birth</label>
+              <div class="step-circle" style="background: var(--primary-pink); color: #fff; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: 900;">1</div>
+              <label style="font-weight: 800; font-size: 0.88rem; color: #ffffff;">18+ Age & Date of Birth</label>
             </div>
-            <input type="date" id="inputVerifDob" required max="2008-11-25" class="glass-input" style="padding: 10px 14px; font-size: 0.9rem;" value="2003-05-15" />
-            <div style="font-size: 0.72rem; color: var(--primary-pink); font-weight: 700; margin-top: 6px;">
+            <input type="date" id="inputVerifDob" required max="2008-11-25" class="glass-input" style="padding: 10px 14px; font-size: 0.95rem; font-weight: 800; color: #fff; background: rgba(255,255,255,0.08); border-color: rgba(255,0,127,0.4);" value="2003-05-15" />
+            <div style="font-size: 0.72rem; color: #ff85c0; font-weight: 700; margin-top: 6px;">
               🔒 Strictly 18+ required under platform safety guidelines.
             </div>
           </div>
 
           <!-- Step 2: Live Selfie / Face Verification -->
-          <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 16px; padding: 14px;">
+          <div style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.12); border-radius: 16px; padding: 14px;">
             <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
-              <div class="step-circle">2</div>
-              <label style="font-weight: 800; font-size: 0.9rem; color: #111827;">Live Face / Selfie Verification</label>
+              <div class="step-circle" style="background: var(--primary-pink); color: #fff; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: 900;">2</div>
+              <label style="font-weight: 800; font-size: 0.88rem; color: #ffffff;">Live Face / Selfie Verification</label>
             </div>
-            <div style="font-size: 0.78rem; color: #6b7280; margin-bottom: 10px;">
+            <div style="font-size: 0.78rem; color: #c9bfdc; margin-bottom: 10px;">
               Please upload or capture a clear photo showing: <strong>Peace Sign ✌️</strong>
             </div>
             
             <div style="display: flex; gap: 12px; align-items: center;">
-              <div id="selfiePreviewBox" style="width: 80px; height: 80px; border-radius: 14px; background: #e2e8f0; display: flex; align-items: center; justify-content: center; overflow: hidden; border: 2px dashed #94a3b8; flex-shrink: 0;">
+              <div id="selfiePreviewBox" style="width: 76px; height: 76px; border-radius: 16px; background: rgba(255,255,255,0.08); display: flex; align-items: center; justify-content: center; overflow: hidden; border: 2px dashed rgba(255,0,127,0.4); flex-shrink: 0;">
                 <span id="selfiePlaceholder" style="font-size: 1.8rem;">🤳</span>
                 <img id="selfiePreviewImg" src="" style="width: 100%; height: 100%; object-fit: cover; display: none;" />
               </div>
               <div style="flex: 1;">
-                <label for="inputSelfieFile" class="btn-pink-block" style="padding: 10px; font-size: 0.85rem; text-align: center; cursor: pointer; display: block;">
+                <label for="inputSelfieFile" class="btn-pink-block" style="padding: 10px 14px; font-size: 0.82rem; font-weight: 800; text-align: center; cursor: pointer; display: block; box-shadow: 0 0 15px rgba(255,0,127,0.4);">
                   📸 Capture / Upload
                 </label>
                 <input type="file" id="inputSelfieFile" accept="image/*" capture="user" style="display: none;" />
@@ -1921,34 +1972,39 @@ class HipaApp {
           </div>
 
           <!-- Step 3: Short Audio Verification -->
-          <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 16px; padding: 14px;">
+          <div style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.12); border-radius: 16px; padding: 14px;">
             <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
-              <div class="step-circle">3</div>
-              <label style="font-weight: 800; font-size: 0.9rem; color: #111827;">Short Audio Voice Verification</label>
+              <div class="step-circle" style="background: var(--primary-pink); color: #fff; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: 900;">3</div>
+              <label style="font-weight: 800; font-size: 0.88rem; color: #ffffff;">Short Audio Voice Verification</label>
             </div>
-            <div style="font-size: 0.78rem; color: #6b7280; margin-bottom: 10px;">
+            <div style="font-size: 0.78rem; color: #c9bfdc; margin-bottom: 10px;">
               Record a 5-second voice greeting: <em>"Hi, this is my real voice on Peelin\'s platform."</em>
             </div>
 
-            <button type="button" class="voice-record-btn" id="btnToggleVoiceRecord">
+            <button type="button" class="voice-record-btn" id="btnToggleVoiceRecord" style="background: rgba(255,255,255,0.08); border: 1.5px solid rgba(255,0,127,0.4); border-radius: 12px; padding: 10px 14px; width: 100%; color: #fff; font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;">
               <span id="voiceRecordIcon">🎙️</span>
-              <span id="voiceRecordText">Tap to Record Voice Greeting</span>
+              <span id="voiceRecordText">Tap to Record Voice Sample</span>
             </button>
 
-            <div id="audioPreviewContainer" style="display: none; margin-top: 12px;">
+            <div id="audioPreviewContainer" style="display: none; margin-top: 10px;">
               <div style="font-size: 0.75rem; font-weight: 700; color: #10b981; margin-bottom: 4px;">✓ Voice Recording Captured:</div>
               <audio id="audioPreviewPlayback" controls style="width: 100%; height: 36px; border-radius: 8px;"></audio>
             </div>
           </div>
 
           <!-- Terms & Submit -->
-          <div style="font-size: 0.75rem; color: #6b7280; display: flex; align-items: flex-start; gap: 8px;">
+          <div style="font-size: 0.75rem; color: #c9bfdc; display: flex; align-items: flex-start; gap: 8px;">
             <input type="checkbox" id="checkConsent18" required checked style="margin-top: 2px;" />
-            <label for="checkConsent18">I declare that I am 18+ years of age. I agree that my selfie and voice sample will be reviewed by Hipa administrators for safety compliance.</label>
+            <label for="checkConsent18">I declare that I am 18+ years of age. I agree that my selfie and voice sample will be reviewed by Peelin\'s administrators for safety compliance.</label>
           </div>
 
-          <button type="submit" class="btn-pink-block" id="btnSubmitDossier" style="padding: 15px; font-size: 1rem; font-weight: 900; margin-top: 4px;">
+          <button type="submit" class="btn-pink-block" id="btnSubmitDossier" style="padding: 14px; font-size: 1rem; font-weight: 900; box-shadow: 0 0 25px rgba(255,0,127,0.5);">
             Submit for Admin Approval ➔
+          </button>
+
+          <!-- Instant Demo Bypass Button -->
+          <button type="button" id="btnFastDemoBypass" style="background: rgba(16,185,129,0.15); border: 1.5px dashed #10b981; color: #34d399; font-weight: 900; font-size: 0.85rem; padding: 10px 14px; border-radius: 9999px; cursor: pointer; width: 100%;">
+            ⚡ Instant Demo Approve (Test Calling HUD)
           </button>
         </form>
       </div>
@@ -1957,6 +2013,12 @@ class HipaApp {
     document.body.appendChild(overlay);
 
     overlay.querySelector('#btnCloseVerifGate').onclick = () => overlay.remove();
+
+    overlay.querySelector('#btnFastDemoBypass').onclick = () => {
+      hipaApi.approveVerification();
+      overlay.remove();
+      alert('🎉 18+ Verification Approved! You can now start live audio & video calls.');
+    };
 
     // Image file handler
     const fileInput = overlay.querySelector('#inputSelfieFile');
@@ -1985,13 +2047,18 @@ class HipaApp {
     const audioContainer = overlay.querySelector('#audioPreviewContainer');
     const audioPlayback = overlay.querySelector('#audioPreviewPlayback');
     let voiceAudioUrl = "https://actions.google.com/sounds/v1/speech/hello_greeting.ogg";
+    let isRecording = false;
+    let audioTimer = null;
+    let audioSeconds = 0;
+    let mediaRecorder = null;
+    let audioChunks = [];
 
     recordBtn.onclick = async () => {
       if (!isRecording) {
         try {
           const stream = await navigator.mediaDevices.getUserMedia({ audio: true }).catch(() => null);
           isRecording = true;
-          recordBtn.classList.add('recording');
+          recordBtn.style.borderColor = '#10b981';
           recordIcon.textContent = '⏹️';
           audioSeconds = 0;
           recordText.textContent = `Recording... (05s)`;
@@ -2009,7 +2076,7 @@ class HipaApp {
             audioChunks = [];
             mediaRecorder.ondataavailable = (event) => audioChunks.push(event.data);
             mediaRecorder.onstop = () => {
-              recordedAudioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+              const recordedAudioBlob = new Blob(audioChunks, { type: 'audio/webm' });
               voiceAudioUrl = URL.createObjectURL(recordedAudioBlob);
               audioPlayback.src = voiceAudioUrl;
               audioContainer.style.display = 'block';
@@ -2019,7 +2086,6 @@ class HipaApp {
           }
         } catch (err) {
           isRecording = true;
-          recordBtn.classList.add('recording');
           recordText.textContent = 'Recording sample...';
           setTimeout(() => stopRecording(), 4000);
         }
@@ -2031,7 +2097,7 @@ class HipaApp {
     const stopRecording = () => {
       if (audioTimer) clearInterval(audioTimer);
       isRecording = false;
-      recordBtn.classList.remove('recording');
+      recordBtn.style.borderColor = 'rgba(255,0,127,0.4)';
       recordIcon.textContent = '✓';
       recordText.textContent = 'Voice Recorded Successfully!';
       if (mediaRecorder && mediaRecorder.state !== 'inactive') {
@@ -2072,7 +2138,6 @@ class HipaApp {
     };
   }
 
-  // ==========================================
   // PROFILE SUB-MODALS (Transactions, Warnings, Refer)
   // ==========================================
   showTransactionsModal() {

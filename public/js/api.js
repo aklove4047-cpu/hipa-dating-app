@@ -527,6 +527,39 @@ class HipaApiService {
     return newUser;
   }
 
+  approveVerification() {
+    const u = this.getUser();
+    if (u) {
+      u.verificationStatus = 'approved';
+      u.verified = true;
+      this.saveUser(u);
+      try {
+        let allUsers = JSON.parse(localStorage.getItem('hipa_all_users') || '[]');
+        const idx = allUsers.findIndex(item => item.phone === u.phone);
+        if (idx !== -1) {
+          allUsers[idx].verificationStatus = 'approved';
+          allUsers[idx].verified = true;
+          localStorage.setItem('hipa_all_users', JSON.stringify(allUsers));
+        }
+      } catch (e) {}
+    }
+    return true;
+  }
+
+  approveUserVerification() {
+    const user = this.getUser() || {};
+    user.verificationStatus = 'approved';
+    user.verified = true;
+    user.coins = (user.coins || 60) + 100;
+    this.saveUser(user);
+    try {
+      const bc = new BroadcastChannel('hipa_users_sync');
+      bc.postMessage({ type: 'USER_VERIFIED', userId: user.id });
+      setTimeout(() => bc.close(), 1000);
+    } catch (e) {}
+    return user;
+  }
+
   getVerificationStatus() {
     const u = this.getUser();
     if (!u) return 'unverified';

@@ -1124,13 +1124,15 @@ body {
 
 .verification-modal-wrap {
   width: 100%;
-  max-width: 420px;
+  max-width: 440px;
   max-height: 90vh;
   overflow-y: auto;
-  background: #ffffff;
+  background: #140d22 !important;
+  color: #ffffff !important;
+  border: 1.5px solid rgba(255, 0, 127, 0.4) !important;
   border-radius: 28px;
-  padding: 28px 24px;
-  box-shadow: 0 25px 70px rgba(0, 0, 0, 0.4);
+  padding: 26px 20px;
+  box-shadow: 0 25px 70px rgba(0, 0, 0, 0.8), 0 0 35px rgba(255, 0, 127, 0.3);
   position: relative;
   animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
