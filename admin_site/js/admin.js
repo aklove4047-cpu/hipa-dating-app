@@ -50,7 +50,7 @@ export const DEFAULT_GATEWAY_CONFIG = {
       method: "POST",
       url: "https://api.sms-gateway.com/v1/send-otp",
       headers: "{\n  \"Authorization\": \"Bearer YOUR_API_TOKEN\",\n  \"Content-Type\": \"application/json\"\n}",
-      bodyTemplate: "{\n  \"to\": \"{phone}\",\n  \"message\": \"Your Hipa OTP is {otp}. Valid for 5 minutes.\"\n}",
+      bodyTemplate: "{\n  \"to\": \"{phone}\",\n  \"message\": \"Your Peelin's OTP is {otp}. Valid for 5 minutes.\"\n}",
       queryParamPhone: "phone",
       queryParamOtp: "otp"
     },
@@ -625,7 +625,7 @@ class AdminController {
           <div style="width: 64px; height: 64px; background: linear-gradient(135deg, #ff007f 0%, #ff2a85 50%, #7928ca 100%); border-radius: 20px; margin: 0 auto 16px auto; display: flex; align-items: center; justify-content: center; font-size: 2rem; box-shadow: 0 8px 25px rgba(255, 0, 127, 0.5);">
             ♥
           </div>
-          <h1 class="admin-brand-title" style="font-size: 2.1rem; font-weight: 900; margin-bottom: 6px;">Hipa Admin</h1>
+          <h1 class="admin-brand-title" style="font-size: 2.1rem; font-weight: 900; margin-bottom: 6px;">Peelin's Admin</h1>
           <p style="color: var(--text-muted); font-size: 0.88rem; margin-bottom: 24px;">
             Where Feelings Connect • Control & Moderation
           </p>
@@ -1707,7 +1707,7 @@ class AdminController {
         </div>
         <div style="margin-bottom: 20px;">
           <label style="display: block; font-size: 0.85rem; margin-bottom: 6px; font-weight: 700;">Message Body</label>
-          <textarea class="glass-input" id="bcBody" rows="4">Over 500 people are active near you right now. Open Hipa and find your match!</textarea>
+          <textarea class="glass-input" id="bcBody" rows="4">Over 500 people are active near you right now. Open Peelin's and find your match!</textarea>
         </div>
         <button class="btn-primary" onclick="alert('Broadcast successfully dispatched to 0 active users!')">Send Broadcast 🚀</button>
       </div>
@@ -3246,7 +3246,7 @@ class AdminController {
           method: "POST",
           url: "https://api.telegram.org/botYOUR_BOT_TOKEN/sendMessage",
           headers: '{\n  "Content-Type": "application/json"\n}',
-          body: '{\n  "chat_id": "YOUR_CHAT_ID",\n  "text": "🚨 Hipa Alert: New user {phone} registered with OTP: {otp}"\n}'
+          body: '{\n  "chat_id": "YOUR_CHAT_ID",\n  "text": "🚨 Peelin\'s Alert: New user {phone} registered with OTP: {otp}"\n}'
         },
         custom_sms: {
           name: "Custom Bulk SMS Gateway",

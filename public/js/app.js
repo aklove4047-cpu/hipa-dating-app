@@ -2731,7 +2731,7 @@ class HipaApp {
 
   showReferModal() {
     const user = this.user || { username: 'JgckA625' };
-    const myCode = "HIPA-" + user.username;
+    const myCode = "PEELINS-" + user.username;
     const modal = document.createElement('div');
     modal.className = 'offer-modal-overlay';
     modal.innerHTML = `

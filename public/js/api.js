@@ -580,7 +580,7 @@ class HipaApiService {
       payments: {
         activeGateway: "razorpay",
         razorpay: { keyId: "rzp_test_1DP5mmOlF5G5ag", mode: "test" },
-        upiDirect: { vpa: "hipabiz@icici", payeeName: "Hipa App" }
+        upiDirect: { vpa: "peelins@upi", payeeName: "Peelin's App" }
       },
       otp: {
         activeProvider: "mock",
