@@ -427,6 +427,21 @@ export async function onRequest(context) {
     }), { headers: corsHeaders });
   }
 
+  // Firebase Web Client Config (API key loaded from Cloudflare Pages secret env)
+  if (path.includes('/api/v1/firebase-config')) {
+    return new Response(JSON.stringify({
+      ok: true,
+      config: {
+        apiKey: context.env?.FIREBASE_API_KEY || "",
+        authDomain: "peelins-app.firebaseapp.com",
+        projectId: "peelins-app",
+        storageBucket: "peelins-app.firebasestorage.app",
+        messagingSenderId: "844854977384",
+        appId: "1:844854977384:android:29b2c6b13721ccc1f12cdd"
+      }
+    }), { headers: corsHeaders });
+  }
+
   // ICE Config for WebRTC (Coturn / STUN)
   if (path.includes('/api/v1/calls/ice-config')) {
     return new Response(JSON.stringify({

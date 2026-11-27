@@ -467,6 +467,13 @@ class HipaApiService {
         bc.postMessage({ type: 'USER_STATUS_CHANGED', userId: u.id, isOnline: !!isOnline });
         setTimeout(() => bc.close(), 1000);
       } catch (e) {}
+
+      // Update online presence in Firebase Firestore
+      try {
+        if (typeof window.peelinsFirebase !== 'undefined') {
+          window.peelinsFirebase.updateOnlineStatus(u.id, !!isOnline);
+        }
+      } catch (e) {}
     }
     return isOnline;
   }
@@ -474,6 +481,94 @@ class HipaApiService {
   getUserOnlineStatus() {
     const u = this.getUser();
     return u ? (u.isOnline !== false) : true;
+  }
+
+  getAllRegisteredUsers() {
+    try {
+      return JSON.parse(localStorage.getItem('hipa_all_users') || '[]');
+    } catch (e) {
+      return [];
+    }
+  }
+
+  async getRealDiscoverProfiles() {
+    const currentUser = this.getUser();
+    const myId = currentUser ? currentUser.id : null;
+    const myGender = currentUser ? currentUser.gender : 'male';
+    const targetGender = myGender === 'female' ? 'male' : 'female';
+
+    // 1. Fetch real cloud users from Firebase
+    let cloudUsers = [];
+    try {
+      if (typeof window.peelinsFirebase !== 'undefined') {
+        cloudUsers = await window.peelinsFirebase.fetchRealUsers(myId, targetGender);
+      }
+    } catch (e) {}
+
+    // 2. Fetch local registered users
+    const localUsers = this.getAllRegisteredUsers();
+
+    const userMap = new Map();
+
+    cloudUsers.forEach(u => {
+      userMap.set(String(u.id || u.phone), {
+        id: u.id,
+        name: u.name || 'User',
+        avatar: u.avatar || '/images/avatar_female_riya.jpg',
+        photo: u.avatar || '/images/avatar_female_riya.jpg',
+        city: u.city || 'India',
+        language: u.language || 'Hindi',
+        bio: u.bio || 'Looking for real connections on Peelin\'s',
+        verified: !!u.verified,
+        online: u.isOnline !== false,
+        videoOnline: u.isOnline !== false,
+        voiceRate: u.voiceRate || 10,
+        videoRate: u.videoRate || 20,
+        rating: 4.9,
+        callsCount: Math.floor(12 + Math.random() * 40),
+        isRealUser: true,
+        gender: u.gender || targetGender
+      });
+    });
+
+    localUsers.forEach(u => {
+      if (String(u.id) !== String(myId) && (!targetGender || u.gender === targetGender)) {
+        const key = String(u.id || u.phone);
+        if (!userMap.has(key)) {
+          userMap.set(key, {
+            id: u.id,
+            name: u.name || u.username || 'User',
+            avatar: u.avatar || '/images/avatar_female_riya.jpg',
+            photo: u.avatar || '/images/avatar_female_riya.jpg',
+            city: u.city || 'India',
+            language: u.language || 'Hindi',
+            bio: u.bio || 'Looking for real connections on Peelin\'s',
+            verified: u.verified !== false,
+            online: u.isOnline !== false,
+            videoOnline: u.isOnline !== false,
+            voiceRate: u.voiceRate || 10,
+            videoRate: u.videoRate || 20,
+            rating: 4.8,
+            callsCount: 15,
+            isRealUser: true,
+            gender: u.gender || targetGender
+          });
+        }
+      }
+    });
+
+    const realUsers = Array.from(userMap.values());
+
+    // Verified companion creators filtered by target gender
+    const creators = HIPA_CREATORS.filter(c => {
+      if (myGender === 'female') {
+        return c.gender === 'male';
+      }
+      return c.gender !== 'male';
+    });
+
+    // Real users show at top of feed!
+    return [...realUsers, ...creators];
   }
 
   getGatewayConfigs() {
@@ -723,6 +818,13 @@ class HipaApiService {
     this.saveUser(newUser);
     this.session = { token: "hipa_tok_" + Date.now(), userId: newUser.id };
     localStorage.setItem('hipa_user_session', JSON.stringify(this.session));
+
+    // Real-Time Firebase Firestore Cloud Sync
+    try {
+      if (typeof window.peelinsFirebase !== 'undefined') {
+        window.peelinsFirebase.syncUserProfile(newUser);
+      }
+    } catch (e) {}
 
     // Save to shared localStorage for same-browser Admin sync
     try {

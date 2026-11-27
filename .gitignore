@@ -11,3 +11,5 @@ data/*.db-shm
 uploads/
 dating-app-prd.zip
 prd_extracted/
+android/app/google-services.json
+public/downloads/*.apk

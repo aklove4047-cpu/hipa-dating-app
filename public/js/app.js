@@ -8,6 +8,8 @@
    ========================================================= */
 
 import { hipaApi, HIPA_CREATORS, HIPA_COIN_PACKS, HIPA_LANGUAGES, HIPA_AVATARS, HIPA_GIFTS, HIPA_STORIES, hipaAudio } from './api.js?v=12.0';
+import { callManager } from './call-manager.js';
+import { firebaseService } from './firebase-init.js';
 
 class HipaApp {
   constructor() {
@@ -26,11 +28,34 @@ class HipaApp {
   }
 
   init() {
+    window.hipaApp = this;
+    window.peelinsApp = this;
     this.setupBroadcastSync();
+
+    // Initialize Firebase & Listen for incoming WebRTC calls
+    try {
+      if (typeof firebaseService !== 'undefined') {
+        firebaseService.ensureReady();
+      }
+      if (callManager && typeof callManager.initIncomingCallListener === 'function') {
+        callManager.initIncomingCallListener();
+      }
+    } catch (e) {
+      console.warn('Call listener init note:', e);
+    }
+
     if (!hipaApi.isLoggedIn()) {
       this.renderOnboardingStep1();
     } else {
       this.renderMainApp();
+      // Sync active user profile & status to Firebase
+      const u = hipaApi.getUser();
+      if (u) {
+        try {
+          firebaseService.syncUserProfile(u);
+          firebaseService.updateOnlineStatus(u.id, true);
+        } catch (e) {}
+      }
     }
   }
 
@@ -1050,15 +1075,51 @@ class HipaApp {
   renderHomeTab(container) {
     const categories = ['All', 'Trending 🔥', 'Video 📹', 'Audio 📞', 'Hindi', 'Punjabi', 'Marathi', 'Bengali', 'Tamil', 'Telugu'];
 
-    let creators = HIPA_CREATORS;
+    const realRegistered = hipaApi.getAllRegisteredUsers();
+    const currentUser = hipaApi.getUser();
+    const myId = currentUser ? currentUser.id : null;
+    const myGender = currentUser ? currentUser.gender : 'male';
+    const targetGender = myGender === 'female' ? 'male' : 'female';
+
+    // Map real registered users
+    const realUsersList = realRegistered
+      .filter(u => String(u.id) !== String(myId) && (!targetGender || u.gender === targetGender))
+      .map(u => ({
+        id: u.id,
+        name: u.name || u.username || 'Real Member',
+        avatar: u.avatar || '/images/avatar_female_riya.jpg',
+        photo: u.avatar || '/images/avatar_female_riya.jpg',
+        city: u.city || 'India',
+        language: u.language || 'Hindi',
+        bio: u.bio || 'Real dating profile on Peelin\'s',
+        verified: u.verified !== false,
+        online: u.isOnline !== false,
+        videoOnline: u.isOnline !== false,
+        voiceRate: u.voiceRate || 10,
+        videoRate: u.videoRate || 20,
+        rating: 4.9,
+        callsCount: 18,
+        isRealUser: true,
+        gender: u.gender || targetGender
+      }));
+
+    // Companion verified creators filtered by target gender
+    const baseCreators = HIPA_CREATORS.filter(c => {
+      if (myGender === 'female') return c.gender === 'male';
+      return c.gender !== 'male';
+    });
+
+    const allProfiles = [...realUsersList, ...baseCreators];
+
+    let creators = allProfiles;
     if (this.activeCategory === 'Video 📹') {
-      creators = HIPA_CREATORS.filter(c => c.videoOnline);
+      creators = allProfiles.filter(c => c.videoOnline);
     } else if (this.activeCategory === 'Audio 📞') {
-      creators = HIPA_CREATORS.filter(c => c.voiceRate > 0);
+      creators = allProfiles.filter(c => c.voiceRate > 0);
     } else if (this.activeCategory === 'Trending 🔥') {
-      creators = [...HIPA_CREATORS].sort((a, b) => b.callsCount - a.callsCount);
+      creators = [...allProfiles].sort((a, b) => (b.callsCount || 0) - (a.callsCount || 0));
     } else if (this.activeCategory !== 'All') {
-      creators = HIPA_CREATORS.filter(c => c.language.toLowerCase().includes(this.activeCategory.toLowerCase()));
+      creators = allProfiles.filter(c => (c.language || '').toLowerCase().includes(this.activeCategory.toLowerCase()));
     }
 
     container.innerHTML = `
@@ -1185,6 +1246,7 @@ class HipaApp {
                 <div>
                   <div class="creator-name" style="display: flex; align-items: center; gap: 6px;">
                     ${c.name}
+                    ${c.isRealUser ? '<span style="background: linear-gradient(135deg, #10b981, #059669); color: #fff; font-size: 0.65rem; font-weight: 800; padding: 1px 6px; border-radius: 999px;">REAL</span>' : ''}
                     ${c.verified ? '<span style="color: #0284c7; font-size: 0.85rem;" title="Verified">✓</span>' : ''}
                   </div>
                   <div style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600; margin-top: 2px;">
@@ -2067,175 +2129,10 @@ class HipaApp {
   }
 
   // ==========================================
-  // LIVE WEBRTC CALLING SCREEN (Ultra-Realistic HUD & Safety)
+  // LIVE WEBRTC CALLING SCREEN (Real Camera/Mic & Firestore Signaling)
   // ==========================================
   startCall(creator, type = 'voice') {
-    // 18+ Mandatory Verification & Admin Approval Gate
-    const vStatus = hipaApi.getVerificationStatus();
-    if (vStatus !== 'approved') {
-      this.showVerificationGateModal(vStatus);
-      return;
-    }
-
-    const costPerMin = type === 'video' ? creator.videoRate : creator.voiceRate;
-    const userCoins = hipaApi.getCoins();
-
-    if (userCoins < costPerMin) {
-      alert(`⚠️ Low Coin Balance!\nYou have ${userCoins} coins, but this call requires ${costPerMin} coins/min.\nRecharge your wallet to start calling.`);
-      this.showWelcomeOfferModal();
-      return;
-    }
-
-    hipaAudio.playRing();
-
-    const overlay = document.createElement('div');
-    overlay.className = 'call-fullscreen-hud';
-
-    let secondsElapsed = 0;
-    let isFilterActive = false;
-    let isMuted = false;
-
-    overlay.innerHTML = `
-      <!-- Background Video Stream Simulation -->
-      <img id="callRemoteVideo" src="${creator.avatar}" class="call-remote-bg" style="filter: brightness(0.85);" />
-
-      <!-- Watermark & Top Safety Bar -->
-      <div class="call-top-hud">
-        <div style="display: flex; align-items: center; gap: 8px;">
-          <div style="width: 10px; height: 10px; border-radius: 50%; background: #10b981; box-shadow: 0 0 10px #10b981;"></div>
-          <span style="font-size: 0.82rem; font-weight: 800; color: #fff; letter-spacing: 0.5px;">LIVE ${type.toUpperCase()}</span>
-          <span style="font-size: 0.72rem; color: #ffd700; background: rgba(0,0,0,0.5); padding: 2px 8px; border-radius: 6px;">🪙 ${costPerMin}/min</span>
-        </div>
-
-        <button id="btnInCallReport" style="background: rgba(239, 68, 68, 0.35); border: 1px solid rgba(239, 68, 68, 0.7); color: #fff; padding: 6px 14px; border-radius: 9999px; font-weight: 800; font-size: 0.75rem; display: flex; align-items: center; gap: 5px; cursor: pointer; backdrop-filter: blur(8px);">
-          🚨 Report & Block
-        </button>
-      </div>
-
-      <!-- Watermark -->
-      <div class="watermark-overlay" style="top: 80px; left: 20px;">
-        🛡️ Hipa 18+ Encrypted Call • Verified Creator #${creator.id}
-      </div>
-
-      <!-- Local PIP Camera (Picture-in-Picture) -->
-      ${type === 'video' ? `
-        <div class="call-local-pip" id="pipCamera">
-          <img src="${this.selectedAvatar || '/images/avatar_male_aryan.jpg'}" alt="You" />
-          <div style="position: absolute; bottom: 4px; left: 6px; font-size: 0.62rem; color: #fff; font-weight: 800; background: rgba(0,0,0,0.6); padding: 1px 4px; border-radius: 4px;">You</div>
-        </div>
-      ` : ''}
-
-      <!-- Center Creator Call Info -->
-      <div style="position: relative; z-index: 10; text-align: center; color: #ffffff; margin-top: auto; margin-bottom: 20px;">
-        <h2 style="font-size: 2rem; font-weight: 900; margin-bottom: 4px; text-shadow: 0 4px 15px rgba(0,0,0,0.8);">${creator.name}</h2>
-        <div style="font-size: 0.88rem; color: #ffd1e3; font-weight: 700;">${creator.language} • ${creator.bio || 'Connected live'}</div>
-        <div id="liveCallTimer" style="font-size: 1.6rem; font-weight: 900; color: #ffffff; margin-top: 8px; font-family: monospace; text-shadow: 0 2px 10px rgba(0,0,0,0.9);">00:00</div>
-      </div>
-
-      <!-- Bottom In-Call Controls Dock -->
-      <div class="call-bottom-hud">
-        <!-- Live Coin Balance Tracker -->
-        <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.6); backdrop-filter: blur(12px); border: 1px solid rgba(255,215,0,0.3); border-radius: var(--radius-full); padding: 8px 16px;">
-          <div style="display: flex; align-items: center; gap: 6px;">
-            <span style="font-size: 1.1rem;">🪙</span>
-            <span style="font-size: 0.82rem; font-weight: 800; color: #ffd700;">Balance: <strong id="callLiveCoins">${hipaApi.getCoins()}</strong> coins</span>
-          </div>
-          <button id="btnInCallQuickGift" style="background: var(--primary-gradient); border: none; color: #fff; padding: 4px 12px; border-radius: 9999px; font-weight: 800; font-size: 0.75rem; cursor: pointer;">
-            🎁 Send Gift
-          </button>
-        </div>
-
-        <!-- Controls Row -->
-        <div style="display: flex; gap: 18px; align-items: center; justify-content: center;">
-          <button class="call-icon-round" id="btnToggleMute" style="width: 52px; height: 52px; background: rgba(255,255,255,0.18); backdrop-filter: blur(10px); color: #ffffff; border: 1px solid rgba(255,255,255,0.3); font-size: 1.3rem;">
-            🎤
-          </button>
-          
-          <button class="call-icon-round" id="btnToggleFilter" style="width: 52px; height: 52px; background: rgba(255,255,255,0.18); backdrop-filter: blur(10px); color: #ffd700; border: 1px solid rgba(255,215,0,0.4); font-size: 1.3rem;" title="Toggle Beauty Filter">
-            ✨
-          </button>
-
-          <button class="call-icon-round" id="btnEndCall" style="width: 68px; height: 68px; background: #ef4444; color: #ffffff; border: none; font-size: 1.9rem; box-shadow: 0 0 30px rgba(239, 68, 68, 0.7); cursor: pointer;">
-            📞
-          </button>
-
-          <button class="call-icon-round" id="btnToggleCam" style="width: 52px; height: 52px; background: rgba(255,255,255,0.18); backdrop-filter: blur(10px); color: #ffffff; border: 1px solid rgba(255,255,255,0.3); font-size: 1.3rem;" title="Switch Camera">
-            🔄
-          </button>
-        </div>
-      </div>
-    `;
-
-    document.body.appendChild(overlay);
-
-    const endCall = () => {
-      if (this.callTimer) clearInterval(this.callTimer);
-      const coinsCharged = Math.max(costPerMin, Math.ceil(secondsElapsed / 60) * costPerMin);
-      hipaApi.deductCoins(costPerMin, `Call with ${creator.name}`);
-      hipaApi.recordCall(creator, type, secondsElapsed, coinsCharged);
-      hipaApi.addFriend(creator);
-      const coinEl = document.getElementById('userCoinsCount');
-      if (coinEl) coinEl.textContent = hipaApi.getCoins();
-      overlay.remove();
-    };
-
-    // Live timer & coin deduction every 60s
-    this.callTimer = setInterval(() => {
-      secondsElapsed++;
-      const mins = Math.floor(secondsElapsed / 60);
-      const secs = secondsElapsed % 60;
-      const timerEl = overlay.querySelector('#liveCallTimer');
-      if (timerEl) timerEl.textContent = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-
-      if (secondsElapsed > 0 && secondsElapsed % 60 === 0) {
-        const deducted = hipaApi.deductCoins(costPerMin, `Call with ${creator.name}`);
-        if (!deducted) {
-          alert('Coins exhausted! Call ended.');
-          endCall();
-        } else {
-          hipaAudio.playCoin();
-          const liveCoinEl = overlay.querySelector('#callLiveCoins');
-          if (liveCoinEl) liveCoinEl.textContent = hipaApi.getCoins();
-          const coinEl = document.getElementById('userCoinsCount');
-          if (coinEl) coinEl.textContent = hipaApi.getCoins();
-        }
-      }
-    }, 1000);
-
-    overlay.querySelector('#btnEndCall').onclick = endCall;
-
-    overlay.querySelector('#btnToggleMute').onclick = () => {
-      isMuted = !isMuted;
-      overlay.querySelector('#btnToggleMute').style.background = isMuted ? '#ef4444' : 'rgba(255,255,255,0.18)';
-      overlay.querySelector('#btnToggleMute').textContent = isMuted ? '🔇' : '🎤';
-    };
-
-    overlay.querySelector('#btnToggleFilter').onclick = () => {
-      isFilterActive = !isFilterActive;
-      const remoteImg = overlay.querySelector('#callRemoteVideo');
-      if (remoteImg) {
-        remoteImg.style.filter = isFilterActive ? 'brightness(1.08) contrast(1.1) saturate(1.2)' : 'brightness(0.85)';
-      }
-      overlay.querySelector('#btnToggleFilter').style.boxShadow = isFilterActive ? '0 0 20px #ffd700' : 'none';
-    };
-
-    overlay.querySelector('#btnToggleCam').onclick = () => {
-      alert('Camera view switched.');
-    };
-
-    overlay.querySelector('#btnInCallQuickGift').onclick = () => {
-      this.showGiftModal(creator);
-    };
-
-    // Report & Block button
-    overlay.querySelector('#btnInCallReport').onclick = async () => {
-      const reason = prompt("Safety Report & Emergency Block:\nPlease enter reason (e.g. Inappropriate behavior, fake user, harassment):", "Inappropriate behavior");
-      if (reason) {
-        await hipaApi.reportAndBlockUser(creator.id, creator.name, reason);
-        alert(`🚨 ${creator.name} has been reported and blocked immediately. Our Safety Team has been notified.`);
-        endCall();
-      }
-    };
+    callManager.startCall(creator, type === 'video' ? 'video' : 'voice');
   }
 
   // ==========================================

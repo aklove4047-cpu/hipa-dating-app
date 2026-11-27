@@ -74,7 +74,7 @@ export const DEFAULT_GATEWAY_CONFIG = {
       senderId: "HIPAIN"
     },
     firebase: {
-      apiKey: "AIzaSyFirebaseMockApiKey_98234",
+      apiKey: "DEMO_FIREBASE_API_KEY_PLACEHOLDER",
       authDomain: "hipa-dating.firebaseapp.com",
       projectId: "hipa-dating"
     }
@@ -117,7 +117,7 @@ export const DEFAULT_GATEWAY_CONFIG = {
   ai: {
     gemini: {
       enabled: true,
-      apiKey: "AIzaSyGeminiMockKey_HipaAI_8234",
+      apiKey: "DEMO_GEMINI_API_KEY_PLACEHOLDER",
       model: "gemini-1.5-flash",
       bioEnhancer: true,
       icebreakers: true,
@@ -4081,6 +4081,39 @@ class AdminController {
             <div>
               <label style="font-size: 0.8rem; font-weight: 700; color: #d1d5db;">Maintenance Notice Message</label>
               <textarea id="txtMaintenanceMsg" class="glass-input" rows="3" style="margin-top: 5px; width: 100%; font-size: 0.85rem;">${s.maintenanceMessage || "Peelin's is currently under scheduled maintenance. We will be back online shortly!"}</textarea>
+            </div>
+          </div>
+
+          <!-- 7. Firebase & Real-time WebRTC Signaling Engine -->
+          <div class="glass-panel" style="padding: 24px; border-color: rgba(245, 158, 11, 0.45); box-shadow: 0 10px 30px rgba(0,0,0,0.35);">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;">
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <div style="width: 40px; height: 40px; border-radius: 10px; background: linear-gradient(135deg, #f59e0b, #ef4444); display: flex; align-items: center; justify-content: center; font-size: 1.3rem; color: #fff;">
+                  🔥
+                </div>
+                <div>
+                  <h3 style="font-size: 1.15rem; font-weight: 800; color: #fff; margin: 0;">Firebase & WebRTC Cloud</h3>
+                  <p style="font-size: 0.75rem; color: #fde68a; margin: 0;">Firestore real-time calls & user directory</p>
+                </div>
+              </div>
+              <span style="background: rgba(16, 185, 129, 0.2); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.5); font-size: 0.72rem; font-weight: 800; padding: 4px 10px; border-radius: 999px;">
+                ● Active Live
+              </span>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 12px;">
+              <div>
+                <label style="font-size: 0.8rem; font-weight: 700; color: #d1d5db;">Project ID</label>
+                <input type="text" id="txtFbProjectId" class="glass-input" value="peelins-app" style="margin-top: 5px; width: 100%; font-family: monospace;" />
+              </div>
+              <div>
+                <label style="font-size: 0.8rem; font-weight: 700; color: #d1d5db;">Web / Mobile API Key</label>
+                <input type="text" id="txtFbApiKey" class="glass-input" value="" placeholder="Configured securely via Cloudflare Environment" style="margin-top: 5px; width: 100%; font-family: monospace;" />
+              </div>
+              <div>
+                <label style="font-size: 0.8rem; font-weight: 700; color: #d1d5db;">Storage Bucket</label>
+                <input type="text" id="txtFbStorage" class="glass-input" value="peelins-app.firebasestorage.app" style="margin-top: 5px; width: 100%; font-family: monospace;" />
+              </div>
             </div>
           </div>
         </div>
