@@ -261,13 +261,6 @@ class HipaApp {
           <button class="btn-pink-block" id="btnSendOtp" style="margin-top: 6px; font-size: 1.05rem; font-weight: 900; letter-spacing: 0.5px; box-shadow: 0 0 25px rgba(255,0,127,0.5);">
             Send OTP ➔
           </button>
-
-          <!-- Instant Demo Access for testing -->
-          <div style="margin-top: 12px; text-align: center;">
-            <button type="button" id="btnQuickDemoLogin" style="background: rgba(255,255,255,0.06); border: 1px dashed rgba(255, 0, 127, 0.45); color: #ff94c2; font-size: 0.8rem; font-weight: 800; padding: 8px 16px; border-radius: 9999px; cursor: pointer; width: 100%;">
-              ⚡ Quick Demo Login (Skip OTP & Jump in)
-            </button>
-          </div>
         </div>
       </div>
     `;
@@ -279,13 +272,6 @@ class HipaApp {
 
     root.querySelector('#btnApplyRef').onclick = () => {
       alert('🎉 Referral code applied! You will get 20 bonus coins on signup.');
-    };
-
-    root.querySelector('#btnQuickDemoLogin').onclick = () => {
-      const demoPhone = "98" + Math.floor(10000000 + Math.random() * 90000000);
-      hipaApi.sendPhoneOtp(demoPhone, "PEELINS2026");
-      hipaApi.verifyPhoneOtp("123456");
-      this.renderOnboardingStep3();
     };
 
     root.querySelector('#btnSendOtp').onclick = async () => {
@@ -422,7 +408,12 @@ class HipaApp {
       }
       const res = await hipaApi.verifyPhoneOtp(code);
       if (res.ok) {
-        this.renderOnboardingStep3();
+        if (res.existingUser) {
+          this.user = res.existingUser;
+          this.renderMainApp();
+        } else {
+          this.renderOnboardingStep3();
+        }
       } else {
         alert(res.error);
       }
@@ -1002,6 +993,19 @@ class HipaApp {
     // 1. Initial load + periodic refresh from Cloudflare KV & Firestore
     const fetchAndRender = async () => {
       try {
+        const syncRes = await hipaApi.syncCurrentUserFromServer();
+        if (syncRes.changed) {
+          this.user = syncRes.user;
+          if (syncRes.justApproved) {
+            hipaAudio.playCoin();
+            alert('🎉 Female Identity Verification Completed!\nAapka account Admin ne approve kar diya hai. Ab aap Video aur Audio Calls kar sakti hain!');
+          }
+          if (this.currentTab === 'profile') {
+            const root = document.getElementById('mainViewport');
+            if (root) this.renderProfileTab(root);
+          }
+        }
+
         const profiles = await hipaApi.getRealDiscoverProfiles();
         if (Array.isArray(profiles)) {
           const prevJson = JSON.stringify(this.discoverProfiles.map(p => p.id + '_' + p.online));

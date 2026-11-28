@@ -504,7 +504,8 @@ export async function onRequest(context) {
         return new Response(JSON.stringify({ ok: true, call: found || null }), { headers: corsHeaders });
       }
       if (receiverId) {
-        const incoming = calls.filter(c => String(c.receiverId) === String(receiverId) && c.status === 'ringing');
+        const cutoff60s = Date.now() - 60 * 1000;
+        const incoming = calls.filter(c => String(c.receiverId) === String(receiverId) && c.status === 'ringing' && (c.createdAtMs || 0) > cutoff60s);
         return new Response(JSON.stringify({ ok: true, calls: incoming }), { headers: corsHeaders });
       }
       return new Response(JSON.stringify({ ok: true, calls }), { headers: corsHeaders });

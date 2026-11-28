@@ -514,7 +514,7 @@ class HipaApiService {
         if (Array.isArray(json.users)) apiUsers = json.users;
         else if (Array.isArray(json.data)) apiUsers = json.data;
       }
-    } catch (e) {}
+    } catch (e) { }
 
     // 3. Fetch local registered users
     const localUsers = this.getAllRegisteredUsers();
@@ -767,7 +767,64 @@ class HipaApiService {
       return { ok: false, error: "Invalid OTP code. Please enter the OTP code or test code " + (universalAllowed ? universalCode : "") };
     }
 
-    return { ok: true, pending };
+    // Check if this phone number already has a registered account in Cloud KV
+    let existingUser = null;
+    try {
+      const res = await fetch('/api/v1/users');
+      if (res.ok) {
+        const data = await res.json();
+        const users = Array.isArray(data.users) ? data.users : [];
+        existingUser = users.find(u => u.phone === pending.phone || (u.phone && pending.phone && u.phone.slice(-10) === pending.phone.slice(-10))) || null;
+      }
+    } catch (e) {}
+
+    if (existingUser) {
+      existingUser.isOnline = true;
+      this.saveUser(existingUser);
+      this.session = { token: "hipa_tok_" + Date.now(), userId: existingUser.id };
+      localStorage.setItem('hipa_user_session', JSON.stringify(this.session));
+      try {
+        await fetch('/api/v1/users', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: existingUser.id, phone: existingUser.phone, isOnline: true })
+        });
+      } catch (e) {}
+    }
+
+    return { ok: true, pending, existingUser };
+  }
+
+  async syncCurrentUserFromServer() {
+    const u = this.getUser();
+    if (!u || !u.id) return { changed: false };
+    try {
+      const res = await fetch('/api/v1/users');
+      if (!res.ok) return { changed: false };
+      const data = await res.json();
+      const users = Array.isArray(data.users) ? data.users : [];
+      const remote = users.find(item => String(item.id) === String(u.id) || (item.phone && u.phone && item.phone === u.phone));
+      if (!remote) return { changed: false };
+
+      const prevVerif = u.verificationStatus;
+      const changed = (remote.verificationStatus && remote.verificationStatus !== prevVerif) ||
+        (remote.verified !== undefined && remote.verified !== u.verified) ||
+        (remote.status && remote.status !== u.status);
+
+      if (changed) {
+        const updated = {
+          ...u,
+          verified: remote.verified !== undefined ? remote.verified : u.verified,
+          verificationStatus: remote.verificationStatus || u.verificationStatus,
+          status: remote.status || u.status,
+          voiceRate: remote.voiceRate !== undefined ? remote.voiceRate : u.voiceRate,
+          videoRate: remote.videoRate !== undefined ? remote.videoRate : u.videoRate
+        };
+        this.saveUser(updated);
+        return { changed: true, justApproved: prevVerif !== 'approved' && updated.verificationStatus === 'approved', user: updated };
+      }
+    } catch (e) {}
+    return { changed: false };
   }
 
   finishOnboarding(language, gender, avatar, name = "") {
@@ -969,6 +1026,12 @@ class HipaApiService {
       bc.postMessage({ type: 'SAFETY_REPORT', report });
       setTimeout(() => bc.close(), 1000);
     } catch (e) { }
+
+    fetch('/api/v1/reports', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(report)
+    }).catch(() => {});
 
     return report;
   }
