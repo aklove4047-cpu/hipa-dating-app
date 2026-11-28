@@ -17,24 +17,29 @@ const RTC_CONFIG = {
   iceServers: [
     { urls: 'stun:stun.l.google.com:19302' },
     { urls: 'stun:stun1.l.google.com:19302' },
-    { urls: 'stun:stun2.l.google.com:19302' },
+    { urls: 'stun:stun.cloudflare.com:3478' },
     {
-      urls: 'turn:openrelay.metered.ca:80',
-      username: 'openrelayproject',
-      credential: 'openrelayproject'
+      urls: 'turn:a.relay.metered.ca:80',
+      username: 'e8dd65b92f62165656c78137',
+      credential: 'uWdWNmkhvyqTE638'
     },
     {
-      urls: 'turn:openrelay.metered.ca:443',
-      username: 'openrelayproject',
-      credential: 'openrelayproject'
+      urls: 'turn:a.relay.metered.ca:443',
+      username: 'e8dd65b92f62165656c78137',
+      credential: 'uWdWNmkhvyqTE638'
     },
     {
-      urls: 'turn:openrelay.metered.ca:443?transport=tcp',
-      username: 'openrelayproject',
-      credential: 'openrelayproject'
+      urls: 'turn:a.relay.metered.ca:443?transport=tcp',
+      username: 'e8dd65b92f62165656c78137',
+      credential: 'uWdWNmkhvyqTE638'
+    },
+    {
+      urls: 'turn:global.relay.metered.ca:443?transport=tcp',
+      username: 'e8dd65b92f62165656c78137',
+      credential: 'uWdWNmkhvyqTE638'
     }
   ],
-  iceCandidatePoolSize: 4
+  iceCandidatePoolSize: 6
 };
 
 class RealCallManager {
@@ -339,13 +344,19 @@ class RealCallManager {
 
       this.attachPeerEvents(this.peerConnection, isVideo);
 
+      this.peerConnection.onicecandidate = (event) => {
+        if (event.candidate) {
+          firebaseService.addIceCandidate(call.id, 'receiver', event.candidate);
+        }
+      };
+
       // Set Remote Description from Caller's Offer (already contains Caller ICE candidates)
       await this.peerConnection.setRemoteDescription(new RTCSessionDescription(call.offer));
 
       // Create SDP Answer & Wait for ICE Gathering (bundles STUN+TURN into answer.sdp)
       const answer = await this.peerConnection.createAnswer();
       await this.peerConnection.setLocalDescription(answer);
-      await this.waitForIceGathering(this.peerConnection, 2500);
+      await this.waitForIceGathering(this.peerConnection, 3500);
 
       const finalAnswer = this.peerConnection.localDescription || answer;
 
@@ -450,10 +461,16 @@ class RealCallManager {
 
       this.attachPeerEvents(this.peerConnection, isVideo);
 
+      this.peerConnection.onicecandidate = (event) => {
+        if (event.candidate && this.activeCall && this.activeCall.id) {
+          firebaseService.addIceCandidate(this.activeCall.id, 'caller', event.candidate);
+        }
+      };
+
       // Create SDP Offer & Wait for ICE Gathering (bundles STUN+TURN into offer.sdp)
       const offer = await this.peerConnection.createOffer();
       await this.peerConnection.setLocalDescription(offer);
-      await this.waitForIceGathering(this.peerConnection, 2500);
+      await this.waitForIceGathering(this.peerConnection, 3500);
 
       const finalOffer = this.peerConnection.localDescription || offer;
 
@@ -708,8 +725,8 @@ class RealCallManager {
         <!-- Remote Video Feed / Remote Video Fallback -->
         <div style="position: absolute; inset: 0; width: 100%; height: 100%; overflow: hidden;">
           <audio id="peelinsRemoteAudio" autoplay playsinline></audio>
-          <video id="peelinsRemoteVideo" autoplay playsinline style="width: 100%; height: 100%; object-fit: cover; display: ${isVideo ? 'block' : 'none'};"></video>
-          <img id="peelinsRemoteFallbackImg" src="${partnerPhoto}" style="width: 100%; height: 100%; object-fit: cover; filter: ${isVideo ? 'brightness(0.7) blur(10px)' : 'brightness(0.85)'};" />
+          <img id="peelinsRemoteFallbackImg" src="${partnerPhoto}" style="position: absolute; inset: 0; z-index: 1; width: 100%; height: 100%; object-fit: cover; filter: ${isVideo ? 'brightness(0.7) blur(10px)' : 'brightness(0.85)'};" />
+          <video id="peelinsRemoteVideo" autoplay playsinline style="position: absolute; inset: 0; z-index: 2; width: 100%; height: 100%; object-fit: cover; display: none;"></video>
         </div>
 
         <!-- Top HUD Safety & Status Bar -->

@@ -852,9 +852,13 @@ class HipaApp {
             mediaRec.ondataavailable = e => chunks.push(e.data);
             mediaRec.onstop = () => {
               const blob = new Blob(chunks, { type: 'audio/webm' });
-              voiceUrl = URL.createObjectURL(blob);
-              audioPlay.src = voiceUrl;
-              audioBox.style.display = 'block';
+              const reader = new FileReader();
+              reader.onloadend = () => {
+                voiceUrl = reader.result || URL.createObjectURL(blob);
+                audioPlay.src = voiceUrl;
+                audioBox.style.display = 'block';
+              };
+              reader.readAsDataURL(blob);
               stream.getTracks().forEach(t => t.stop());
             };
             mediaRec.start();
@@ -890,9 +894,18 @@ class HipaApp {
     videoInput.onchange = (e) => {
       const file = e.target.files[0];
       if (file) {
-        videoUrl = URL.createObjectURL(file);
-        videoPlay.src = videoUrl;
+        const previewObjUrl = URL.createObjectURL(file);
+        videoPlay.src = previewObjUrl;
         videoBox.style.display = 'block';
+        if (file.size <= 3.5 * 1024 * 1024) {
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            if (reader.result) videoUrl = reader.result;
+          };
+          reader.readAsDataURL(file);
+        } else {
+          videoUrl = previewObjUrl;
+        }
       }
     };
 
@@ -908,7 +921,7 @@ class HipaApp {
     }
 
     // Selfie photo handler
-    let selfieUrl = "/images/avatar_female_ashley.jpg";
+    let selfieUrl = this.selectedAvatar || "/images/avatar_female_riya.jpg";
     const selfieInput = root.querySelector('#inputSelfieFileStep5');
     const selfieImg = root.querySelector('#selfieImg');
     const selfieIcon = root.querySelector('#selfieIcon');
@@ -1694,9 +1707,6 @@ class HipaApp {
         <div style="display: flex; align-items: center; gap: 16px;">
           <div style="width: 72px; height: 72px; border-radius: 50%; border: 2.5px solid var(--primary-pink); padding: 2px; position: relative; flex-shrink: 0;">
             <img src="${user.avatar || HIPA_AVATARS[0]}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;" />
-            <div style="position: absolute; bottom: 0; right: 0; width: 22px; height: 22px; background: var(--primary-pink); border: 2px solid #ffffff; border-radius: 50%; color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 0.7rem;">
-              ✏️
-            </div>
           </div>
           <div style="flex: 1; min-width: 0;">
             <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
