@@ -1,6 +1,7 @@
 name = "hipa-admin"
+pages_build_output_dir = "public"
 compatibility_date = "2026-11-01"
 
 [[kv_namespaces]]
 binding = "HIPA_DATA"
-id = "ae8ec5871f954e10a7881e746b1e8611"
+id = "bdb74490a1c3495a83508697c39b3ba0"

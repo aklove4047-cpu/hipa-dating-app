@@ -191,108 +191,214 @@ class FirebaseService {
     }
   }
 
-  // --- Real WebRTC Call Signaling (Firestore) ---
-
-  // User A initiates call: creates document in calls/
-  async createCall(callData) {
-    if (!this.ensureReady()) {
-      return { id: 'local_' + Date.now(), ...callData };
+  // --- Real WebRTC Call Signaling (Firestore + Cloudflare KV Dual Engine) ---
+  getCallsApiUrl() {
+    if (window.location && window.location.origin && window.location.origin.startsWith('http') && !window.location.origin.includes('localhost')) {
+      return window.location.origin + '/api/v1/calls';
     }
-    try {
-      const callRef = this.db.collection('calls').doc();
-      const payload = {
-        ...callData,
-        id: callRef.id,
-        status: 'ringing',
-        createdAt: window.firebase.firestore.FieldValue.serverTimestamp()
-      };
-      await callRef.set(payload);
-      return { id: callRef.id, ...payload };
-    } catch (err) {
-      console.error('[Firebase] Create call error:', err);
-      return { id: 'local_' + Date.now(), ...callData };
-    }
+    return 'https://www.peelins.in/api/v1/calls';
   }
 
-  // User B listens for incoming calls
+  // User A initiates call: creates document in Cloudflare KV + Firestore
+  async createCall(callData) {
+    const callId = 'call_' + Date.now() + '_' + Math.floor(Math.random() * 10000);
+    const payload = {
+      ...callData,
+      id: callId,
+      status: 'ringing'
+    };
+
+    // 1. Always post to Cloudflare KV /api/v1/calls (Works immediately without Firestore setup!)
+    try {
+      await fetch(this.getCallsApiUrl(), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+    } catch (e) {}
+
+    // 2. Also sync to Firestore if enabled
+    if (this.ensureReady()) {
+      try {
+        await this.db.collection('calls').doc(callId).set({
+          ...payload,
+          createdAt: window.firebase.firestore.FieldValue.serverTimestamp()
+        });
+      } catch (err) {}
+    }
+
+    return payload;
+  }
+
+  // User B listens for incoming calls (Cloudflare KV polling + Firestore onSnapshot)
   listenForIncomingCalls(myUserId, onIncomingCall) {
     if (!myUserId) return () => {};
+    const seenCalls = new Set();
+
+    const triggerOnce = (call) => {
+      if (!call || !call.id || seenCalls.has(call.id)) return;
+      seenCalls.add(call.id);
+      onIncomingCall(call);
+    };
+
+    // 1. Cloudflare KV Polling (every 1.5s)
+    if (this.kvCallPollInterval) clearInterval(this.kvCallPollInterval);
+    this.kvCallPollInterval = setInterval(async () => {
+      try {
+        const res = await fetch(`${this.getCallsApiUrl()}?receiverId=${encodeURIComponent(String(myUserId))}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data.calls)) {
+            data.calls.forEach(triggerOnce);
+          }
+        }
+      } catch (e) {}
+    }, 1500);
+
+    // 2. Firestore real-time listener (if enabled)
     if (!this.ensureReady()) {
       this.pendingCallListener = { userId: myUserId, cb: onIncomingCall };
-      return () => {};
+    } else {
+      try {
+        if (this.callUnsubscribe) this.callUnsubscribe();
+        this.callUnsubscribe = this.db.collection('calls')
+          .where('receiverId', '==', String(myUserId))
+          .where('status', '==', 'ringing')
+          .onSnapshot(snapshot => {
+            snapshot.docChanges().forEach(change => {
+              if (change.type === 'added') {
+                triggerOnce({ id: change.doc.id, ...change.doc.data() });
+              }
+            });
+          }, () => {});
+      } catch (e) {}
     }
-    try {
-      if (this.callUnsubscribe) {
-        this.callUnsubscribe();
-      }
-      this.callUnsubscribe = this.db.collection('calls')
-        .where('receiverId', '==', String(myUserId))
-        .where('status', '==', 'ringing')
-        .onSnapshot(snapshot => {
-          snapshot.docChanges().forEach(change => {
-            if (change.type === 'added') {
-              const call = { id: change.doc.id, ...change.doc.data() };
-              onIncomingCall(call);
-            }
-          });
-        }, err => console.warn('[Firebase] Incoming calls listener error:', err));
-      
-      return this.callUnsubscribe;
-    } catch (e) {
-      return () => {};
-    }
+
+    return () => {
+      if (this.kvCallPollInterval) clearInterval(this.kvCallPollInterval);
+      if (this.callUnsubscribe) this.callUnsubscribe();
+    };
   }
 
   // Listen for Call Document status changes (e.g. accepted, declined, ended)
   listenToCall(callId, onUpdate) {
-    if (!this.ensureReady() || !callId || String(callId).startsWith('local_')) {
-      return () => {};
-    }
-    try {
-      return this.db.collection('calls').doc(callId).onSnapshot(doc => {
-        if (doc.exists) {
-          onUpdate(doc.data());
+    if (!callId || String(callId).startsWith('local_')) return () => {};
+    let lastStatus = '';
+    let hasAnswer = false;
+
+    const pollTimer = setInterval(async () => {
+      try {
+        const res = await fetch(`${this.getCallsApiUrl()}?callId=${encodeURIComponent(callId)}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.call) {
+            const changed = data.call.status !== lastStatus || (!!data.call.answer && !hasAnswer);
+            if (changed) {
+              lastStatus = data.call.status;
+              hasAnswer = !!data.call.answer;
+              onUpdate(data.call);
+            }
+          }
         }
-      }, err => console.warn('[Firebase] Call doc listener error:', err));
-    } catch (e) {
-      return () => {};
+      } catch (e) {}
+    }, 1000);
+
+    let fsUnsub = () => {};
+    if (this.ensureReady()) {
+      try {
+        fsUnsub = this.db.collection('calls').doc(callId).onSnapshot(doc => {
+          if (doc.exists) {
+            const d = doc.data();
+            onUpdate(d);
+          }
+        }, () => {});
+      } catch (e) {}
     }
+
+    return () => {
+      clearInterval(pollTimer);
+      fsUnsub();
+    };
   }
 
   // Update Call Document (offer, answer, status)
   async updateCall(callId, data) {
-    if (!this.ensureReady() || !callId || String(callId).startsWith('local_')) return;
+    if (!callId || String(callId).startsWith('local_')) return;
     try {
-      await this.db.collection('calls').doc(callId).update(data);
-    } catch (err) {
-      console.warn('[Firebase] Update call error:', err);
+      await fetch(this.getCallsApiUrl(), {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: callId, ...data })
+      });
+    } catch (e) {}
+
+    if (this.ensureReady()) {
+      try {
+        await this.db.collection('calls').doc(callId).update(data);
+      } catch (err) {}
     }
   }
 
   // Add ICE Candidate
   async addIceCandidate(callId, role, candidate) {
-    if (!this.ensureReady() || !callId || String(callId).startsWith('local_') || !candidate) return;
+    if (!callId || String(callId).startsWith('local_') || !candidate) return;
+    const candJson = candidate.toJSON ? candidate.toJSON() : candidate;
     try {
-      const sub = role === 'caller' ? 'callerCandidates' : 'receiverCandidates';
-      await this.db.collection('calls').doc(callId).collection(sub).add(candidate.toJSON ? candidate.toJSON() : candidate);
+      await fetch(this.getCallsApiUrl(), {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: callId, role, addCandidate: candJson })
+      });
     } catch (e) {}
+
+    if (this.ensureReady()) {
+      try {
+        const sub = role === 'caller' ? 'callerCandidates' : 'receiverCandidates';
+        await this.db.collection('calls').doc(callId).collection(sub).add(candJson);
+      } catch (e) {}
+    }
   }
 
   // Listen for Remote ICE Candidates
   listenIceCandidates(callId, roleToListen, onCandidate) {
-    if (!this.ensureReady() || !callId || String(callId).startsWith('local_')) return () => {};
-    try {
-      const sub = roleToListen === 'caller' ? 'callerCandidates' : 'receiverCandidates';
-      return this.db.collection('calls').doc(callId).collection(sub).onSnapshot(snapshot => {
-        snapshot.docChanges().forEach(change => {
-          if (change.type === 'added') {
-            onCandidate(change.doc.data());
+    if (!callId || String(callId).startsWith('local_')) return () => {};
+    let seenCount = 0;
+
+    const pollTimer = setInterval(async () => {
+      try {
+        const res = await fetch(`${this.getCallsApiUrl()}?callId=${encodeURIComponent(callId)}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.call) {
+            const field = roleToListen === 'caller' ? 'callerCandidates' : 'receiverCandidates';
+            const list = data.call[field] || [];
+            while (seenCount < list.length) {
+              onCandidate(list[seenCount]);
+              seenCount++;
+            }
           }
-        });
-      }, () => {});
-    } catch (e) {
-      return () => {};
+        }
+      } catch (e) {}
+    }, 1000);
+
+    let fsUnsub = () => {};
+    if (this.ensureReady()) {
+      try {
+        const sub = roleToListen === 'caller' ? 'callerCandidates' : 'receiverCandidates';
+        fsUnsub = this.db.collection('calls').doc(callId).collection(sub).onSnapshot(snapshot => {
+          snapshot.docChanges().forEach(change => {
+            if (change.type === 'added') {
+              onCandidate(change.doc.data());
+            }
+          });
+        }, () => {});
+      } catch (e) {}
     }
+
+    return () => {
+      clearInterval(pollTimer);
+      fsUnsub();
+    };
   }
 }
 

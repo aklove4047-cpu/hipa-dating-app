@@ -427,6 +427,90 @@ export async function onRequest(context) {
     }), { headers: corsHeaders });
   }
 
+  // WebRTC Call Signaling Endpoint (Cloudflare KV-backed Real-Time Fallback)
+  if (path.includes('/api/v1/calls') && !path.includes('ice-config')) {
+    const kv = context.env?.HIPA_DATA;
+
+    const loadCalls = async () => {
+      if (kv) {
+        try {
+          const raw = await kv.get('peelins_active_calls');
+          if (raw) return JSON.parse(raw);
+        } catch (e) {}
+      }
+      return globalThis.__PEELINS_CALLS__ || [];
+    };
+
+    const saveCalls = async (calls) => {
+      // Keep only calls from last 15 minutes
+      const cutoff = Date.now() - 15 * 60 * 1000;
+      const trimmed = calls.filter(c => (c.createdAtMs || 0) > cutoff).slice(0, 100);
+      if (kv) {
+        await kv.put('peelins_active_calls', JSON.stringify(trimmed));
+      } else {
+        globalThis.__PEELINS_CALLS__ = trimmed;
+      }
+    };
+
+    if (request.method === 'POST') {
+      try {
+        const body = await request.json();
+        const calls = await loadCalls();
+        const callId = body.id || ('call_' + Date.now() + '_' + Math.floor(Math.random() * 1000));
+        const newCall = {
+          ...body,
+          id: callId,
+          status: body.status || 'ringing',
+          callerCandidates: body.callerCandidates || [],
+          receiverCandidates: body.receiverCandidates || [],
+          createdAtMs: Date.now()
+        };
+        calls.unshift(newCall);
+        await saveCalls(calls);
+        return new Response(JSON.stringify({ ok: true, call: newCall }), { headers: corsHeaders });
+      } catch (err) {
+        return new Response(JSON.stringify({ ok: false, error: err.message }), { status: 500, headers: corsHeaders });
+      }
+    }
+
+    if (request.method === 'PUT') {
+      try {
+        const body = await request.json();
+        const calls = await loadCalls();
+        const idx = calls.findIndex(c => String(c.id) === String(body.id));
+        if (idx === -1) {
+          return new Response(JSON.stringify({ ok: false, error: 'Call not found' }), { status: 404, headers: corsHeaders });
+        }
+        if (body.addCandidate && body.role) {
+          const field = body.role === 'caller' ? 'callerCandidates' : 'receiverCandidates';
+          calls[idx][field] = calls[idx][field] || [];
+          calls[idx][field].push(body.addCandidate);
+        } else {
+          calls[idx] = { ...calls[idx], ...body, updatedAtMs: Date.now() };
+        }
+        await saveCalls(calls);
+        return new Response(JSON.stringify({ ok: true, call: calls[idx] }), { headers: corsHeaders });
+      } catch (err) {
+        return new Response(JSON.stringify({ ok: false, error: err.message }), { status: 500, headers: corsHeaders });
+      }
+    }
+
+    if (request.method === 'GET') {
+      const receiverId = url.searchParams.get('receiverId');
+      const callId = url.searchParams.get('callId');
+      const calls = await loadCalls();
+      if (callId) {
+        const found = calls.find(c => String(c.id) === String(callId));
+        return new Response(JSON.stringify({ ok: true, call: found || null }), { headers: corsHeaders });
+      }
+      if (receiverId) {
+        const incoming = calls.filter(c => String(c.receiverId) === String(receiverId) && c.status === 'ringing');
+        return new Response(JSON.stringify({ ok: true, calls: incoming }), { headers: corsHeaders });
+      }
+      return new Response(JSON.stringify({ ok: true, calls }), { headers: corsHeaders });
+    }
+  }
+
   // Firebase Web Client Config (API key loaded from Cloudflare Pages secret env)
   if (path.includes('/api/v1/firebase-config')) {
     return new Response(JSON.stringify({

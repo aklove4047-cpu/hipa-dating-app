@@ -999,17 +999,25 @@ class HipaApp {
     const myGender = currentUser ? currentUser.gender : 'male';
     const targetGender = myGender === 'female' ? 'male' : 'female';
 
-    // 1. Initial load from Firestore + Cloudflare API + LocalStorage
-    try {
-      const profiles = await hipaApi.getRealDiscoverProfiles();
-      if (Array.isArray(profiles)) {
-        this.discoverProfiles = profiles;
-        if (this.currentTab === 'home') {
-          const root = document.getElementById('mainViewport');
-          if (root) this.renderHomeTab(root);
+    // 1. Initial load + periodic refresh from Cloudflare KV & Firestore
+    const fetchAndRender = async () => {
+      try {
+        const profiles = await hipaApi.getRealDiscoverProfiles();
+        if (Array.isArray(profiles)) {
+          const prevJson = JSON.stringify(this.discoverProfiles.map(p => p.id + '_' + p.online));
+          const nextJson = JSON.stringify(profiles.map(p => p.id + '_' + p.online));
+          this.discoverProfiles = profiles;
+          if (prevJson !== nextJson && this.currentTab === 'home') {
+            const root = document.getElementById('mainViewport');
+            if (root) this.renderHomeTab(root);
+          }
         }
-      }
-    } catch (e) {}
+      } catch (e) {}
+    };
+
+    await fetchAndRender();
+    if (this.realUsersPollTimer) clearInterval(this.realUsersPollTimer);
+    this.realUsersPollTimer = setInterval(fetchAndRender, 5000);
 
     // 2. Real-time Firestore live subscription
     try {
