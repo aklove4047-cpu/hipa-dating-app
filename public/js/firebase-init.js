@@ -39,6 +39,13 @@ class FirebaseService {
                 if (this.isReady && this.pendingCallListener) {
                   this.listenForIncomingCalls(this.pendingCallListener.userId, this.pendingCallListener.cb);
                 }
+                if (this.isReady && this.pendingUsersListener) {
+                  this.subscribeToRealUsers(
+                    this.pendingUsersListener.userId,
+                    this.pendingUsersListener.targetGender,
+                    this.pendingUsersListener.cb
+                  );
+                }
               }
               return;
             }
@@ -153,6 +160,37 @@ class FirebaseService {
     }
   }
 
+  // Real-time Firestore listener for all registered users
+  subscribeToRealUsers(currentUserId, targetGender, onUsersUpdate) {
+    if (!this.ensureReady()) {
+      this.pendingUsersListener = { userId: currentUserId, targetGender, cb: onUsersUpdate };
+      return () => {};
+    }
+    try {
+      if (this.usersUnsubscribe) {
+        this.usersUnsubscribe();
+      }
+      this.usersUnsubscribe = this.db.collection('users')
+        .limit(100)
+        .onSnapshot(snapshot => {
+          const users = [];
+          snapshot.forEach(doc => {
+            const data = doc.data();
+            if (String(data.id) !== String(currentUserId) && data.status !== 'banned') {
+              if (!targetGender || data.gender === targetGender) {
+                users.push(data);
+              }
+            }
+          });
+          onUsersUpdate(users);
+        }, err => console.warn('[Firebase] Users listener error:', err));
+
+      return this.usersUnsubscribe;
+    } catch (e) {
+      return () => {};
+    }
+  }
+
   // --- Real WebRTC Call Signaling (Firestore) ---
 
   // User A initiates call: creates document in calls/
@@ -188,7 +226,7 @@ class FirebaseService {
         this.callUnsubscribe();
       }
       this.callUnsubscribe = this.db.collection('calls')
-        .where('receiverId', '==', myUserId)
+        .where('receiverId', '==', String(myUserId))
         .where('status', '==', 'ringing')
         .onSnapshot(snapshot => {
           snapshot.docChanges().forEach(change => {

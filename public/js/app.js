@@ -22,6 +22,7 @@ class HipaApp {
     this.selectedCoinPack = HIPA_COIN_PACKS[0];
     this.activeCategory = 'All';
     this.user = hipaApi.getUser();
+    this.discoverProfiles = [];
     this.callTimer = null;
     this.offerTimer = null;
     this.offerSeconds = 297; // 04:57
@@ -986,6 +987,69 @@ class HipaApp {
 
     this.bindGlobalEvents();
     this.renderCurrentTab();
+    this.loadAndSubscribeRealUsers();
+    try {
+      callManager.initIncomingCallListener();
+    } catch (e) {}
+  }
+
+  async loadAndSubscribeRealUsers() {
+    const currentUser = hipaApi.getUser();
+    const myId = currentUser ? currentUser.id : null;
+    const myGender = currentUser ? currentUser.gender : 'male';
+    const targetGender = myGender === 'female' ? 'male' : 'female';
+
+    // 1. Initial load from Firestore + Cloudflare API + LocalStorage
+    try {
+      const profiles = await hipaApi.getRealDiscoverProfiles();
+      if (Array.isArray(profiles)) {
+        this.discoverProfiles = profiles;
+        if (this.currentTab === 'home') {
+          const root = document.getElementById('mainViewport');
+          if (root) this.renderHomeTab(root);
+        }
+      }
+    } catch (e) {}
+
+    // 2. Real-time Firestore live subscription
+    try {
+      if (firebaseService && typeof firebaseService.subscribeToRealUsers === 'function') {
+        firebaseService.subscribeToRealUsers(myId, targetGender, (liveUsers) => {
+          const mapped = liveUsers.map(u => ({
+            id: u.id,
+            name: u.name || u.username || 'Real Member',
+            avatar: u.avatar || (u.gender === 'female' ? '/images/avatar_female_riya.jpg' : '/images/avatar_male_aryan.jpg'),
+            photo: u.avatar || (u.gender === 'female' ? '/images/avatar_female_riya.jpg' : '/images/avatar_male_aryan.jpg'),
+            city: u.city || 'India',
+            language: u.language || 'Hindi',
+            bio: u.bio || 'Looking for real connections on Peelin\'s',
+            verified: u.verified !== false,
+            online: u.isOnline !== false,
+            videoOnline: u.isOnline !== false,
+            voiceRate: u.voiceRate || 10,
+            videoRate: u.videoRate || 20,
+            rating: 4.9,
+            callsCount: u.callsCount || 1,
+            isRealUser: true,
+            gender: u.gender || targetGender,
+            phone: u.phone || ''
+          }));
+
+          // Merge with any API/local profiles already discovered
+          const map = new Map();
+          mapped.forEach(u => map.set(String(u.id), u));
+          (this.discoverProfiles || []).forEach(u => {
+            if (!map.has(String(u.id))) map.set(String(u.id), u);
+          });
+          this.discoverProfiles = Array.from(map.values());
+
+          if (this.currentTab === 'home') {
+            const root = document.getElementById('mainViewport');
+            if (root) this.renderHomeTab(root);
+          }
+        });
+      }
+    } catch (e) {}
   }
 
   bindGlobalEvents() {
@@ -1045,13 +1109,17 @@ class HipaApp {
       };
     });
 
-    // Floating Random Match
+    // Floating Random Match (Real Users Only)
     const randomBtn = document.getElementById('btnFloatingRandom');
     if (randomBtn) {
       randomBtn.onclick = () => {
-        const onlineCreators = HIPA_CREATORS.filter(c => c.online);
-        const randomCreator = onlineCreators[Math.floor(Math.random() * onlineCreators.length)] || HIPA_CREATORS[0];
-        this.startCall(randomCreator, 'video');
+        const onlineUsers = (this.discoverProfiles || []).filter(c => c.online);
+        if (!onlineUsers.length) {
+          alert('Abhi koi real member online nahi hai. Jab koi dusra real user join karega, aap direct Video Call kar sakenge!');
+          return;
+        }
+        const randomUser = onlineUsers[Math.floor(Math.random() * onlineUsers.length)];
+        this.startCall(randomUser, 'video');
       };
     }
   }
@@ -1070,10 +1138,10 @@ class HipaApp {
   }
 
   // ==========================================
-  // TAB 1: HOME (Dual Mode: Live Directory & 3D Swipe Deck)
+  // TAB 1: HOME (100% Real Users Directory & 3D Swipe Deck)
   // ==========================================
   renderHomeTab(container) {
-    const categories = ['All', 'Trending 🔥', 'Video 📹', 'Audio 📞', 'Hindi', 'Punjabi', 'Marathi', 'Bengali', 'Tamil', 'Telugu'];
+    const categories = ['All', 'Video 📹', 'Audio 📞', 'Hindi', 'Punjabi', 'Marathi', 'Bengali', 'Tamil', 'Telugu'];
 
     const realRegistered = hipaApi.getAllRegisteredUsers();
     const currentUser = hipaApi.getUser();
@@ -1081,65 +1149,58 @@ class HipaApp {
     const myGender = currentUser ? currentUser.gender : 'male';
     const targetGender = myGender === 'female' ? 'male' : 'female';
 
-    // Map real registered users
-    const realUsersList = realRegistered
-      .filter(u => String(u.id) !== String(myId) && (!targetGender || u.gender === targetGender))
-      .map(u => ({
-        id: u.id,
-        name: u.name || u.username || 'Real Member',
-        avatar: u.avatar || '/images/avatar_female_riya.jpg',
-        photo: u.avatar || '/images/avatar_female_riya.jpg',
-        city: u.city || 'India',
-        language: u.language || 'Hindi',
-        bio: u.bio || 'Real dating profile on Peelin\'s',
-        verified: u.verified !== false,
-        online: u.isOnline !== false,
-        videoOnline: u.isOnline !== false,
-        voiceRate: u.voiceRate || 10,
-        videoRate: u.videoRate || 20,
-        rating: 4.9,
-        callsCount: 18,
-        isRealUser: true,
-        gender: u.gender || targetGender
-      }));
-
-    // Companion verified creators filtered by target gender
-    const baseCreators = HIPA_CREATORS.filter(c => {
-      if (myGender === 'female') return c.gender === 'male';
-      return c.gender !== 'male';
+    // Merge real users from live cloud state + localStorage (Zero Demo/Fake Profiles!)
+    const profileMap = new Map();
+    (this.discoverProfiles || []).forEach(u => {
+      if (String(u.id) !== String(myId) && (!targetGender || u.gender === targetGender)) {
+        profileMap.set(String(u.id), u);
+      }
     });
 
-    const allProfiles = [...realUsersList, ...baseCreators];
+    realRegistered.forEach(u => {
+      if (String(u.id) !== String(myId) && (!targetGender || u.gender === targetGender)) {
+        const key = String(u.id);
+        if (!profileMap.has(key)) {
+          profileMap.set(key, {
+            id: u.id,
+            name: u.name || u.username || 'Real Member',
+            avatar: u.avatar || (u.gender === 'female' ? '/images/avatar_female_riya.jpg' : '/images/avatar_male_aryan.jpg'),
+            photo: u.avatar || (u.gender === 'female' ? '/images/avatar_female_riya.jpg' : '/images/avatar_male_aryan.jpg'),
+            city: u.city || 'India',
+            language: u.language || 'Hindi',
+            bio: u.bio || 'Real dating profile on Peelin\'s',
+            verified: u.verified !== false,
+            online: u.isOnline !== false,
+            videoOnline: u.isOnline !== false,
+            voiceRate: u.voiceRate || 10,
+            videoRate: u.videoRate || 20,
+            rating: 4.9,
+            callsCount: u.callsCount || 1,
+            isRealUser: true,
+            gender: u.gender || targetGender,
+            phone: u.phone || ''
+          });
+        }
+      }
+    });
+
+    const allProfiles = Array.from(profileMap.values());
+    this.discoverProfiles = allProfiles;
 
     let creators = allProfiles;
     if (this.activeCategory === 'Video 📹') {
       creators = allProfiles.filter(c => c.videoOnline);
     } else if (this.activeCategory === 'Audio 📞') {
       creators = allProfiles.filter(c => c.voiceRate > 0);
-    } else if (this.activeCategory === 'Trending 🔥') {
-      creators = [...allProfiles].sort((a, b) => (b.callsCount || 0) - (a.callsCount || 0));
     } else if (this.activeCategory !== 'All') {
       creators = allProfiles.filter(c => (c.language || '').toLowerCase().includes(this.activeCategory.toLowerCase()));
     }
 
     container.innerHTML = `
-      <!-- 1. Live Stories / Reels Carousel -->
-      <div class="stories-bar" style="margin: -14px -14px 10px -14px;">
-        ${HIPA_STORIES.map(st => `
-          <div class="story-item" data-id="${st.id}">
-            <div class="story-avatar-wrap ${st.isLive ? 'live' : ''}">
-              <img src="${st.avatar}" alt="${st.name}" />
-              ${st.isLive ? '<span class="story-badge-live">LIVE</span>' : ''}
-            </div>
-            <span class="story-name">${st.name}</span>
-          </div>
-        `).join('')}
-      </div>
-
-      <!-- 2. Discovery Mode Toggle Bar -->
-      <div class="discovery-toggle-bar">
+      <!-- 1. Discovery Mode Toggle Bar -->
+      <div class="discovery-toggle-bar" style="margin-top: 2px;">
         <button class="discovery-tab-btn ${this.discoveryMode === 'creators' ? 'active' : ''}" data-mode="creators">
-          📹 Live Creators
+          📹 Live Real Users (${allProfiles.length})
         </button>
         <button class="discovery-tab-btn ${this.discoveryMode === 'swipe' ? 'active' : ''}" data-mode="swipe">
           🔥 Vibe Swipe
@@ -1166,62 +1227,14 @@ class HipaApp {
       </div>
 
       ${this.discoveryMode === 'creators' ? `
-        <!-- FEATURED HERO CARD (Ashley - Exact Image 2 Representation) -->
-        <div class="featured-hero-card">
-          <img src="/images/avatar_female_ashley.jpg" class="featured-hero-img" alt="Ashley" />
-          <div class="featured-hero-overlay">
-            <div class="hero-creator-header">
-              <div class="hero-creator-name">
-                Ashley <span class="hero-verified-pill" title="18+ Verified">✓</span>
-              </div>
-              <button class="btn-send-gift-hero" data-id="1" style="background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.25); border-radius: 9999px; padding: 6px 14px; color: #fff; font-weight: 800; font-size: 0.78rem; cursor: pointer; display: flex; align-items: center; gap: 5px;">
-                🎁 Send Gift
-              </button>
-            </div>
-            <div class="hero-creator-bio">
-              Free spirited traveler exploring hidden gems, new cuisines, and unforgettable global experiences daily.
-            </div>
-            <div class="hero-tags-grid">
-              <span class="hero-tag-pill">photography 📷</span>
-              <span class="hero-tag-pill">politics 🏛️</span>
-              <span class="hero-tag-pill">travel ✈️</span>
-              <span class="hero-tag-pill">sports ⚽</span>
-            </div>
-            <!-- Dual Call Rate Buttons from Screenshot -->
-            <div class="hero-call-actions-row">
-              <button class="hero-call-btn-card btn-hero-voice" data-id="1" title="Start Audio Call with Ashley">
-                <div class="hero-call-btn-top audio">
-                  <span style="font-size: 1.6rem; color: #ffffff;">📞</span>
-                </div>
-                <div class="hero-call-btn-bottom">
-                  <span>🪙 10/min</span>
-                  <span>⏱️ 8 mins</span>
-                </div>
-              </button>
-              <button class="hero-call-btn-card btn-hero-video" data-id="1" title="Start Video Call with Ashley">
-                <div class="hero-call-btn-top video">
-                  <span style="font-size: 1.6rem; color: #ffffff;">📹</span>
-                </div>
-                <div class="hero-call-btn-bottom">
-                  <span>🪙 10/min</span>
-                  <span>⏱️ 8 mins</span>
-                </div>
-              </button>
-            </div>
+        <!-- Live Real Users Header & Refresh -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+          <div style="font-size: 0.85rem; font-weight: 800; color: #10b981; display: flex; align-items: center; gap: 6px;">
+            <span style="width: 8px; height: 8px; border-radius: 50%; background: #10b981; display: inline-block; box-shadow: 0 0 8px #10b981;"></span>
+            Real ${targetGender === 'female' ? 'Girls' : 'Boys'} Online
           </div>
-        </div>
-
-        <!-- Welcome Offer Banner Card -->
-        <div class="glass-card" id="bannerWelcomeOffer" style="background: linear-gradient(135deg, rgba(255, 0, 127, 0.85) 0%, rgba(121, 40, 202, 0.85) 100%); color: #ffffff; padding: 14px 18px; border-radius: var(--radius-md); display: flex; align-items: center; justify-content: space-between; cursor: pointer; margin-bottom: 14px; box-shadow: var(--shadow-pink); border: 1px solid rgba(255, 255, 255, 0.2);">
-          <div style="display: flex; align-items: center; gap: 12px;">
-            <div style="font-size: 2rem;">🪙</div>
-            <div>
-              <div style="font-weight: 900; font-size: 1.05rem;">Get 60 Coins for only ₹14</div>
-              <div style="font-size: 0.75rem; opacity: 0.9;">Save 65% • Limited welcome offer</div>
-            </div>
-          </div>
-          <button class="btn-secondary" style="background: #ffffff; color: var(--primary-pink); font-size: 0.8rem; font-weight: 800; border: none; padding: 8px 14px; border-radius: var(--radius-full); box-shadow: 0 4px 12px rgba(0,0,0,0.2);">
-            Claim 🎁
+          <button id="btnRefreshRealUsers" style="background: rgba(255,0,127,0.12); border: 1px solid rgba(255,0,127,0.35); color: #ff85c0; font-size: 0.74rem; font-weight: 800; padding: 5px 12px; border-radius: 999px; cursor: pointer;">
+            🔄 Refresh Live
           </button>
         </div>
 
@@ -1234,9 +1247,20 @@ class HipaApp {
           `).join('')}
         </div>
 
-        <!-- Creators Grid -->
+        <!-- Real Users List -->
         <div class="creators-list">
-          ${creators.map(c => `
+          ${creators.length === 0 ? `
+            <div class="glass-card" style="padding: 28px 18px; text-align: center; border-radius: 18px; border: 1px dashed rgba(255,0,127,0.4);">
+              <div style="font-size: 2.6rem; margin-bottom: 10px;">💑</div>
+              <h3 style="font-size: 1.05rem; font-weight: 900; color: #ffffff; margin-bottom: 6px;">Abhi koi real ${targetGender === 'female' ? 'Female' : 'Male'} member registered nahi hai</h3>
+              <p style="font-size: 0.8rem; color: #d1c7e6; line-height: 1.5; margin-bottom: 16px;">
+                Demo mode hata diya gaya hai. Dusre phone ya browser se ek <strong>${targetGender === 'female' ? 'Female (Ladki)' : 'Male (Ladka)'}</strong> account register karein — woh turant yahan live dikhega aur aap real Video / Audio Call kar sakenge!
+              </p>
+              <button id="btnRefreshEmptyUsers" style="background: linear-gradient(135deg, #ff007f, #7928ca); border: none; color: #fff; padding: 10px 20px; border-radius: 999px; font-weight: 800; font-size: 0.85rem; cursor: pointer;">
+                🔄 Check Again
+              </button>
+            </div>
+          ` : creators.map(c => `
             <div class="creator-card" data-id="${c.id}">
               <div class="creator-left">
                 <div class="creator-avatar-wrap">
@@ -1246,11 +1270,11 @@ class HipaApp {
                 <div>
                   <div class="creator-name" style="display: flex; align-items: center; gap: 6px;">
                     ${c.name}
-                    ${c.isRealUser ? '<span style="background: linear-gradient(135deg, #10b981, #059669); color: #fff; font-size: 0.65rem; font-weight: 800; padding: 1px 6px; border-radius: 999px;">REAL</span>' : ''}
+                    <span style="background: linear-gradient(135deg, #10b981, #059669); color: #fff; font-size: 0.65rem; font-weight: 800; padding: 1px 6px; border-radius: 999px;">REAL</span>
                     ${c.verified ? '<span style="color: #0284c7; font-size: 0.85rem;" title="Verified">✓</span>' : ''}
                   </div>
                   <div style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600; margin-top: 2px;">
-                    ${c.language} • ⭐ ${c.rating} • ${c.callsCount}+ calls
+                    ${c.language} • ${c.online ? '🟢 Online' : '⚫ Offline'} • ${c.city || 'India'}
                   </div>
                 </div>
               </div>
@@ -1279,9 +1303,18 @@ class HipaApp {
           `).join('')}
         </div>
       ` : `
-        <!-- 3D VIBE SWIPE DECK MODE -->
+        <!-- 3D VIBE SWIPE DECK MODE (Real Users) -->
         ${(() => {
-          const profile = HIPA_CREATORS[this.currentSwipeIndex % HIPA_CREATORS.length];
+          if (!allProfiles.length) {
+            return `
+              <div class="glass-card" style="padding: 36px 20px; text-align: center; border-radius: 18px; margin-top: 20px;">
+                <div style="font-size: 3rem; margin-bottom: 10px;">💫</div>
+                <h3 style="font-size: 1.1rem; font-weight: 900; color: #fff; margin-bottom: 6px;">Koi real member abhi available nahi hai</h3>
+                <p style="font-size: 0.82rem; color: #d1c7e6;">Dusre device se ${targetGender === 'female' ? 'Female' : 'Male'} profile register karein aur live swipe + call karein.</p>
+              </div>
+            `;
+          }
+          const profile = allProfiles[this.currentSwipeIndex % allProfiles.length];
           return `
             <div class="swipe-deck-wrap">
               <div class="swipe-card-3d">
@@ -1289,13 +1322,15 @@ class HipaApp {
                 <div class="featured-hero-overlay">
                   <div style="display: flex; align-items: center; justify-content: space-between;">
                     <div style="font-size: 1.8rem; font-weight: 900; color: #fff;">
-                      ${profile.name}, ${profile.age} <span class="hero-verified-pill">✓</span>
+                      ${profile.name} <span class="hero-verified-pill">✓</span>
                     </div>
                     <span class="glass-pill" style="font-size: 0.75rem; background: rgba(255,0,127,0.3); color: #fff;">${profile.language}</span>
                   </div>
                   <p style="font-size: 0.88rem; color: #e2d9f3; line-height: 1.4;">${profile.bio || "Looking to connect live on audio & video call! ✨"}</p>
                   <div class="hero-tags-grid">
-                    ${(profile.tags || ['music 🎵', 'travel ✈️', 'chat 💬']).map(t => `<span class="hero-tag-pill">${t}</span>`).join('')}
+                    <span class="hero-tag-pill">${profile.online ? '🟢 Online' : '⚫ Offline'}</span>
+                    <span class="hero-tag-pill">📍 ${profile.city || 'India'}</span>
+                    <span class="hero-tag-pill">✨ Real User</span>
                   </div>
                 </div>
               </div>
@@ -1316,16 +1351,7 @@ class HipaApp {
       `}
     `;
 
-    // 1. Stories Click
-    container.querySelectorAll('.story-item').forEach(el => {
-      el.onclick = () => {
-        const sid = Number(el.getAttribute('data-id'));
-        const story = HIPA_STORIES.find(s => s.id === sid);
-        if (story) this.showStoryModal(story);
-      };
-    });
-
-    // 2. Discovery Mode Switch
+    // 1. Discovery Mode Switch
     container.querySelectorAll('.discovery-tab-btn').forEach(btn => {
       btn.onclick = () => {
         this.discoveryMode = btn.getAttribute('data-mode');
@@ -1334,6 +1360,16 @@ class HipaApp {
       };
     });
 
+    // 2. Refresh Real Users Buttons
+    const refreshHandler = () => {
+      hipaAudio.playPop();
+      this.loadAndSubscribeRealUsers();
+    };
+    const btnRefresh = container.querySelector('#btnRefreshRealUsers');
+    if (btnRefresh) btnRefresh.onclick = refreshHandler;
+    const btnRefreshEmpty = container.querySelector('#btnRefreshEmptyUsers');
+    if (btnRefreshEmpty) btnRefreshEmpty.onclick = refreshHandler;
+
     // 3. Quick Hub Modals
     const btnWheel = container.querySelector('#btnOpenLuckyWheel');
     if (btnWheel) btnWheel.onclick = () => this.showLuckyWheelModal();
@@ -1341,30 +1377,7 @@ class HipaApp {
     const btnVIP = container.querySelector('#btnOpenVIPClub');
     if (btnVIP) btnVIP.onclick = () => this.showVIPMembershipModal();
 
-    // 4. Hero Ashley Call Buttons
-    const heroVoice = container.querySelector('.btn-hero-voice');
-    if (heroVoice) {
-      heroVoice.onclick = () => {
-        const ashley = HIPA_CREATORS[0];
-        this.startCall(ashley, 'voice');
-      };
-    }
-    const heroVideo = container.querySelector('.btn-hero-video');
-    if (heroVideo) {
-      heroVideo.onclick = () => {
-        const ashley = HIPA_CREATORS[0];
-        this.startCall(ashley, 'video');
-      };
-    }
-    const heroGift = container.querySelector('.btn-send-gift-hero');
-    if (heroGift) {
-      heroGift.onclick = () => {
-        const ashley = HIPA_CREATORS[0];
-        this.showGiftModal(ashley);
-      };
-    }
-
-    // 5. Category filter clicks
+    // 4. Category filter clicks
     container.querySelectorAll('.cat-pill').forEach(btn => {
       btn.onclick = () => {
         this.activeCategory = btn.getAttribute('data-cat');
@@ -1373,16 +1386,12 @@ class HipaApp {
       };
     });
 
-    // 6. Welcome Offer banner
-    const banner = container.querySelector('#bannerWelcomeOffer');
-    if (banner) banner.onclick = () => this.showWelcomeOfferModal();
-
-    // 7. Grid Call & Gift buttons
+    // 5. Grid Call & Gift buttons (Real Users Lookup)
     container.querySelectorAll('.btn-quick-gift').forEach(btn => {
       btn.onclick = (e) => {
         e.stopPropagation();
-        const cid = Number(btn.getAttribute('data-id'));
-        const creator = HIPA_CREATORS.find(c => c.id === cid);
+        const cid = btn.getAttribute('data-id');
+        const creator = allProfiles.find(c => String(c.id) === String(cid));
         if (creator) this.showGiftModal(creator);
       };
     });
@@ -1390,17 +1399,18 @@ class HipaApp {
     container.querySelectorAll('.btn-voice-call').forEach(btn => {
       btn.onclick = (e) => {
         e.stopPropagation();
-        const cid = Number(btn.getAttribute('data-id'));
-        const creator = HIPA_CREATORS.find(c => c.id === cid);
-        this.startCall(creator, 'voice');
+        const cid = btn.getAttribute('data-id');
+        const creator = allProfiles.find(c => String(c.id) === String(cid));
+        if (creator) this.startCall(creator, 'voice');
       };
     });
 
     container.querySelectorAll('.btn-video-call').forEach(btn => {
       btn.onclick = (e) => {
         e.stopPropagation();
-        const cid = Number(btn.getAttribute('data-id'));
-        const creator = HIPA_CREATORS.find(c => c.id === cid);
+        const cid = btn.getAttribute('data-id');
+        const creator = allProfiles.find(c => String(c.id) === String(cid));
+        if (!creator) return;
         if (!creator.videoOnline) {
           alert(`${creator.name} is currently offline for video calls. You can connect via voice call!`);
           return;
@@ -1409,7 +1419,7 @@ class HipaApp {
       };
     });
 
-    // 8. Swipe Controls
+    // 6. Swipe Controls
     const btnPass = container.querySelector('#btnSwipePass');
     if (btnPass) {
       btnPass.onclick = () => {
@@ -1422,8 +1432,10 @@ class HipaApp {
     const btnSuperlike = container.querySelector('#btnSwipeSuperlike');
     if (btnSuperlike) {
       btnSuperlike.onclick = () => {
+        if (!allProfiles.length) return;
+        const target = allProfiles[this.currentSwipeIndex % allProfiles.length];
         hipaAudio.playHeart();
-        alert(`⭐ Superliked! You stand out to ${HIPA_CREATORS[this.currentSwipeIndex % HIPA_CREATORS.length].name}!`);
+        alert(`⭐ Superliked! You stand out to ${target.name}!`);
         this.currentSwipeIndex++;
         this.renderHomeTab(container);
       };
@@ -1432,7 +1444,8 @@ class HipaApp {
     const btnLike = container.querySelector('#btnSwipeLike');
     if (btnLike) {
       btnLike.onclick = () => {
-        const creator = HIPA_CREATORS[this.currentSwipeIndex % HIPA_CREATORS.length];
+        if (!allProfiles.length) return;
+        const creator = allProfiles[this.currentSwipeIndex % allProfiles.length];
         hipaAudio.playHeart();
         this.triggerFlyingGiftAnimation('💖');
         alert(`🎉 It's a Vibe Match with ${creator.name}!\nConnect on video or audio call now.`);
@@ -1444,8 +1457,8 @@ class HipaApp {
     const btnCallSwipe = container.querySelector('#btnSwipeCall');
     if (btnCallSwipe) {
       btnCallSwipe.onclick = () => {
-        const cid = Number(btnCallSwipe.getAttribute('data-id'));
-        const creator = HIPA_CREATORS.find(c => c.id === cid);
+        const cid = btnCallSwipe.getAttribute('data-id');
+        const creator = allProfiles.find(c => String(c.id) === String(cid));
         if (creator) this.startCall(creator, 'video');
       };
     }

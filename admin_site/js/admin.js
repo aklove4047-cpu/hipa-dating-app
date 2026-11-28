@@ -1715,86 +1715,153 @@ class AdminController {
   }
 
   renderCreators(container) {
-    const creators = JSON.parse(localStorage.getItem('hipa_creators_override') || localStorage.getItem('hima_creators_override') || 'null') || [
-      { id: 1, name: "jannatkhan", language: "Hindi", voiceRate: 10, videoRate: 0, status: "voice_only" },
-      { id: 2, name: "khushi", language: "Bengali", voiceRate: 10, videoRate: 0, status: "voice_only" },
-      { id: 3, name: "Simran", language: "Punjabi", voiceRate: 10, videoRate: 60, status: "online" },
-      { id: 4, name: "Heena", language: "Marathi", voiceRate: 10, videoRate: 60, status: "online" },
-      { id: 5, name: "Susmita", language: "Odia", voiceRate: 10, videoRate: 60, status: "online" },
-      { id: 6, name: "Damini", language: "Telugu", voiceRate: 10, videoRate: 60, status: "online" },
-      { id: 7, name: "Pallavi", language: "Tamil", voiceRate: 0, videoRate: 60, status: "video_only" },
-      { id: 8, name: "mahiqueen", language: "Marathi", voiceRate: 10, videoRate: 0, status: "voice_only" },
-      { id: 9, name: "Priya", language: "Hindi", voiceRate: 10, videoRate: 60, status: "online" },
-      { id: 10, name: "xvsea", language: "Bengali", voiceRate: 10, videoRate: 60, status: "online" }
-    ];
+    // 100% Real Registered Users (Zero Demo/Fake Creators)
+    const creators = (ADMIN_DATA.users || []).map(u => ({
+      id: u.id,
+      phone: u.phone || '',
+      name: u.name || u.username || 'Real User',
+      gender: u.gender || 'female',
+      avatar: u.avatar || '/images/avatar_female_riya.jpg',
+      language: u.language || 'Hindi',
+      voiceRate: u.voiceRate !== undefined ? u.voiceRate : 10,
+      videoRate: u.videoRate !== undefined ? u.videoRate : 20,
+      status: u.callStatus || (u.isOnline === false ? 'offline' : 'online'),
+      blocked: u.status === 'banned'
+    }));
 
     container.innerHTML = `
       <div class="admin-topbar">
         <div>
-          <h1 style="font-size: 1.8rem; font-weight: 800;">🎭 Creators Directory & Calling Rates</h1>
+          <h1 style="font-size: 1.8rem; font-weight: 800;">🎭 Real Users Directory & Calling Rates (${creators.length})</h1>
           <p style="color: var(--text-muted); font-size: 0.9rem;">
-            Control per-minute calling rates (coins/min), online status, and creator availability.
+            Manage real registered members, per-minute calling rates (coins/min), and live availability.
           </p>
         </div>
-        <button class="btn-primary" id="btnSaveCreatorsRates">💾 Save Changes</button>
+        <div style="display: flex; gap: 10px;">
+          <button class="btn-secondary" id="btnRefreshRealCreators" style="padding: 10px 16px;">🔄 Refresh</button>
+          <button class="btn-primary" id="btnSaveCreatorsRates">💾 Save Changes</button>
+        </div>
       </div>
 
       <div class="glass-panel" style="padding: 20px; overflow-x: auto;">
-        <table class="admin-table">
-          <thead>
-            <tr>
-              <th>Creator</th>
-              <th>Language</th>
-              <th>Voice Rate (Coins/min)</th>
-              <th>Video Rate (Coins/min)</th>
-              <th>Calling Status</th>
-              <th>Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${creators.map((c, idx) => `
-              <tr data-idx="${idx}">
-                <td>
-                  <strong>${c.name}</strong>
-                </td>
-                <td>
-                  <span class="glass-pill">${c.language}</span>
-                </td>
-                <td>
-                  <input type="number" class="glass-input rate-voice" value="${c.voiceRate}" style="width: 100px; padding: 6px;" />
-                </td>
-                <td>
-                  <input type="number" class="glass-input rate-video" value="${c.videoRate}" style="width: 100px; padding: 6px;" />
-                </td>
-                <td>
-                  <select class="glass-input creator-status" style="width: 130px; padding: 6px;">
-                    <option value="online" ${c.status === 'online' ? 'selected' : ''}>🟢 Full Online</option>
-                    <option value="voice_only" ${c.status === 'voice_only' ? 'selected' : ''}>📞 Voice Only</option>
-                    <option value="video_only" ${c.status === 'video_only' ? 'selected' : ''}>📹 Video Only</option>
-                    <option value="offline" ${c.status === 'offline' ? 'selected' : ''}>⚪ Offline</option>
-                  </select>
-                </td>
-                <td>
-                  <button class="btn-secondary" style="color: #ef4444; padding: 4px 10px; font-size: 0.75rem;">Block</button>
-                </td>
+        ${creators.length === 0 ? `
+          <div style="text-align: center; padding: 48px 20px; color: var(--text-muted);">
+            <div style="font-size: 2.5rem; margin-bottom: 10px;">👥</div>
+            <h3 style="color: #fff; font-weight: 800; margin-bottom: 6px;">No Real Users Registered Yet</h3>
+            <p style="font-size: 0.88rem;">Demo profiles hata diye gaye hain. Jaise hi koi user <strong>peelins.in</strong> ya APK par register karega, woh yahan live dikhega.</p>
+          </div>
+        ` : `
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Real Member</th>
+                <th>Language</th>
+                <th>Voice Rate (Coins/min)</th>
+                <th>Video Rate (Coins/min)</th>
+                <th>Calling Status</th>
+                <th>Action</th>
               </tr>
-            `).join('')}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              ${creators.map((c, idx) => `
+                <tr data-idx="${idx}" data-id="${c.id}">
+                  <td>
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                      <img src="${c.avatar}" style="width: 34px; height: 34px; border-radius: 50%; object-fit: cover;" onerror="this.src='/images/avatar_female_riya.jpg'" />
+                      <div>
+                        <strong>${c.name}</strong>
+                        <div style="font-size: 0.72rem; color: var(--text-muted);">${c.gender === 'female' ? '👩 Female' : '👨 Male'} • ${c.phone}</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td>
+                    <span class="glass-pill">${c.language}</span>
+                  </td>
+                  <td>
+                    <input type="number" class="glass-input rate-voice" value="${c.voiceRate}" style="width: 100px; padding: 6px;" />
+                  </td>
+                  <td>
+                    <input type="number" class="glass-input rate-video" value="${c.videoRate}" style="width: 100px; padding: 6px;" />
+                  </td>
+                  <td>
+                    <select class="glass-input creator-status" style="width: 140px; padding: 6px;">
+                      <option value="online" ${c.status === 'online' ? 'selected' : ''}>🟢 Full Online</option>
+                      <option value="voice_only" ${c.status === 'voice_only' ? 'selected' : ''}>📞 Voice Only</option>
+                      <option value="video_only" ${c.status === 'video_only' ? 'selected' : ''}>📹 Video Only</option>
+                      <option value="offline" ${c.status === 'offline' ? 'selected' : ''}>⚪ Offline</option>
+                    </select>
+                  </td>
+                  <td>
+                    <button class="btn-secondary btn-toggle-block" data-id="${c.id}" style="color: ${c.blocked ? '#10b981' : '#ef4444'}; padding: 4px 10px; font-size: 0.75rem;">
+                      ${c.blocked ? 'Unblock' : 'Block'}
+                    </button>
+                  </td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        `}
       </div>
     `;
 
-    container.querySelector('#btnSaveCreatorsRates').onclick = () => {
-      const rows = container.querySelectorAll('tbody tr');
-      rows.forEach((row, idx) => {
-        creators[idx].voiceRate = Number(row.querySelector('.rate-voice').value) || 0;
-        creators[idx].videoRate = Number(row.querySelector('.rate-video').value) || 0;
-        creators[idx].status = row.querySelector('.creator-status').value;
-      });
-      localStorage.setItem('hipa_creators_override', JSON.stringify(creators));
-      localStorage.setItem('hima_creators_override', JSON.stringify(creators));
-      alert('🎉 Creator call rates and online availability updated successfully!');
-    };
+    const btnRefresh = container.querySelector('#btnRefreshRealCreators');
+    if (btnRefresh) {
+      btnRefresh.onclick = async () => {
+        await this.syncUsersFromCloud();
+        this.renderCreators(container);
+      };
+    }
+
+    container.querySelectorAll('.btn-toggle-block').forEach(btn => {
+      btn.onclick = async () => {
+        const uid = btn.getAttribute('data-id');
+        const user = (ADMIN_DATA.users || []).find(u => String(u.id) === String(uid));
+        if (!user) return;
+        user.status = user.status === 'banned' ? 'active' : 'banned';
+        try {
+          await fetch('/api/v1/users', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: user.id, phone: user.phone, status: user.status })
+          });
+        } catch (e) {}
+        this.renderCreators(container);
+      };
+    });
+
+    const btnSave = container.querySelector('#btnSaveCreatorsRates');
+    if (btnSave) {
+      btnSave.onclick = async () => {
+        const rows = container.querySelectorAll('tbody tr');
+        for (const row of rows) {
+          const uid = row.getAttribute('data-id');
+          const user = (ADMIN_DATA.users || []).find(u => String(u.id) === String(uid));
+          if (!user) continue;
+          user.voiceRate = Number(row.querySelector('.rate-voice').value) || 0;
+          user.videoRate = Number(row.querySelector('.rate-video').value) || 0;
+          user.callStatus = row.querySelector('.creator-status').value;
+          user.isOnline = user.callStatus !== 'offline';
+          try {
+            await fetch('/api/v1/users', {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                id: user.id,
+                phone: user.phone,
+                voiceRate: user.voiceRate,
+                videoRate: user.videoRate,
+                callStatus: user.callStatus,
+                isOnline: user.isOnline
+              })
+            });
+          } catch (e) {}
+        }
+        try {
+          localStorage.setItem('hipa_all_users', JSON.stringify(ADMIN_DATA.users));
+        } catch (e) {}
+        this.showToast('🎉 Real member call rates & online availability updated!');
+      };
+    }
   }
 
   renderCoinManager(container) {

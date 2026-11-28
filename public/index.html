@@ -1,10 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="viewport"
+    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <meta name="theme-color" content="#ff007f">
-  <meta name="description" content="Peelin's — Meet Live • Feel Real. 18+ Audio & Video calling with verified creators.">
+  <meta name="description"
+    content="Peelin's — Meet Live • Feel Real. 18+ Audio & Video calling with verified creators.">
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate, max-age=0">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
@@ -30,28 +33,37 @@
 
   <link rel="stylesheet" href="/css/hipa.css?v=14.0">
 </head>
+
 <body>
   <div class="hipa-viewport hima-viewport" id="hipaAppRoot">
     <!-- Top Bar (Shown when user is authenticated) -->
     <header class="hipa-topbar hima-topbar" id="hipaTopBar">
       <div class="hipa-brand">
-        <div class="hipa-logo-icon" style="background: transparent; overflow: hidden; border: none; width: 38px; height: 38px; border-radius: 10px; box-shadow: 0 0 15px rgba(255, 0, 127, 0.4);">
+        <div class="hipa-logo-icon"
+          style="background: transparent; overflow: hidden; border: none; width: 38px; height: 38px; border-radius: 10px; box-shadow: 0 0 15px rgba(255, 0, 127, 0.4);">
           <img src="/images/peelins_logo.jpg" style="width: 100%; height: 100%; object-fit: cover;" />
         </div>
         <div class="hipa-brand-info">
           <div style="display: flex; align-items: center; gap: 6px;">
-            <h1 style="background: linear-gradient(135deg, #ff007f 0%, #ff2a85 50%, #7928ca 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-weight: 900; letter-spacing: -0.5px;">Peelin's</h1>
+            <h1
+              style="background: linear-gradient(135deg, #ff007f 0%, #ff2a85 50%, #7928ca 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-weight: 900; letter-spacing: -0.5px;">
+              Peelin's</h1>
             <span class="badge-18-plus">18+</span>
           </div>
           <p style="color: #6b7280; font-weight: 700;">Meet Live • Feel Real</p>
         </div>
       </div>
       <div style="display: flex; align-items: center; gap: 8px;">
-        <div id="topBarOnlineStatus" style="display: flex; align-items: center; gap: 5px; background: rgba(16, 185, 129, 0.12); border: 1.5px solid rgba(16, 185, 129, 0.35); border-radius: 999px; padding: 4px 10px; font-size: 0.72rem; font-weight: 800; color: #10b981; cursor: pointer; user-select: none;" title="Click to toggle Online / Offline">
-          <span id="topBarOnlineDot" style="width: 8px; height: 8px; border-radius: 50%; background: #10b981; box-shadow: 0 0 8px #10b981;"></span>
+        <div id="topBarOnlineStatus"
+          style="display: flex; align-items: center; gap: 5px; background: rgba(16, 185, 129, 0.12); border: 1.5px solid rgba(16, 185, 129, 0.35); border-radius: 999px; padding: 4px 10px; font-size: 0.72rem; font-weight: 800; color: #10b981; cursor: pointer; user-select: none;"
+          title="Click to toggle Online / Offline">
+          <span id="topBarOnlineDot"
+            style="width: 8px; height: 8px; border-radius: 50%; background: #10b981; box-shadow: 0 0 8px #10b981;"></span>
           <span id="topBarOnlineText">Online</span>
         </div>
-        <a href="/downloads/peelins.apk" download="peelins.apk" class="cat-pill" style="padding: 5px 12px; font-size: 0.75rem; text-decoration: none; border-color: #ff007f; color: #ff007f; font-weight: 800; background: rgba(255, 0, 127, 0.06);" title="Download Android APK">
+        <a href="/downloads/peelins.apk" download="peelins.apk" class="cat-pill"
+          style="padding: 5px 12px; font-size: 0.75rem; text-decoration: none; border-color: #ff007f; color: #ff007f; font-weight: 800; background: rgba(255, 0, 127, 0.06);"
+          title="Download Android APK">
           📲 APK
         </a>
         <button class="hipa-coin-pill hima-coin-pill" id="btnOpenWalletTop" title="My Coin Balance">
@@ -61,22 +73,36 @@
       </div>
     </header>
 
-        <!-- Global Top Announcement Banner (Controlled from Admin Panel) -->
-    <div id="hipaGlobalAnnouncement" style="display: none; background: linear-gradient(135deg, #ff007f 0%, #7928ca 100%); color: #ffffff; padding: 7px 14px; font-size: 0.76rem; font-weight: 800; text-align: center; box-shadow: 0 2px 10px rgba(255, 0, 127, 0.35); position: relative; z-index: 9999; letter-spacing: 0.2px;">
+    <!-- Global Top Announcement Banner (Controlled from Admin Panel) -->
+    <div id="hipaGlobalAnnouncement"
+      style="display: none; background: linear-gradient(135deg, #ff007f 0%, #7928ca 100%); color: #ffffff; padding: 7px 14px; font-size: 0.76rem; font-weight: 800; text-align: center; box-shadow: 0 2px 10px rgba(255, 0, 127, 0.35); position: relative; z-index: 9999; letter-spacing: 0.2px;">
       <span id="hipaGlobalAnnouncementText">🔥 Welcome to Peelin's! Recharging ₹14 gives 350 Coins + VIP badge!</span>
     </div>
 
     <!-- Main Dynamic Viewport -->
     <main class="hipa-scroll-area hima-scroll-area" id="mainViewport">
       <!-- Loading Spinner Fallback -->
-      <div id="hipaLoaderState" style="height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 40px 20px;">
-        <div style="width: 76px; height: 76px; border-radius: 20px; overflow: hidden; margin-bottom: 16px; box-shadow: 0 8px 30px rgba(255,0,127,0.5);">
+      <div id="hipaLoaderState"
+        style="height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 40px 20px;">
+        <div
+          style="width: 76px; height: 76px; border-radius: 20px; overflow: hidden; margin-bottom: 16px; box-shadow: 0 8px 30px rgba(255,0,127,0.5);">
           <img src="/images/peelins_logo.jpg" style="width: 100%; height: 100%; object-fit: cover;" />
         </div>
-        <h2 style="font-size: 1.8rem; font-weight: 900; background: linear-gradient(135deg, #ff007f, #7928ca); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 4px;">Peelin's</h2>
-        <p style="font-size: 0.85rem; color: #6b7280; font-weight: 700; margin-bottom: 24px;">Meet Live • Feel Real • 18+</p>
-        <div style="width: 32px; height: 32px; border: 3px solid rgba(255,0,127,0.2); border-top-color: #ff007f; border-radius: 50%; animation: spinLoader 0.8s linear infinite;"></div>
-        <style>@keyframes spinLoader { to { transform: rotate(360deg); } }</style>
+        <h2
+          style="font-size: 1.8rem; font-weight: 900; background: linear-gradient(135deg, #ff007f, #7928ca); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 4px;">
+          Peelin's</h2>
+        <p style="font-size: 0.85rem; color: #6b7280; font-weight: 700; margin-bottom: 24px;">Meet Live • Feel Real •
+          18+</p>
+        <div
+          style="width: 32px; height: 32px; border: 3px solid rgba(255,0,127,0.2); border-top-color: #ff007f; border-radius: 50%; animation: spinLoader 0.8s linear infinite;">
+        </div>
+        <style>
+          @keyframes spinLoader {
+            to {
+              transform: rotate(360deg);
+            }
+          }
+        </style>
       </div>
     </main>
 
@@ -112,5 +138,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 
   <script type="module" src="/js/app.js?v=16.0"></script>
+  <script type="module" src="/js/app.js?v=17.0"></script>
 </body>
+
 </html>

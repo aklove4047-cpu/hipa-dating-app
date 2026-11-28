@@ -258,10 +258,10 @@ export const hipaAudio = {
       gain.connect(this.ctx.destination);
       osc.start();
       osc.stop(this.ctx.currentTime + duration);
-    } catch (e) {}
+    } catch (e) { }
   },
   playPop() { this.playTone(600, 'sine', 0.08, 0.15); },
-  playCoin() { 
+  playCoin() {
     this.playTone(987, 'sine', 0.1, 0.12);
     setTimeout(() => this.playTone(1318, 'sine', 0.2, 0.12), 60);
   },
@@ -280,7 +280,7 @@ class HipaApiService {
     // Migration: read from hipa_* first, fallback to hima_*
     this.session = JSON.parse(localStorage.getItem('hipa_user_session') || localStorage.getItem('hima_user_session') || 'null');
     this.user = JSON.parse(localStorage.getItem('hipa_user_profile') || localStorage.getItem('hima_user_profile') || 'null');
-    
+
     // Initialize coin balance
     if (this.user && typeof this.user.coins === 'undefined') {
       this.user.coins = 60;
@@ -320,7 +320,7 @@ class HipaApiService {
             };
           });
         }
-      } catch (e) {}
+      } catch (e) { }
     }
     return [...DEFAULT_AVATAR_OBJECTS];
   }
@@ -339,14 +339,14 @@ class HipaApiService {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ avatars: list })
-        }).catch(() => {});
-      } catch (e) {}
+        }).catch(() => { });
+      } catch (e) { }
     }
     try {
       const bc = new BroadcastChannel('hipa_users_sync');
       bc.postMessage({ type: 'AVATARS_UPDATED', avatars: list });
       setTimeout(() => bc.close(), 1000);
-    } catch (e) {}
+    } catch (e) { }
   }
 
   addAvatar(url, name = "Avatar", gender = "female") {
@@ -386,7 +386,7 @@ class HipaApiService {
       try {
         const parsed = JSON.parse(saved);
         return { ...DEFAULT_APP_SETTINGS, ...parsed };
-      } catch (e) {}
+      } catch (e) { }
     }
     return { ...DEFAULT_APP_SETTINGS };
   }
@@ -395,7 +395,7 @@ class HipaApiService {
     const current = this.getSettings();
     const merged = { ...current, ...settings };
     localStorage.setItem('peelins_global_settings', JSON.stringify(merged));
-    
+
     // Also keep peelins_whatsapp_config in sync
     const waCfg = {
       enabled: merged.enableWhatsappPopup,
@@ -413,8 +413,8 @@ class HipaApiService {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(merged)
-        }).catch(() => {});
-      } catch (e) {}
+        }).catch(() => { });
+      } catch (e) { }
     }
 
     try {
@@ -422,7 +422,7 @@ class HipaApiService {
       bc.postMessage({ type: 'SYSTEM_SETTINGS_UPDATED', settings: merged });
       bc.postMessage({ type: 'WHATSAPP_CONFIG_UPDATED', config: waCfg });
       setTimeout(() => bc.close(), 1000);
-    } catch (e) {}
+    } catch (e) { }
 
     return merged;
   }
@@ -466,14 +466,14 @@ class HipaApiService {
         const bc = new BroadcastChannel('hipa_users_sync');
         bc.postMessage({ type: 'USER_STATUS_CHANGED', userId: u.id, isOnline: !!isOnline });
         setTimeout(() => bc.close(), 1000);
-      } catch (e) {}
+      } catch (e) { }
 
       // Update online presence in Firebase Firestore
       try {
         if (typeof window.peelinsFirebase !== 'undefined') {
           window.peelinsFirebase.updateOnlineStatus(u.id, !!isOnline);
         }
-      } catch (e) {}
+      } catch (e) { }
     }
     return isOnline;
   }
@@ -503,78 +503,62 @@ class HipaApiService {
       if (typeof window.peelinsFirebase !== 'undefined') {
         cloudUsers = await window.peelinsFirebase.fetchRealUsers(myId, targetGender);
       }
+    } catch (e) { }
+
+    // 2. Fetch cloud users from Cloudflare API as backup
+    let apiUsers = [];
+    try {
+      const res = await fetch('/api/v1/users');
+      if (res.ok) {
+        const json = await res.json();
+        if (Array.isArray(json.users)) apiUsers = json.users;
+        else if (Array.isArray(json.data)) apiUsers = json.data;
+      }
     } catch (e) {}
 
-    // 2. Fetch local registered users
+    // 3. Fetch local registered users
     const localUsers = this.getAllRegisteredUsers();
 
     const userMap = new Map();
-
-    cloudUsers.forEach(u => {
-      userMap.set(String(u.id || u.phone), {
-        id: u.id,
-        name: u.name || 'User',
-        avatar: u.avatar || '/images/avatar_female_riya.jpg',
-        photo: u.avatar || '/images/avatar_female_riya.jpg',
-        city: u.city || 'India',
-        language: u.language || 'Hindi',
-        bio: u.bio || 'Looking for real connections on Peelin\'s',
-        verified: !!u.verified,
-        online: u.isOnline !== false,
-        videoOnline: u.isOnline !== false,
-        voiceRate: u.voiceRate || 10,
-        videoRate: u.videoRate || 20,
-        rating: 4.9,
-        callsCount: Math.floor(12 + Math.random() * 40),
-        isRealUser: true,
-        gender: u.gender || targetGender
-      });
-    });
-
-    localUsers.forEach(u => {
-      if (String(u.id) !== String(myId) && (!targetGender || u.gender === targetGender)) {
-        const key = String(u.id || u.phone);
-        if (!userMap.has(key)) {
-          userMap.set(key, {
-            id: u.id,
-            name: u.name || u.username || 'User',
-            avatar: u.avatar || '/images/avatar_female_riya.jpg',
-            photo: u.avatar || '/images/avatar_female_riya.jpg',
-            city: u.city || 'India',
-            language: u.language || 'Hindi',
-            bio: u.bio || 'Looking for real connections on Peelin\'s',
-            verified: u.verified !== false,
-            online: u.isOnline !== false,
-            videoOnline: u.isOnline !== false,
-            voiceRate: u.voiceRate || 10,
-            videoRate: u.videoRate || 20,
-            rating: 4.8,
-            callsCount: 15,
-            isRealUser: true,
-            gender: u.gender || targetGender
-          });
-        }
+    const addMappedUser = (u) => {
+      if (!u || String(u.id) === String(myId)) return;
+      if (u.status === 'banned') return;
+      if (targetGender && u.gender !== targetGender) return;
+      const key = String(u.id || u.phone);
+      if (!userMap.has(key)) {
+        userMap.set(key, {
+          id: u.id,
+          name: u.name || u.username || 'Real Member',
+          avatar: u.avatar || (u.gender === 'female' ? '/images/avatar_female_riya.jpg' : '/images/avatar_male_aryan.jpg'),
+          photo: u.avatar || (u.gender === 'female' ? '/images/avatar_female_riya.jpg' : '/images/avatar_male_aryan.jpg'),
+          city: u.city || 'India',
+          language: u.language || 'Hindi',
+          bio: u.bio || 'Looking for real connections on Peelin\'s',
+          verified: u.verified !== false,
+          online: u.isOnline !== false,
+          videoOnline: u.isOnline !== false,
+          voiceRate: u.voiceRate || 10,
+          videoRate: u.videoRate || 20,
+          rating: 4.9,
+          callsCount: u.callsCount || 1,
+          isRealUser: true,
+          gender: u.gender || targetGender,
+          phone: u.phone || ''
+        });
       }
-    });
+    };
 
-    const realUsers = Array.from(userMap.values());
+    cloudUsers.forEach(addMappedUser);
+    apiUsers.forEach(addMappedUser);
+    localUsers.forEach(addMappedUser);
 
-    // Verified companion creators filtered by target gender
-    const creators = HIPA_CREATORS.filter(c => {
-      if (myGender === 'female') {
-        return c.gender === 'male';
-      }
-      return c.gender !== 'male';
-    });
-
-    // Real users show at top of feed!
-    return [...realUsers, ...creators];
+    return Array.from(userMap.values());
   }
 
   getGatewayConfigs() {
     const saved = localStorage.getItem('hipa_system_api_configs');
     if (saved) {
-      try { return JSON.parse(saved); } catch (e) {}
+      try { return JSON.parse(saved); } catch (e) { }
     }
     return {
       payments: {
@@ -724,17 +708,17 @@ class HipaApiService {
       if (activeProvider === 'fast2sms' && cfg.otp?.fast2sms?.apiKey) {
         const f2sKey = cfg.otp.fast2sms.apiKey;
         const url = `https://www.fast2sms.com/dev/bulkV2?authorization=${encodeURIComponent(f2sKey)}&route=otp&variables_values=${generatedOtp}&flash=0&numbers=${cleanPhone}`;
-        await fetch(url, { method: 'GET', mode: 'no-cors' }).catch(() => {});
+        await fetch(url, { method: 'GET', mode: 'no-cors' }).catch(() => { });
       } else if (activeProvider === 'twofactor' && cfg.otp?.twofactor?.apiKey) {
         const tfKey = cfg.otp.twofactor.apiKey;
         const sender = cfg.otp.twofactor.senderId || 'HIPAOT';
         const url = `https://2factor.in/API/V1/${encodeURIComponent(tfKey)}/SMS/${cleanPhone}/${generatedOtp}/${encodeURIComponent(sender)}`;
-        await fetch(url, { method: 'GET' }).catch(() => {});
+        await fetch(url, { method: 'GET' }).catch(() => { });
       } else if (activeProvider === 'msg91' && cfg.otp?.msg91?.authKey) {
         const mKey = cfg.otp.msg91.authKey;
         const tpl = cfg.otp.msg91.templateId || '';
         const url = `https://control.msg91.com/api/v5/otp?template_id=${encodeURIComponent(tpl)}&mobile=91${cleanPhone}&authkey=${encodeURIComponent(mKey)}&otp=${generatedOtp}`;
-        await fetch(url, { method: 'GET', mode: 'no-cors' }).catch(() => {});
+        await fetch(url, { method: 'GET', mode: 'no-cors' }).catch(() => { });
       } else if (activeProvider === 'custom_sms' && cfg.otp?.customSms?.url) {
         const cs = cfg.otp.customSms;
         const targetUrl = cs.url.replace(/\{phone\}/g, cleanPhone).replace(/\{otp\}/g, generatedOtp);
@@ -749,7 +733,7 @@ class HipaApiService {
         if (cs.bodyTemplate && cs.method !== 'GET') {
           options.body = cs.bodyTemplate.replace(/\{phone\}/g, cleanPhone).replace(/\{otp\}/g, generatedOtp);
         }
-        await fetch(targetUrl, options).catch(() => {});
+        await fetch(targetUrl, options).catch(() => { });
       }
     } catch (err) {
       console.warn("SMS dispatch notice:", err);
@@ -777,7 +761,7 @@ class HipaApiService {
 
     const entered = (code || '').trim();
     const isValid = (entered === pending.otp) ||
-                    (universalAllowed && (entered === universalCode || entered === '123456' || entered === pending.universalCode));
+      (universalAllowed && (entered === universalCode || entered === '123456' || entered === pending.universalCode));
 
     if (!isValid) {
       return { ok: false, error: "Invalid OTP code. Please enter the OTP code or test code " + (universalAllowed ? universalCode : "") };
@@ -824,7 +808,7 @@ class HipaApiService {
       if (typeof window.peelinsFirebase !== 'undefined') {
         window.peelinsFirebase.syncUserProfile(newUser);
       }
-    } catch (e) {}
+    } catch (e) { }
 
     // Save to shared localStorage for same-browser Admin sync
     try {
@@ -832,14 +816,14 @@ class HipaApiService {
       allUsers = allUsers.filter(u => u.phone !== newUser.phone);
       allUsers.unshift(newUser);
       localStorage.setItem('hipa_all_users', JSON.stringify(allUsers));
-    } catch (e) {}
+    } catch (e) { }
 
     // Real-time cross-tab broadcast to Admin Panel
     try {
       const bc = new BroadcastChannel('hipa_users_sync');
       bc.postMessage({ type: 'USER_REGISTERED', user: newUser });
       setTimeout(() => bc.close(), 1000);
-    } catch (e) {}
+    } catch (e) { }
 
     // Dispatch to Cloudflare backend endpoints
     const endpoints = [
@@ -852,7 +836,7 @@ class HipaApiService {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newUser)
-      }).catch(() => {});
+      }).catch(() => { });
     });
 
     return newUser;
@@ -872,7 +856,7 @@ class HipaApiService {
           allUsers[idx].verified = true;
           localStorage.setItem('hipa_all_users', JSON.stringify(allUsers));
         }
-      } catch (e) {}
+      } catch (e) { }
     }
     return true;
   }
@@ -887,7 +871,7 @@ class HipaApiService {
       const bc = new BroadcastChannel('hipa_users_sync');
       bc.postMessage({ type: 'USER_VERIFIED', userId: user.id });
       setTimeout(() => bc.close(), 1000);
-    } catch (e) {}
+    } catch (e) { }
     return user;
   }
 
@@ -929,7 +913,7 @@ class HipaApiService {
       queue = queue.filter(q => q.phone !== payload.phone);
       queue.unshift(payload);
       localStorage.setItem('hipa_verifications_queue', JSON.stringify(queue));
-    } catch (e) {}
+    } catch (e) { }
 
     // Dispatch to Cloudflare backend
     const endpoints = [
@@ -942,7 +926,7 @@ class HipaApiService {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
-      }).catch(() => {});
+      }).catch(() => { });
     });
 
     // Real-time broadcast to Admin Panel
@@ -950,7 +934,7 @@ class HipaApiService {
       const bc = new BroadcastChannel('hipa_users_sync');
       bc.postMessage({ type: 'VERIFICATION_SUBMITTED', item: payload });
       setTimeout(() => bc.close(), 1000);
-    } catch (e) {}
+    } catch (e) { }
 
     return payload;
   }
@@ -978,13 +962,13 @@ class HipaApiService {
       let reports = JSON.parse(localStorage.getItem('hipa_reports_list') || '[]');
       reports.unshift(report);
       localStorage.setItem('hipa_reports_list', JSON.stringify(reports));
-    } catch (e) {}
+    } catch (e) { }
 
     try {
       const bc = new BroadcastChannel('hipa_users_sync');
       bc.postMessage({ type: 'SAFETY_REPORT', report });
       setTimeout(() => bc.close(), 1000);
-    } catch (e) {}
+    } catch (e) { }
 
     return report;
   }
@@ -1018,7 +1002,7 @@ class HipaApiService {
       const bc = new BroadcastChannel('hipa_users_sync');
       bc.postMessage({ type: 'GIFT_SENT', creatorId, gift });
       setTimeout(() => bc.close(), 1000);
-    } catch (e) {}
+    } catch (e) { }
 
     return { ok: true, gift, remainingCoins: this.getCoins() };
   }

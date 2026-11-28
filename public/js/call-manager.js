@@ -225,6 +225,10 @@ class RealCallManager {
       if (remoteVid) {
         remoteVid.srcObject = this.remoteStream;
       }
+      const remoteAud = document.getElementById('peelinsRemoteAudio');
+      if (remoteAud) {
+        remoteAud.srcObject = this.remoteStream;
+      }
 
       // Add local tracks to peer connection
       this.localStream.getTracks().forEach(track => {
@@ -345,6 +349,10 @@ class RealCallManager {
       if (remoteVid) {
         remoteVid.srcObject = this.remoteStream;
       }
+      const remoteAud = document.getElementById('peelinsRemoteAudio');
+      if (remoteAud) {
+        remoteAud.srcObject = this.remoteStream;
+      }
 
       // Add local tracks
       this.localStream.getTracks().forEach(track => {
@@ -368,11 +376,11 @@ class RealCallManager {
 
       // Create Call Doc in Firestore
       const callRecord = await firebaseService.createCall({
-        callerId: user ? user.id : 'caller_' + Date.now(),
+        callerId: String(user ? user.id : 'caller_' + Date.now()),
         callerName: user ? (user.name || user.username) : 'Peelin\'s User',
         callerPhoto: user ? user.avatar : '',
         callerCity: user ? user.city : 'India',
-        receiverId: partner.id,
+        receiverId: String(partner.id),
         receiverName: partner.name,
         receiverPhoto: partner.avatar || partner.photo,
         type: callType,
@@ -413,24 +421,10 @@ class RealCallManager {
           } catch (e) {}
         }
       });
-
-      // Fallback: If partner is an AI/Verified Creator demo profile, connect after 4 seconds
-      if (String(partner.id).length < 5 || !partner.phone) {
-        setTimeout(() => {
-          if (this.activeCall && this.activeCall.status === 'ringing') {
-            this.stopRingtone();
-            this.onCallConnected();
-          }
-        }, 4000);
-      }
     } catch (err) {
-      console.warn('Real WebRTC init error, running high-fidelity fallback:', err);
-      setTimeout(() => {
-        if (this.activeCall && this.activeCall.status === 'ringing') {
-          this.stopRingtone();
-          this.onCallConnected();
-        }
-      }, 3500);
+      console.error('Real WebRTC init error:', err);
+      alert('Camera/Microphone permission required for real calling. Please allow mic/camera access and try again.');
+      this.endCall(true);
     }
   }
 
@@ -633,6 +627,7 @@ class RealCallManager {
       <div style="position: fixed; inset: 0; background: #000000; z-index: 99999; display: flex; flex-direction: column; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, sans-serif;">
         <!-- Remote Video Feed / Remote Video Fallback -->
         <div style="position: absolute; inset: 0; width: 100%; height: 100%; overflow: hidden;">
+          <audio id="peelinsRemoteAudio" autoplay playsinline></audio>
           <video id="peelinsRemoteVideo" autoplay playsinline style="width: 100%; height: 100%; object-fit: cover; display: ${isVideo ? 'block' : 'none'};"></video>
           <img id="peelinsRemoteFallbackImg" src="${partnerPhoto}" style="width: 100%; height: 100%; object-fit: cover; filter: ${isVideo ? 'brightness(0.7) blur(10px)' : 'brightness(0.85)'};" />
         </div>
