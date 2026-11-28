@@ -82,8 +82,9 @@ class FirebaseService {
       } else {
         this.app = window.firebase.app();
       }
-      this.db = window.firebase.firestore();
-      this.auth = window.firebase.auth();
+      this.db = window.firebase.firestore ? window.firebase.firestore() : null;
+      this.rtdb = window.firebase.database ? window.firebase.database() : null;
+      this.auth = window.firebase.auth ? window.firebase.auth() : null;
       this.isReady = true;
       console.log('[Firebase] Initialized successfully for project:', config.projectId);
     } catch (err) {
@@ -209,7 +210,7 @@ class FirebaseService {
       status: 'ringing'
     };
 
-    // 1. Always post to Cloudflare KV /api/v1/calls (Works immediately without Firestore setup!)
+    // 1. Always post to Cloudflare KV /api/v1/calls
     try {
       await fetch(this.getCallsApiUrl(), {
         method: 'POST',
@@ -218,12 +219,12 @@ class FirebaseService {
       });
     } catch (e) {}
 
-    // 2. Also sync to Firestore if enabled
-    if (this.ensureReady()) {
+    // 2. Also write to Firebase Realtime Database for instant <100ms WebSocket signaling!
+    if (this.ensureReady() && this.rtdb) {
       try {
-        await this.db.collection('calls').doc(callId).set({
+        await this.rtdb.ref(`calls/${callId}`).set({
           ...payload,
-          createdAt: window.firebase.firestore.FieldValue.serverTimestamp()
+          createdAtMs: Date.now()
         });
       } catch (err) {}
     }
@@ -256,27 +257,26 @@ class FirebaseService {
       } catch (e) {}
     }, 1500);
 
-    // 2. Firestore real-time listener (if enabled)
+    // 2. Firebase Realtime Database instant WebSocket listener (<100ms)
+    let rtdbRef = null;
+    let rtdbHandler = null;
     if (!this.ensureReady()) {
       this.pendingCallListener = { userId: myUserId, cb: onIncomingCall };
-    } else {
+    } else if (this.rtdb) {
       try {
-        if (this.callUnsubscribe) this.callUnsubscribe();
-        this.callUnsubscribe = this.db.collection('calls')
-          .where('receiverId', '==', String(myUserId))
-          .where('status', '==', 'ringing')
-          .onSnapshot(snapshot => {
-            snapshot.docChanges().forEach(change => {
-              if (change.type === 'added') {
-                triggerOnce({ id: change.doc.id, ...change.doc.data() });
-              }
-            });
-          }, () => {});
+        rtdbRef = this.rtdb.ref('calls').orderByChild('receiverId').equalTo(String(myUserId));
+        rtdbHandler = rtdbRef.on('child_added', (snap) => {
+          const call = snap.val();
+          if (call && call.status === 'ringing' && (Date.now() - (call.createdAtMs || 0) < 60000)) {
+            triggerOnce({ id: snap.key, ...call });
+          }
+        });
       } catch (e) {}
     }
 
     return () => {
       if (this.kvCallPollInterval) clearInterval(this.kvCallPollInterval);
+      if (rtdbRef && rtdbHandler) rtdbRef.off('child_added', rtdbHandler);
       if (this.callUnsubscribe) this.callUnsubscribe();
     };
   }
@@ -304,21 +304,21 @@ class FirebaseService {
       } catch (e) {}
     }, 1000);
 
-    let fsUnsub = () => {};
-    if (this.ensureReady()) {
+    let rtdbRef = null;
+    let rtdbHandler = null;
+    if (this.ensureReady() && this.rtdb) {
       try {
-        fsUnsub = this.db.collection('calls').doc(callId).onSnapshot(doc => {
-          if (doc.exists) {
-            const d = doc.data();
-            onUpdate(d);
-          }
-        }, () => {});
+        rtdbRef = this.rtdb.ref(`calls/${callId}`);
+        rtdbHandler = rtdbRef.on('value', (snap) => {
+          const d = snap.val();
+          if (d) onUpdate(d);
+        });
       } catch (e) {}
     }
 
     return () => {
       clearInterval(pollTimer);
-      fsUnsub();
+      if (rtdbRef && rtdbHandler) rtdbRef.off('value', rtdbHandler);
     };
   }
 
@@ -333,9 +333,9 @@ class FirebaseService {
       });
     } catch (e) {}
 
-    if (this.ensureReady()) {
+    if (this.ensureReady() && this.rtdb) {
       try {
-        await this.db.collection('calls').doc(callId).update(data);
+        await this.rtdb.ref(`calls/${callId}`).update(data);
       } catch (err) {}
     }
   }
