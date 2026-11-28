@@ -10,6 +10,7 @@
 import { hipaApi, HIPA_CREATORS, HIPA_COIN_PACKS, HIPA_LANGUAGES, HIPA_AVATARS, HIPA_GIFTS, HIPA_STORIES, hipaAudio } from './api.js?v=12.0';
 import { callManager } from './call-manager.js';
 import { firebaseService } from './firebase-init.js';
+import { i18n } from './i18n.js';
 
 class HipaApp {
   constructor() {
@@ -450,15 +451,15 @@ class HipaApp {
           <span style="font-size: 0.82rem; font-weight: 800; color: #ff85c0;">Step 3 of 4</span>
         </div>
 
-        <h1 style="font-size: 1.75rem; font-weight: 900; color: #ffffff; margin-bottom: 4px;">Choose your language</h1>
-        <p style="font-size: 0.88rem; color: #c9bfdc; font-weight: 600; margin-bottom: 20px;">
-          Select language to connect with creators who speak your mother tongue
+        <h1 id="step3Title" style="font-size: 1.75rem; font-weight: 900; color: #ffffff; margin-bottom: 4px;">${i18n.t('choose_lang')}</h1>
+        <p id="step3Subtitle" style="font-size: 0.88rem; color: #c9bfdc; font-weight: 600; margin-bottom: 20px;">
+          ${i18n.t('choose_lang_sub')}
         </p>
 
         <!-- Languages Grid (All 10 Visible & Fully Scrollable) -->
         <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 24px;">
           ${languages.map((lang) => `
-            <div class="lang-card-item ${this.selectedLanguage === lang.name ? 'selected' : ''}" data-lang="${lang.name}" style="background: rgba(255,255,255,0.06); border: 2px solid ${this.selectedLanguage === lang.name ? 'var(--primary-pink)' : 'rgba(255,255,255,0.12)'}; border-radius: 18px; padding: 14px 12px; display: flex; align-items: center; gap: 12px; cursor: pointer; transition: all 0.2s ease; box-shadow: ${this.selectedLanguage === lang.name ? '0 0 20px rgba(255,0,127,0.45)' : 'none'};">
+            <div class="lang-card-item ${this.selectedLanguage === lang.name ? 'selected' : ''}" data-lang="${lang.name}" data-code="${lang.code}" style="background: rgba(255,255,255,0.06); border: 2px solid ${this.selectedLanguage === lang.name ? 'var(--primary-pink)' : 'rgba(255,255,255,0.12)'}; border-radius: 18px; padding: 14px 12px; display: flex; align-items: center; gap: 12px; cursor: pointer; transition: all 0.2s ease; box-shadow: ${this.selectedLanguage === lang.name ? '0 0 20px rgba(255,0,127,0.45)' : 'none'};">
               <div style="width: 40px; height: 40px; border-radius: 12px; background: ${this.selectedLanguage === lang.name ? 'var(--primary-gradient)' : 'rgba(255,255,255,0.1)'}; color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 1.15rem; font-weight: 900; flex-shrink: 0;">
                 ${lang.char}
               </div>
@@ -473,7 +474,7 @@ class HipaApp {
         <!-- Continue Button (In-Flow, Never Overlaps Content) -->
         <div style="margin-top: 10px; padding-bottom: 20px;">
           <button class="btn-pink-block" id="btnContinueLanguage" style="font-size: 1.05rem; font-weight: 900; box-shadow: 0 0 25px rgba(255,0,127,0.5);">
-            Continue ➔
+            ${i18n.t('continue')}
           </button>
         </div>
       </div>
@@ -496,6 +497,16 @@ class HipaApp {
         const icon = card.querySelector('div');
         if (icon) icon.style.background = 'var(--primary-gradient)';
         this.selectedLanguage = card.getAttribute('data-lang');
+        const langCode = card.getAttribute('data-code') || 'en';
+        i18n.setLang(langCode);
+
+        // Live-translate heading, subtitle, and button immediately!
+        const tEl = root.querySelector('#step3Title');
+        const sEl = root.querySelector('#step3Subtitle');
+        const cBtn = root.querySelector('#btnContinueLanguage');
+        if (tEl) tEl.textContent = i18n.t('choose_lang');
+        if (sEl) sEl.textContent = i18n.t('choose_lang_sub');
+        if (cBtn) cBtn.textContent = i18n.t('continue');
       };
     });
 
@@ -667,11 +678,10 @@ class HipaApp {
         // Direct female to mandatory voice & video verification step
         this.renderFemaleVerificationStep(enteredName);
       } else {
-        // Male finishes onboarding directly
+        // Male finishes onboarding directly (No WhatsApp Group for Male accounts)
         this.user = hipaApi.finishOnboarding(this.selectedLanguage, this.selectedGender, this.selectedAvatar, enteredName);
         root.style.padding = '';
         this.renderMainApp();
-        this.showPostRegistrationWhatsAppModal();
       }
     };
   }
@@ -717,8 +727,13 @@ class HipaApp {
             </button>
 
             <div id="voiceNotePreviewBox" style="display: none; margin-top: 12px;">
-              <div style="font-size: 0.75rem; font-weight: 700; color: #10b981; margin-bottom: 4px;">✓ Voice Note Captured:</div>
-              <audio id="voiceNotePlayback" controls style="width: 100%; height: 36px; border-radius: 8px;"></audio>
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+                <span style="font-size: 0.75rem; font-weight: 700; color: #10b981;">✓ Voice Note Captured:</span>
+                <button type="button" id="btnRemoveVoiceNote" style="background: rgba(239, 68, 68, 0.2); border: 1px solid rgba(239, 68, 68, 0.5); color: #fca5a5; font-size: 0.7rem; font-weight: 800; padding: 4px 10px; border-radius: 999px; cursor: pointer;">
+                  🗑️ Remove &amp; Record Again
+                </button>
+              </div>
+              <audio id="voiceNotePlayback" controls controlsList="nodownload" style="width: 100%; height: 36px; border-radius: 8px;"></audio>
             </div>
           </div>
 
@@ -740,8 +755,13 @@ class HipaApp {
             </div>
 
             <div id="videoPreviewWrap" style="display: none; margin-top: 12px;">
-              <div style="font-size: 0.75rem; font-weight: 700; color: #10b981; margin-bottom: 4px;">✓ Video Recording Captured:</div>
-              <video id="videoPlaybackPreview" controls style="width: 100%; max-height: 140px; border-radius: 12px; background: #000; border: 1px solid #10b981;"></video>
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+                <span style="font-size: 0.75rem; font-weight: 700; color: #10b981;">✓ Video Recording Captured:</span>
+                <button type="button" id="btnRemoveVideoNote" style="background: rgba(239, 68, 68, 0.2); border: 1px solid rgba(239, 68, 68, 0.5); color: #fca5a5; font-size: 0.7rem; font-weight: 800; padding: 4px 10px; border-radius: 999px; cursor: pointer;">
+                  🗑️ Remove &amp; Record Again
+                </button>
+              </div>
+              <video id="videoPlaybackPreview" controls controlsList="nodownload" style="width: 100%; max-height: 140px; border-radius: 12px; background: #000; border: 1px solid #10b981;"></video>
             </div>
           </div>
 
@@ -756,10 +776,13 @@ class HipaApp {
                 <span id="selfieIcon" style="font-size: 1.6rem;">🤳</span>
                 <img id="selfieImg" src="" style="width: 100%; height: 100%; object-fit: cover; display: none;" />
               </div>
-              <div style="flex: 1;">
+              <div style="flex: 1; display: flex; flex-direction: column; gap: 6px;">
                 <label for="inputSelfieFileStep5" class="btn-secondary" style="padding: 10px; font-size: 0.8rem; font-weight: 800; text-align: center; cursor: pointer; display: block; border-radius: 12px; color: #fff;">
                   📸 Capture Selfie
                 </label>
+                <button type="button" id="btnRemoveSelfiePhoto" style="display: none; background: rgba(239, 68, 68, 0.2); border: 1px solid rgba(239, 68, 68, 0.5); color: #fca5a5; font-size: 0.72rem; font-weight: 800; padding: 5px 10px; border-radius: 999px; cursor: pointer;">
+                  🗑️ Remove &amp; Retake
+                </button>
                 <input type="file" id="inputSelfieFileStep5" accept="image/*" capture="user" style="display: none;" />
               </div>
             </div>
@@ -846,6 +869,18 @@ class HipaApp {
       }
     };
 
+    const btnRemoveVoice = root.querySelector('#btnRemoveVoiceNote');
+    if (btnRemoveVoice) {
+      btnRemoveVoice.onclick = () => {
+        voiceUrl = "https://actions.google.com/sounds/v1/speech/hello_greeting.ogg";
+        audioPlay.pause();
+        audioPlay.src = '';
+        audioBox.style.display = 'none';
+        iconRecord.textContent = '🎙️';
+        txtRecord.textContent = 'Tap to Record Voice Note';
+      };
+    }
+
     // Video recording handler
     let videoUrl = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4";
     const videoInput = root.querySelector('#inputVideoFile');
@@ -861,11 +896,23 @@ class HipaApp {
       }
     };
 
+    const btnRemoveVideo = root.querySelector('#btnRemoveVideoNote');
+    if (btnRemoveVideo) {
+      btnRemoveVideo.onclick = () => {
+        videoUrl = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4";
+        videoInput.value = '';
+        videoPlay.pause();
+        videoPlay.src = '';
+        videoBox.style.display = 'none';
+      };
+    }
+
     // Selfie photo handler
     let selfieUrl = "/images/avatar_female_ashley.jpg";
     const selfieInput = root.querySelector('#inputSelfieFileStep5');
     const selfieImg = root.querySelector('#selfieImg');
     const selfieIcon = root.querySelector('#selfieIcon');
+    const btnRemoveSelfie = root.querySelector('#btnRemoveSelfiePhoto');
 
     selfieInput.onchange = (e) => {
       const file = e.target.files[0];
@@ -876,10 +923,22 @@ class HipaApp {
           selfieImg.src = selfieUrl;
           selfieImg.style.display = 'block';
           selfieIcon.style.display = 'none';
+          if (btnRemoveSelfie) btnRemoveSelfie.style.display = 'block';
         };
         reader.readAsDataURL(file);
       }
     };
+
+    if (btnRemoveSelfie) {
+      btnRemoveSelfie.onclick = () => {
+        selfieUrl = "/images/avatar_female_ashley.jpg";
+        selfieInput.value = '';
+        selfieImg.src = '';
+        selfieImg.style.display = 'none';
+        selfieIcon.style.display = 'block';
+        btnRemoveSelfie.style.display = 'none';
+      };
+    }
 
     // Submit handler
     const form = root.querySelector('#formFemaleOnboardingVerif');
@@ -1695,21 +1754,23 @@ class HipaApp {
           </button>
         </div>
 
-        <!-- Official WhatsApp Group Card -->
-        <div class="whatsapp-banner-card" style="margin-top: 14px; background: linear-gradient(135deg, rgba(37, 211, 102, 0.12), rgba(18, 140, 126, 0.12)); border: 1.5px solid #25D366; border-radius: 14px; padding: 12px 14px; display: flex; align-items: center; justify-content: space-between; gap: 10px;">
-          <div style="display: flex; align-items: center; gap: 12px;">
-            <div style="width: 40px; height: 40px; border-radius: 10px; background: #25D366; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; color: white; flex-shrink: 0;">
-              💬
+        <!-- Official WhatsApp Group Card (Female Accounts Only) -->
+        ${isFemale ? `
+          <div class="whatsapp-banner-card" style="margin-top: 14px; background: linear-gradient(135deg, rgba(37, 211, 102, 0.12), rgba(18, 140, 126, 0.12)); border: 1.5px solid #25D366; border-radius: 14px; padding: 12px 14px; display: flex; align-items: center; justify-content: space-between; gap: 10px;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <div style="width: 40px; height: 40px; border-radius: 10px; background: #25D366; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; color: white; flex-shrink: 0;">
+                💬
+              </div>
+              <div>
+                <div style="font-weight: 800; font-size: 0.88rem; color: #065f46;">Official WhatsApp Group</div>
+                <div style="font-size: 0.72rem; color: #047857;">Exclusive live events &amp; verified creator perks</div>
+              </div>
             </div>
-            <div>
-              <div style="font-weight: 800; font-size: 0.88rem; color: #065f46;">Official WhatsApp Group</div>
-              <div style="font-size: 0.72rem; color: #047857;">Exclusive live events & verified creator perks</div>
-            </div>
+            <button id="btnProfileWhatsApp" class="btn-whatsapp" style="padding: 8px 14px; font-size: 0.78rem; font-weight: 800; border-radius: 20px; background: #25D366; color: #ffffff; border: none; cursor: pointer; white-space: nowrap;">
+              Join Group
+            </button>
           </div>
-          <button id="btnProfileWhatsApp" class="btn-whatsapp" style="padding: 8px 14px; font-size: 0.78rem; font-weight: 800; border-radius: 20px; background: #25D366; color: #ffffff; border: none; cursor: pointer; white-space: nowrap;">
-            Join Group
-          </button>
-        </div>
+        ` : ''}
 
         <div style="height: 1px; background: #f3f4f6; margin: 18px 0 14px 0;"></div>
 
