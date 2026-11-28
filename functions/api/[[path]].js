@@ -519,6 +519,7 @@ export async function onRequest(context) {
       config: {
         apiKey: context.env?.FIREBASE_API_KEY || "",
         authDomain: "peelins-app.firebaseapp.com",
+        databaseURL: "https://peelins-app-default-rtdb.firebaseio.com",
         projectId: "peelins-app",
         storageBucket: "peelins-app.firebasestorage.app",
         messagingSenderId: "844854977384",

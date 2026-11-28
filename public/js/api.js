@@ -767,6 +767,7 @@ class HipaApiService {
       return { ok: false, error: "Invalid OTP code. Please enter the OTP code or test code " + (universalAllowed ? universalCode : "") };
     }
 
+    return { ok: true, pending };
     // Check if this phone number already has a registered account in Cloud KV
     let existingUser = null;
     try {
@@ -776,7 +777,7 @@ class HipaApiService {
         const users = Array.isArray(data.users) ? data.users : [];
         existingUser = users.find(u => u.phone === pending.phone || (u.phone && pending.phone && u.phone.slice(-10) === pending.phone.slice(-10))) || null;
       }
-    } catch (e) {}
+    } catch (e) { }
 
     if (existingUser) {
       existingUser.isOnline = true;
@@ -789,7 +790,7 @@ class HipaApiService {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ id: existingUser.id, phone: existingUser.phone, isOnline: true })
         });
-      } catch (e) {}
+      } catch (e) { }
     }
 
     return { ok: true, pending, existingUser };
@@ -823,7 +824,7 @@ class HipaApiService {
         this.saveUser(updated);
         return { changed: true, justApproved: prevVerif !== 'approved' && updated.verificationStatus === 'approved', user: updated };
       }
-    } catch (e) {}
+    } catch (e) { }
     return { changed: false };
   }
 
@@ -1031,7 +1032,7 @@ class HipaApiService {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(report)
-    }).catch(() => {});
+    }).catch(() => { });
 
     return report;
   }

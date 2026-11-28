@@ -6,6 +6,7 @@
 export const DEFAULT_FIREBASE_CONFIG = {
   apiKey: "",
   authDomain: "peelins-app.firebaseapp.com",
+  databaseURL: "https://peelins-app-default-rtdb.firebaseio.com",
   projectId: "peelins-app",
   storageBucket: "peelins-app.firebasestorage.app",
   messagingSenderId: "844854977384",
