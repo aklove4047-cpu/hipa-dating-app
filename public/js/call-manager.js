@@ -17,8 +17,24 @@ const RTC_CONFIG = {
   iceServers: [
     { urls: 'stun:stun.l.google.com:19302' },
     { urls: 'stun:stun1.l.google.com:19302' },
-    { urls: 'stun:stun2.l.google.com:19302' }
-  ]
+    { urls: 'stun:stun2.l.google.com:19302' },
+    {
+      urls: 'turn:openrelay.metered.ca:80',
+      username: 'openrelayproject',
+      credential: 'openrelayproject'
+    },
+    {
+      urls: 'turn:openrelay.metered.ca:443',
+      username: 'openrelayproject',
+      credential: 'openrelayproject'
+    },
+    {
+      urls: 'turn:openrelay.metered.ca:443?transport=tcp',
+      username: 'openrelayproject',
+      credential: 'openrelayproject'
+    }
+  ],
+  iceCandidatePoolSize: 4
 };
 
 class RealCallManager {
@@ -37,6 +53,96 @@ class RealCallManager {
     this.isMuted = false;
     this.isCameraOff = false;
     this.isFilterActive = false;
+    this.pendingRemoteCandidates = [];
+  }
+
+  // Wait for ICE gathering so offer/answer SDP includes STUN+TURN candidates atomically
+  waitForIceGathering(pc, timeoutMs = 2500) {
+    return new Promise((resolve) => {
+      if (!pc || pc.iceGatheringState === 'complete') {
+        resolve();
+        return;
+      }
+      let done = false;
+      const finish = () => {
+        if (done) return;
+        done = true;
+        pc.removeEventListener('icegatheringstatechange', onStateChange);
+        resolve();
+      };
+      const onStateChange = () => {
+        if (pc.iceGatheringState === 'complete') finish();
+      };
+      pc.addEventListener('icegatheringstatechange', onStateChange);
+      setTimeout(finish, timeoutMs);
+    });
+  }
+
+  async acquireMedia(isVideo) {
+    try {
+      return await navigator.mediaDevices.getUserMedia({
+        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+        video: isVideo ? { facingMode: this.currentFacingMode, width: { ideal: 640 }, height: { ideal: 480 } } : false
+      });
+    } catch (err) {
+      if (isVideo) {
+        console.warn('Video capture failed, falling back to audio-only:', err);
+        return await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+      }
+      throw err;
+    }
+  }
+
+  attachPeerEvents(pc, isVideo) {
+    pc.ontrack = (event) => {
+      const tracks = (event.streams && event.streams[0]) ? event.streams[0].getTracks() : [event.track];
+      tracks.forEach((track) => {
+        if (track && !this.remoteStream.getTracks().some(t => t.id === track.id)) {
+          this.remoteStream.addTrack(track);
+        }
+      });
+
+      const remoteVidEl = document.getElementById('peelinsRemoteVideo');
+      const remoteAudEl = document.getElementById('peelinsRemoteAudio');
+      const fallbackImg = document.getElementById('peelinsRemoteFallbackImg');
+
+      if (remoteAudEl) {
+        remoteAudEl.srcObject = this.remoteStream;
+        remoteAudEl.play().catch(() => {});
+      }
+      if (remoteVidEl && isVideo && this.remoteStream.getVideoTracks().length > 0) {
+        remoteVidEl.srcObject = this.remoteStream;
+        remoteVidEl.style.display = 'block';
+        remoteVidEl.play().catch(() => {});
+        if (fallbackImg) fallbackImg.style.display = 'none';
+      }
+    };
+
+    pc.oniceconnectionstatechange = () => {
+      const state = pc.iceConnectionState;
+      const statusBadge = document.getElementById('peelinsCallStatusBadge');
+      if (!statusBadge) return;
+      if (state === 'connected' || state === 'completed') {
+        statusBadge.textContent = '● CONNECTED (HD)';
+        statusBadge.style.color = '#10b981';
+      } else if (state === 'checking') {
+        statusBadge.textContent = 'CONNECTING MEDIA...';
+        statusBadge.style.color = '#ffd700';
+      } else if (state === 'disconnected' || state === 'failed') {
+        statusBadge.textContent = 'RECONNECTING...';
+        statusBadge.style.color = '#ef4444';
+      }
+    };
+  }
+
+  async flushPendingCandidates() {
+    if (!this.peerConnection || !this.peerConnection.remoteDescription) return;
+    while (this.pendingRemoteCandidates.length > 0) {
+      const cand = this.pendingRemoteCandidates.shift();
+      try {
+        await this.peerConnection.addIceCandidate(new RTCIceCandidate(cand));
+      } catch (e) {}
+    }
   }
 
   // --- Audio Tone Generator for Ringback & Incoming Ringtone ---
@@ -206,15 +312,15 @@ class RealCallManager {
     this.renderCallHUD();
 
     try {
-      // 1. Get Local Media Stream (Camera / Mic)
-      this.localStream = await navigator.mediaDevices.getUserMedia({
-        audio: true,
-        video: isVideo ? { facingMode: this.currentFacingMode } : false
-      });
+      this.pendingRemoteCandidates = [];
+
+      // 1. Get Local Media Stream (Camera / Mic with audio fallback)
+      this.localStream = await this.acquireMedia(isVideo);
 
       const localVid = document.getElementById('peelinsLocalVideo');
       if (localVid && isVideo) {
         localVid.srcObject = this.localStream;
+        localVid.play().catch(() => {});
       }
 
       // 2. Setup RTCPeerConnection
@@ -222,53 +328,39 @@ class RealCallManager {
       this.remoteStream = new MediaStream();
 
       const remoteVid = document.getElementById('peelinsRemoteVideo');
-      if (remoteVid) {
-        remoteVid.srcObject = this.remoteStream;
-      }
+      if (remoteVid) remoteVid.srcObject = this.remoteStream;
       const remoteAud = document.getElementById('peelinsRemoteAudio');
-      if (remoteAud) {
-        remoteAud.srcObject = this.remoteStream;
-      }
+      if (remoteAud) remoteAud.srcObject = this.remoteStream;
 
       // Add local tracks to peer connection
       this.localStream.getTracks().forEach(track => {
         this.peerConnection.addTrack(track, this.localStream);
       });
 
-      // Handle remote incoming tracks
-      this.peerConnection.ontrack = (event) => {
-        event.streams[0].getTracks().forEach(track => {
-          this.remoteStream.addTrack(track);
-        });
-        const fallbackImg = document.getElementById('peelinsRemoteFallbackImg');
-        if (fallbackImg) fallbackImg.style.display = 'none';
-        const remoteVidEl = document.getElementById('peelinsRemoteVideo');
-        if (remoteVidEl) remoteVidEl.style.display = 'block';
-      };
+      this.attachPeerEvents(this.peerConnection, isVideo);
 
-      // Send local ICE candidates to Firestore
-      this.peerConnection.onicecandidate = (event) => {
-        if (event.candidate) {
-          firebaseService.addIceCandidate(call.id, 'receiver', event.candidate);
-        }
-      };
-
-      // Set Remote Description from Caller's Offer
+      // Set Remote Description from Caller's Offer (already contains Caller ICE candidates)
       await this.peerConnection.setRemoteDescription(new RTCSessionDescription(call.offer));
 
-      // Create SDP Answer
+      // Create SDP Answer & Wait for ICE Gathering (bundles STUN+TURN into answer.sdp)
       const answer = await this.peerConnection.createAnswer();
       await this.peerConnection.setLocalDescription(answer);
+      await this.waitForIceGathering(this.peerConnection, 2500);
 
-      // Update Call Doc with Answer
+      const finalAnswer = this.peerConnection.localDescription || answer;
+
+      // Update Call Doc with Complete Answer
       await firebaseService.updateCall(call.id, {
-        answer: { type: answer.type, sdp: answer.sdp },
+        answer: { type: finalAnswer.type, sdp: finalAnswer.sdp },
         status: 'connected'
       });
 
-      // Listen for Caller's ICE Candidates
+      // Also listen for any late Caller ICE Candidates
       this.unsubscribeCandidates = firebaseService.listenIceCandidates(call.id, 'caller', async (candidateData) => {
-        if (this.peerConnection && candidateData) {
+        if (!this.peerConnection || !candidateData) return;
+        if (!this.peerConnection.remoteDescription) {
+          this.pendingRemoteCandidates.push(candidateData);
+        } else {
           try {
             await this.peerConnection.addIceCandidate(new RTCIceCandidate(candidateData));
           } catch (e) {}
@@ -284,8 +376,9 @@ class RealCallManager {
 
       this.onCallConnected();
     } catch (err) {
-      console.warn('WebRTC answer error (fallback to simulation):', err);
-      this.onCallConnected();
+      console.error('WebRTC answer error:', err);
+      alert('Camera/Mic permission required to connect call. Please allow access and try again.');
+      this.endCall(true);
     }
   }
 
@@ -330,15 +423,15 @@ class RealCallManager {
     this.renderCallHUD();
 
     try {
+      this.pendingRemoteCandidates = [];
+
       // 1. Acquire Local Camera/Mic
-      this.localStream = await navigator.mediaDevices.getUserMedia({
-        audio: true,
-        video: isVideo ? { facingMode: this.currentFacingMode } : false
-      });
+      this.localStream = await this.acquireMedia(isVideo);
 
       const localVid = document.getElementById('peelinsLocalVideo');
       if (localVid && isVideo) {
         localVid.srcObject = this.localStream;
+        localVid.play().catch(() => {});
       }
 
       // 2. Setup RTCPeerConnection
@@ -346,35 +439,25 @@ class RealCallManager {
       this.remoteStream = new MediaStream();
 
       const remoteVid = document.getElementById('peelinsRemoteVideo');
-      if (remoteVid) {
-        remoteVid.srcObject = this.remoteStream;
-      }
+      if (remoteVid) remoteVid.srcObject = this.remoteStream;
       const remoteAud = document.getElementById('peelinsRemoteAudio');
-      if (remoteAud) {
-        remoteAud.srcObject = this.remoteStream;
-      }
+      if (remoteAud) remoteAud.srcObject = this.remoteStream;
 
       // Add local tracks
       this.localStream.getTracks().forEach(track => {
         this.peerConnection.addTrack(track, this.localStream);
       });
 
-      // Handle remote incoming tracks
-      this.peerConnection.ontrack = (event) => {
-        event.streams[0].getTracks().forEach(track => {
-          this.remoteStream.addTrack(track);
-        });
-        const fallbackImg = document.getElementById('peelinsRemoteFallbackImg');
-        if (fallbackImg) fallbackImg.style.display = 'none';
-        const remoteVidEl = document.getElementById('peelinsRemoteVideo');
-        if (remoteVidEl) remoteVidEl.style.display = 'block';
-      };
+      this.attachPeerEvents(this.peerConnection, isVideo);
 
-      // Create SDP Offer
+      // Create SDP Offer & Wait for ICE Gathering (bundles STUN+TURN into offer.sdp)
       const offer = await this.peerConnection.createOffer();
       await this.peerConnection.setLocalDescription(offer);
+      await this.waitForIceGathering(this.peerConnection, 2500);
 
-      // Create Call Doc in Firestore
+      const finalOffer = this.peerConnection.localDescription || offer;
+
+      // Create Call Doc with Complete Offer
       const callRecord = await firebaseService.createCall({
         callerId: String(user ? user.id : 'caller_' + Date.now()),
         callerName: user ? (user.name || user.username) : 'Peelin\'s User',
@@ -384,17 +467,10 @@ class RealCallManager {
         receiverName: partner.name,
         receiverPhoto: partner.avatar || partner.photo,
         type: callType,
-        offer: { type: offer.type, sdp: offer.sdp }
+        offer: { type: finalOffer.type, sdp: finalOffer.sdp }
       });
 
       this.activeCall.id = callRecord.id;
-
-      // Send local ICE candidates to Firestore
-      this.peerConnection.onicecandidate = (event) => {
-        if (event.candidate && this.activeCall && this.activeCall.id) {
-          firebaseService.addIceCandidate(this.activeCall.id, 'caller', event.candidate);
-        }
-      };
 
       // Listen for Answer and Status changes
       this.unsubscribeCallDoc = firebaseService.listenToCall(callRecord.id, async (callData) => {
@@ -406,16 +482,20 @@ class RealCallManager {
           this.endCall(false);
         } else if (callData.status === 'ended') {
           this.endCall(false);
-        } else if (callData.status === 'connected' && callData.answer && this.activeCall.status === 'ringing') {
+        } else if (callData.status === 'connected' && callData.answer && this.activeCall && this.activeCall.status === 'ringing') {
           this.stopRingtone();
           await this.peerConnection.setRemoteDescription(new RTCSessionDescription(callData.answer));
+          await this.flushPendingCandidates();
           this.onCallConnected();
         }
       });
 
-      // Listen for Receiver's ICE Candidates
+      // Also listen for any late Receiver ICE Candidates
       this.unsubscribeCandidates = firebaseService.listenIceCandidates(callRecord.id, 'receiver', async (candidateData) => {
-        if (this.peerConnection && candidateData) {
+        if (!this.peerConnection || !candidateData) return;
+        if (!this.peerConnection.remoteDescription) {
+          this.pendingRemoteCandidates.push(candidateData);
+        } else {
           try {
             await this.peerConnection.addIceCandidate(new RTCIceCandidate(candidateData));
           } catch (e) {}
